@@ -17,6 +17,7 @@ lazy_static! {
     };
 }
 
+#[derive(Default)]
 pub struct Scanner {
     input: Vec<char>,
     position: usize,

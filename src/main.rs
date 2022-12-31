@@ -3,6 +3,7 @@ use std::io::{BufRead, Write};
 
 use token::*;
 
+mod parser;
 mod scanner;
 mod token;
 

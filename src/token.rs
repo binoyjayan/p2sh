@@ -19,11 +19,7 @@ impl Token {
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Token {{ ty: {:?}, literal: {}, line: {:?}, }}",
-            self.ttype, self.literal, self.line,
-        )
+        write!(f, "{}", self.literal)
     }
 }
 

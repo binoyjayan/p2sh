@@ -16,11 +16,17 @@ pub enum Expression {
 pub enum Statement {
     Let(LetStmt),
     Return(ReturnStmt),
+    Expr(ExpressionStmt),
 }
 
 pub struct LetStmt {
     pub token: Token,
     pub name: Identifier,
+    pub value: Expression,
+}
+
+pub struct ExpressionStmt {
+    pub token: Token,
     pub value: Expression,
 }
 
@@ -36,11 +42,18 @@ pub struct Identifier {
     pub value: String,
 }
 
+impl fmt::Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.token)
+    }
+}
+
 impl Statement {
     pub fn token_literal(&self) -> String {
         match &self {
             Statement::Let(stmt) => stmt.token.literal.clone(),
             Statement::Return(stmt) => stmt.token.literal.clone(),
+            Statement::Expr(stmt) => stmt.token.literal.clone(),
             _ => "".to_string(),
         }
     }
@@ -49,8 +62,9 @@ impl Statement {
 impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            Statement::Let(_) => write!(f, "let"),
-            Statement::Return(_) => write!(f, "return"),
+            Statement::Let(l) => write!(f, "let {} = {};", l.name, l.value),
+            Statement::Return(r) => write!(f, "return {};", r.value),
+            Statement::Expr(e) => write!(f, "{}", e.value),
         }
     }
 }
@@ -60,6 +74,15 @@ impl Expression {
         match &self {
             Expression::Ident(ident) => ident.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
+        }
+    }
+}
+
+impl fmt::Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            Expression::Ident(ident) => write!(f, "{}", ident),
+            Expression::Nil => write!(f, "let"),
         }
     }
 }
@@ -76,5 +99,14 @@ impl Program {
         } else {
             self.statements[0].token_literal()
         }
+    }
+}
+
+impl fmt::Display for Program {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for s in &self.statements {
+            write!(f, "{}", s)?;
+        }
+        Ok(())
     }
 }

@@ -77,9 +77,41 @@ fn test_return_statements() {
             );
             continue;
         }
-        if let Statement::Return(stmt) = stmt {
+        if let Statement::Return(_stmt) = stmt {
         } else {
             eprintln!("stmt is not a return statement. got={}", stmt);
         }
     }
+}
+
+#[test]
+fn test_string_formatting() {
+    let let_token = Token::new(TokenType::Let, "let", 1);
+    let token_myvar1 = Token::new(TokenType::Identifier, "myvar1", 1);
+    let ident_myvar1 = Identifier {
+        token: token_myvar1,
+        value: "myvar1".to_string(),
+    };
+
+    let token_myvar2 = Token::new(TokenType::Identifier, "myvar2", 2);
+    let ident_myvar2 = Identifier {
+        token: token_myvar2,
+        value: "myvar2".to_string(),
+    };
+
+    let program = Program {
+        statements: vec![Statement::Let(LetStmt {
+            token: let_token,
+            name: ident_myvar1,
+            value: Expression::Ident(ident_myvar2),
+        })],
+    };
+
+    let program_str = format!("{}", program);
+    let expected_str = "let myvar1 = myvar2;";
+    assert_eq!(
+        program_str, expected_str,
+        "program.string() wrong. got='{}'",
+        program_str
+    );
 }

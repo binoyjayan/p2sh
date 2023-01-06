@@ -1,9 +1,14 @@
 pub mod ast;
+pub mod precedence;
+pub mod rules;
 pub mod tests;
 
 use crate::scanner::*;
 use crate::token::*;
 use ast::*;
+use rules::*;
+
+use self::precedence::Precedence;
 
 type ParseError = String;
 type ParseErrors = Vec<ParseError>;
@@ -85,7 +90,7 @@ impl Parser {
         match self.current.ttype {
             TokenType::Let => self.parse_let_statement(),
             TokenType::Return => self.parse_return_statement(),
-            _ => Err("Invalid Statement".to_string()),
+            _ => self.parse_expr_statement(),
         }
     }
 
@@ -124,5 +129,26 @@ impl Parser {
             value: Expression::Nil,
         };
         Ok(Statement::Return(ret_stmt))
+    }
+
+    fn parse_expr_statement(&mut self) -> Result<Statement, ParseError> {
+        let token_expr = self.current.clone();
+        let expr = self.parse_expression(Precedence::Lowest);
+        if self.peek_token_is(&TokenType::Semicolon) {
+            self.next_token();
+        }
+        Ok(Statement::Expr(ExpressionStmt {
+            token: token_expr,
+            value: expr,
+        }))
+    }
+
+    fn parse_expression(&mut self, precedence: Precedence) -> Expression {
+        let ttype = self.current.ttype as usize;
+        if let Some(prefix) = &PARSE_RULES[ttype].prefix {
+            prefix(self)
+        } else {
+            Expression::Nil
+        }
     }
 }

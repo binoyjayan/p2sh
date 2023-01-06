@@ -37,7 +37,7 @@ impl Default for Token {
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub enum TokenType {
-    Illegal,
+    Illegal = 0,
     Eof,
     // Identifiers + literals
     Identifier,
@@ -70,6 +70,7 @@ pub enum TokenType {
     If,
     Else,
     Return,
+    NumberOfTokens,
 }
 
 impl From<TokenType> for &'static str {
@@ -104,6 +105,7 @@ impl From<TokenType> for &'static str {
             TokenType::If => "IF",
             TokenType::Else => "ELSE",
             TokenType::Return => "RETURN",
+            TokenType::NumberOfTokens => "",
         }
     }
 }

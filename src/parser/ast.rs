@@ -10,21 +10,25 @@ pub enum Node {
 #[derive(Debug)]
 pub enum Expression {
     Ident(Identifier),
+    Number(NumberLiteral),
     Nil,
 }
 
+#[derive(Debug)]
 pub enum Statement {
     Let(LetStmt),
     Return(ReturnStmt),
     Expr(ExpressionStmt),
 }
 
+#[derive(Debug)]
 pub struct LetStmt {
     pub token: Token,
     pub name: Identifier,
     pub value: Expression,
 }
 
+#[derive(Debug)]
 pub struct ExpressionStmt {
     pub token: Token,
     pub value: Expression,
@@ -43,6 +47,18 @@ pub struct Identifier {
 }
 
 impl fmt::Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.token)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct NumberLiteral {
+    pub token: Token,
+    pub value: f64,
+}
+
+impl fmt::Display for NumberLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.token)
     }
@@ -73,6 +89,7 @@ impl Expression {
     fn token_literal(&self) -> String {
         match &self {
             Expression::Ident(ident) => ident.token.literal.clone(),
+            Expression::Number(num) => num.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
         }
     }
@@ -82,6 +99,7 @@ impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             Expression::Ident(ident) => write!(f, "{}", ident),
+            Expression::Number(num) => write!(f, "{}", num),
             Expression::Nil => write!(f, "let"),
         }
     }

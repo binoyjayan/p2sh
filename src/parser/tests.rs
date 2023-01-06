@@ -115,3 +115,61 @@ fn test_string_formatting() {
         program_str
     );
 }
+
+#[test]
+fn test_identifier_expression() {
+    let input = "foobar;";
+    let program = parse_test_program(input);
+
+    if program.statements.len() != 1 {
+        panic!(
+            "program.statements does not contain 1 statement. got={}",
+            program.statements.len()
+        );
+    }
+
+    let stmt = &program.statements[0];
+    if stmt.token_literal() != "foobar" {
+        panic!(
+            "stmt.token_literal() not 'foobar'. got={}",
+            stmt.token_literal()
+        );
+    }
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::Ident(ident) = &stmt.value {
+            if ident.value != "foobar" {
+                panic!("ident.value not 'foobar'. got='{}'", ident.value);
+            }
+        } else {
+            panic!("expr not an Identifier. got={:?}", stmt);
+        }
+    } else {
+        panic!("stmt is not an expression statement. got={}", stmt);
+    }
+}
+
+#[test]
+fn test_number_literal_expression() {
+    let input = "5;";
+    let program = parse_test_program(input);
+
+    if program.statements.len() != 1 {
+        panic!(
+            "program.statements does not contain 1 statement. got={}",
+            program.statements.len()
+        );
+    }
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::Number(num) = &stmt.value {
+            if num.value != 5. {
+                panic!("number.value not '5'. got='{}'", num.value);
+            }
+        } else {
+            panic!("expr not an Number. got={:?}", stmt);
+        }
+    } else {
+        panic!("stmt is not an expression statement. got={}", stmt);
+    }
+}

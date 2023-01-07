@@ -2,15 +2,11 @@ use std::fmt;
 
 use crate::token::*;
 
-pub enum Node {
-    Stmt(Statement),
-    Expr(Expression),
-}
-
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Expression {
     Ident(Identifier),
     Number(NumberLiteral),
+    Unary(UnaryExpr),
     Nil,
 }
 
@@ -64,13 +60,25 @@ impl fmt::Display for NumberLiteral {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct UnaryExpr {
+    pub token: Token,
+    pub operator: String,
+    pub right: Box<Expression>,
+}
+
+impl fmt::Display for UnaryExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.token, self.right.token_literal())
+    }
+}
+
 impl Statement {
     pub fn token_literal(&self) -> String {
         match &self {
             Statement::Let(stmt) => stmt.token.literal.clone(),
             Statement::Return(stmt) => stmt.token.literal.clone(),
             Statement::Expr(stmt) => stmt.token.literal.clone(),
-            _ => "".to_string(),
         }
     }
 }
@@ -90,6 +98,7 @@ impl Expression {
         match &self {
             Expression::Ident(ident) => ident.token.literal.clone(),
             Expression::Number(num) => num.token.literal.clone(),
+            Expression::Unary(prefix) => prefix.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
         }
     }
@@ -100,6 +109,7 @@ impl fmt::Display for Expression {
         match &self {
             Expression::Ident(ident) => write!(f, "{}", ident),
             Expression::Number(num) => write!(f, "{}", num),
+            Expression::Unary(prefix) => write!(f, "{}", prefix),
             Expression::Nil => write!(f, "let"),
         }
     }
@@ -124,6 +134,15 @@ impl fmt::Display for Program {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for s in &self.statements {
             write!(f, "{}", s)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for Program {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for s in &self.statements {
+            writeln!(f, "{:?}", s)?;
         }
         Ok(())
     }

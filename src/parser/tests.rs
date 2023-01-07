@@ -1,6 +1,6 @@
 use super::*;
-use crate::scanner::*;
 
+#[cfg(test)]
 fn parse_test_program(input: &str) -> Program {
     let scanner = Scanner::new(input);
     let mut parser = Parser::new(scanner);
@@ -12,6 +12,7 @@ fn parse_test_program(input: &str) -> Program {
     program
 }
 
+#[cfg(test)]
 fn check_parse_errors(parser: &Parser) {
     if parser.errors.is_empty() {
         return;
@@ -30,10 +31,10 @@ fn test_let_statements() {
         let y = 10;
         let foobar = 838383;
         ";
-    let program = parse_test_program(input);
+    let identifiers = ["x", "y", "foobar"];
 
-    let let_tests = ["x", "y", "foobar"];
-    for (i, tt) in let_tests.iter().enumerate() {
+    let program = parse_test_program(input);
+    for (i, tt) in identifiers.iter().enumerate() {
         let stmt = &program.statements[i];
         test_let_statement(stmt, tt);
     }
@@ -69,18 +70,24 @@ fn test_return_statements() {
         );
     }
 
+    let mut count = 0;
     for stmt in program.statements.iter() {
         if stmt.token_literal() != "return" {
             eprintln!(
                 "stmt.token_literal() not 'return'. got={}",
                 stmt.token_literal()
             );
+            count += 1;
             continue;
         }
         if let Statement::Return(_stmt) = stmt {
         } else {
+            count += 1;
             eprintln!("stmt is not a return statement. got={}", stmt);
         }
+    }
+    if count > 0 {
+        panic!("{}/{} tests failed.", count, program.statements.len());
     }
 }
 
@@ -162,14 +169,73 @@ fn test_number_literal_expression() {
 
     let stmt = &program.statements[0];
     if let Statement::Expr(stmt) = stmt {
-        if let Expression::Number(num) = &stmt.value {
-            if num.value != 5. {
-                panic!("number.value not '5'. got='{}'", num.value);
-            }
-        } else {
-            panic!("expr not an Number. got={:?}", stmt);
+        test_number_literal(&stmt.value, 5.);
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[cfg(test)]
+fn test_number_literal(expr: &Expression, expected: f64) {
+    if let Expression::Number(num) = expr {
+        if num.value != expected {
+            panic!("number.value not '{}'. got='{}'", expected, num.value);
         }
     } else {
-        panic!("stmt is not an expression statement. got={}", stmt);
+        panic!("expr not an Number. got={:?}", expr);
+    }
+}
+
+#[test]
+fn test_parsing_prefix_expressions() {
+    struct PrefixTest {
+        input: &'static str,
+        operator: &'static str,
+        number: f64,
+    }
+    let prefix_tests = vec![
+        PrefixTest {
+            input: "!5",
+            operator: "!",
+            number: 5.,
+        },
+        PrefixTest {
+            input: "-15",
+            operator: "-",
+            number: 15.,
+        },
+    ];
+
+    for test in prefix_tests {
+        let program = parse_test_program(test.input);
+        if program.statements.len() != 1 {
+            panic!(
+                "program.statements does not contain 1 statement. got={}",
+                program.statements.len()
+            );
+        }
+
+        let stmt = &program.statements[0];
+        if let Statement::Expr(stmt) = stmt {
+            if let Expression::Unary(expr) = &stmt.value {
+                if expr.operator != test.operator {
+                    panic!(
+                        "expr.operator is not '{}'. got='{}'",
+                        expr.operator, test.operator
+                    );
+                }
+                test_number_literal(&*expr.right, test.number);
+            } else {
+                panic!("expr not an Prefix expression. got={:?}", stmt);
+            }
+        } else {
+            panic!(
+                "program.statements[0] is not an expression statement. got={}",
+                stmt
+            );
+        }
     }
 }

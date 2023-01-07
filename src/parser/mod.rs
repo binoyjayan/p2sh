@@ -148,7 +148,13 @@ impl Parser {
         if let Some(prefix) = &PARSE_RULES[ttype].prefix {
             prefix(self)
         } else {
+            self.no_prefix_parse_error(self.current.ttype);
             Expression::Nil
         }
+    }
+
+    fn no_prefix_parse_error(&mut self, ttype: TokenType) {
+        let msg = format!("no prefix parser is available for token type '{}'", ttype);
+        self.errors.push(msg);
     }
 }

@@ -18,7 +18,7 @@ pub enum Precedence {
 }
 
 impl Precedence {
-    pub fn next(self) -> Self {
+    pub fn _next(self) -> Self {
         if self == Self::Primary {
             panic!("Precedence::Primary does not have a next()")
         }

@@ -23,11 +23,14 @@ lazy_static! {
         rules[TokenType::Identifier as usize] =
             ParseRule::new(Some(Parser::parse_identifier), None);
         rules[TokenType::Number as usize] = ParseRule::new(Some(Parser::parse_number), None);
+        rules[TokenType::Bang as usize] =
+            ParseRule::new(Some(Parser::parse_prefix_expression), None);
+        rules[TokenType::Minus as usize] =
+            ParseRule::new(Some(Parser::parse_prefix_expression), None);
         rules
     };
 }
 
-/// All the parse rule functions do not advance tokens.
 impl Parser {
     fn parse_identifier(&mut self) -> Expression {
         Expression::Ident(Identifier {
@@ -47,5 +50,20 @@ impl Parser {
             self.errors.push(msg);
             Expression::Nil
         }
+    }
+
+    // Parse unary expressions such as '-' and '!'
+    fn parse_prefix_expression(&mut self) -> Expression {
+        let operator = self.current.literal.clone();
+        let token = self.current.clone();
+
+        self.next_token();
+        let right = self.parse_expression(Precedence::Unary);
+
+        Expression::Unary(UnaryExpr {
+            token,
+            operator,
+            right: Box::new(right),
+        })
     }
 }

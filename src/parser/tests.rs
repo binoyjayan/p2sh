@@ -425,6 +425,11 @@ fn test_parsing_operator_precedence() {
             expected: "((3 < 5) == true)",
             num_stmts: 1,
         },
+        PrecedenceTest {
+            input: "1 + (2 + 3) + 4",
+            expected: "((1 + (2 + 3)) + 4)",
+            num_stmts: 1,
+        },
     ];
 
     for test in precedence_tests {

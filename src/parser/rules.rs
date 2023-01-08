@@ -29,15 +29,18 @@ impl ParseRule {
 lazy_static! {
     pub static ref PARSE_RULES: Vec<ParseRule> = {
         let mut rules = vec![ParseRule::default(); TokenType::NumberOfTokens as usize];
+        // Terminal expressions
         rules[TokenType::Identifier as usize] =
             ParseRule::new(Some(Parser::parse_identifier), None, Precedence::Lowest);
         rules[TokenType::Number as usize] =
             ParseRule::new(Some(Parser::parse_number), None, Precedence::Lowest);
+        // Logical
         rules[TokenType::Bang as usize] = ParseRule::new(
             Some(Parser::parse_prefix_expression),
             None,
             Precedence::Lowest,
         );
+        // Binary
         rules[TokenType::Equal as usize] = ParseRule::new(
             None,
             Some(Parser::parse_infix_expression),
@@ -75,10 +78,14 @@ lazy_static! {
             Some(Parser::parse_infix_expression),
             Precedence::Factor,
         );
+        // Boolean
         rules[TokenType::True as usize] =
             ParseRule::new(Some(Parser::parse_boolean), None, Precedence::Lowest);
         rules[TokenType::False as usize] =
             ParseRule::new(Some(Parser::parse_boolean), None, Precedence::Lowest);
+        // Grouped
+        rules[TokenType::LeftParen as usize] =
+            ParseRule::new(Some(Parser::parse_grouped), None, Precedence::Lowest);
         rules
     };
 }
@@ -148,5 +155,16 @@ impl Parser {
             token: self.current.clone(),
             value: self.curr_token_is(&TokenType::True),
         })
+    }
+
+    // Override operator precedence using grouped expression
+    fn parse_grouped(&mut self) -> Expression {
+        self.next_token();
+        let expr = self.parse_expression(Precedence::Lowest);
+        if self.expect_peek(&TokenType::RightParen) {
+            expr
+        } else {
+            Expression::Nil
+        }
     }
 }

@@ -86,6 +86,9 @@ lazy_static! {
         // Grouped
         rules[TokenType::LeftParen as usize] =
             ParseRule::new(Some(Parser::parse_grouped), None, Precedence::Lowest);
+        // Control flow
+        rules[TokenType::If as usize] =
+            ParseRule::new(Some(Parser::parse_if_expr), None, Precedence::Lowest);
         rules
     };
 }
@@ -166,5 +169,54 @@ impl Parser {
         } else {
             Expression::Nil
         }
+    }
+
+    fn parse_if_expr(&mut self) -> Expression {
+        let token = self.current.clone();
+        if !self.expect_peek(&TokenType::LeftParen) {
+            return Expression::Nil;
+        }
+        self.next_token();
+        let condition = self.parse_expression(Precedence::Lowest);
+        if !self.expect_peek(&TokenType::RightParen) {
+            return Expression::Nil;
+        }
+        if !self.expect_peek(&TokenType::LeftBrace) {
+            return Expression::Nil;
+        }
+
+        let then_stmt = self.parse_block_statement();
+
+        // Check if an else branch exists
+        let else_stmt = if self.peek_token_is(&TokenType::Else) {
+            self.next_token();
+            if !self.expect_peek(&TokenType::LeftBrace) {
+                return Expression::Nil;
+            }
+            Some(self.parse_block_statement())
+        } else {
+            None
+        };
+
+        Expression::If(IfExpr {
+            token,
+            condition: Box::new(condition),
+            then_stmt: then_stmt,
+            else_stmt: None,
+        })
+    }
+
+    fn parse_block_statement(&mut self) -> BlockStatement {
+        let token = self.current.clone();
+        let mut statements = Vec::new();
+        self.next_token();
+
+        while !self.curr_token_is(&TokenType::RightBrace) && !self.curr_token_is(&TokenType::Eof) {
+            if let Ok(stmt) = self.parse_statement() {
+                statements.push(stmt);
+            }
+            self.next_token();
+        }
+        BlockStatement { token, statements }
     }
 }

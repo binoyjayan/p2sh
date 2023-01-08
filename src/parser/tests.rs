@@ -1,20 +1,27 @@
 use super::*;
 
+enum Literal {
+    Str(&'static str),
+    Numeric(f64),
+    Bool(bool),
+}
+
 #[cfg(test)]
 fn parse_test_program(input: &str, num_stmts: usize) -> Program {
     let scanner = Scanner::new(input);
     let mut parser = Parser::new(scanner);
     let program = parser.parse_program();
+    check_parse_errors(&parser);
 
     if program.statements.len() != num_stmts {
-        panic!(
+        assert_eq!(
+            num_stmts,
+            program.statements.len(),
             "program.statements does not contain {} statement(s). got={}",
             num_stmts,
             program.statements.len()
         );
     }
-
-    check_parse_errors(&parser);
     program
 }
 
@@ -53,7 +60,7 @@ fn test_boolean_literal(expr: &Expression, expected: bool) {
 }
 
 #[cfg(test)]
-fn test_identifier(expression: &Expression, value: String) {
+fn test_identifier(expression: &Expression, value: &str) {
     if let Expression::Ident(ident) = expression {
         if ident.value == value {
             if ident.token.literal != value {
@@ -67,6 +74,54 @@ fn test_identifier(expression: &Expression, value: String) {
         }
     } else {
         panic!("expr not an Identifier. got={:?}", expression);
+    }
+}
+
+#[cfg(test)]
+fn test_literal(expression: &Expression, value: Literal) {
+    match value {
+        Literal::Str(value) => {
+            test_identifier(expression, value);
+        }
+        Literal::Numeric(value) => {
+            test_numeric_literal(expression, value);
+        }
+        Literal::Bool(value) => {
+            test_boolean_literal(expression, value);
+        }
+    }
+}
+
+// Generic prefix expression test helper that accepts a generic literal (number/string)
+#[cfg(test)]
+fn test_prefix_expression(expression: &Expression, operator: &str, right: Literal) {
+    if let Expression::Unary(expr) = expression {
+        if expr.operator != operator {
+            panic!(
+                "expr.operator is not '{}'. got='{}'",
+                expr.operator, operator
+            );
+        }
+        test_literal(&*expr.right, right);
+    } else {
+        panic!("expr not a Prefix expression. got={:?}", expression);
+    }
+}
+
+// Generic infix expression test helper that accepts a generic literal (number/string)
+#[cfg(test)]
+fn test_infix_expression(expression: &Expression, left: Literal, operator: &str, right: Literal) {
+    if let Expression::Binary(expr) = expression {
+        if expr.operator != operator {
+            panic!(
+                "expr.operator is not '{}'. got='{}'",
+                expr.operator, operator
+            );
+        }
+        test_literal(&*expr.left, left);
+        test_literal(&*expr.right, right);
+    } else {
+        panic!("expr not an Infix expression. got={:?}", expression);
     }
 }
 
@@ -86,6 +141,7 @@ fn test_let_statements() {
     }
 }
 
+#[cfg(test)]
 fn test_let_statement(stmt: &Statement, name: &str) {
     if stmt.token_literal() != "let" {
         panic!("stmt.token_literal not 'let'. got={}", stmt.token_literal());
@@ -175,7 +231,7 @@ fn test_identifier_expression() {
         );
     }
     if let Statement::Expr(stmt) = stmt {
-        test_identifier(&stmt.value, "foobar".to_string());
+        test_identifier(&stmt.value, "foobar");
     } else {
         panic!("stmt is not an expression statement. got={}", stmt);
     }
@@ -202,18 +258,28 @@ fn test_parsing_prefix_expressions() {
     struct PrefixTest {
         input: &'static str,
         operator: &'static str,
-        number: f64,
+        number: Literal,
     }
     let prefix_tests = vec![
         PrefixTest {
             input: "!5",
             operator: "!",
-            number: 5.,
+            number: Literal::Numeric(5.),
         },
         PrefixTest {
             input: "-15",
             operator: "-",
-            number: 15.,
+            number: Literal::Numeric(15.),
+        },
+        PrefixTest {
+            input: "!true",
+            operator: "!",
+            number: Literal::Bool(true),
+        },
+        PrefixTest {
+            input: "!false",
+            operator: "!",
+            number: Literal::Bool(false),
         },
     ];
 
@@ -222,17 +288,7 @@ fn test_parsing_prefix_expressions() {
 
         let stmt = &program.statements[0];
         if let Statement::Expr(stmt) = stmt {
-            if let Expression::Unary(expr) = &stmt.value {
-                if expr.operator != test.operator {
-                    panic!(
-                        "expr.operator is not '{}'. got='{}'",
-                        expr.operator, test.operator
-                    );
-                }
-                test_numeric_literal(&*expr.right, test.number);
-            } else {
-                panic!("expr not an Prefix expression. got={:?}", stmt);
-            }
+            test_prefix_expression(&stmt.value, test.operator, test.number);
         } else {
             panic!(
                 "program.statements[0] is not an expression statement. got={}",
@@ -247,77 +303,83 @@ fn test_parsing_infix_expressions() {
     struct InfixTest {
         input: &'static str,
         operator: &'static str,
-        left: f64,
-        right: f64,
+        left: Literal,
+        right: Literal,
     }
     let infix_tests = vec![
         InfixTest {
             input: "5 + 5;",
             operator: "+",
-            left: 5.,
-            right: 5.,
+            left: Literal::Numeric(5.),
+            right: Literal::Numeric(5.),
         },
         InfixTest {
             input: "5 - 5;",
             operator: "-",
-            left: 5.,
-            right: 5.,
+            left: Literal::Numeric(5.),
+            right: Literal::Numeric(5.),
         },
         InfixTest {
             input: "5 * 5;",
             operator: "*",
-            left: 5.,
-            right: 5.,
+            left: Literal::Numeric(5.),
+            right: Literal::Numeric(5.),
         },
         InfixTest {
             input: "5 / 5;",
             operator: "/",
-            left: 5.,
-            right: 5.,
+            left: Literal::Numeric(5.),
+            right: Literal::Numeric(5.),
         },
         InfixTest {
             input: "5 > 5;",
             operator: ">",
-            left: 5.,
-            right: 5.,
+            left: Literal::Numeric(5.),
+            right: Literal::Numeric(5.),
         },
         InfixTest {
             input: "5 < 5;",
             operator: "<",
-            left: 5.,
-            right: 5.,
+            left: Literal::Numeric(5.),
+            right: Literal::Numeric(5.),
         },
         InfixTest {
             input: "5 == 5;",
             operator: "==",
-            left: 5.,
-            right: 5.,
+            left: Literal::Numeric(5.),
+            right: Literal::Numeric(5.),
         },
         InfixTest {
             input: "5 != 5;",
             operator: "!=",
-            left: 5.,
-            right: 5.,
+            left: Literal::Numeric(5.),
+            right: Literal::Numeric(5.),
+        },
+        InfixTest {
+            input: "true == true",
+            operator: "==",
+            left: Literal::Bool(true),
+            right: Literal::Bool(true),
+        },
+        InfixTest {
+            input: "true != false",
+            operator: "!=",
+            left: Literal::Bool(true),
+            right: Literal::Bool(false),
+        },
+        InfixTest {
+            input: "false == false",
+            operator: "==",
+            left: Literal::Bool(false),
+            right: Literal::Bool(false),
         },
     ];
 
     for test in infix_tests {
         let program = parse_test_program(test.input, 1);
-
         let stmt = &program.statements[0];
         if let Statement::Expr(stmt) = stmt {
-            if let Expression::Binary(expr) = &stmt.value {
-                if expr.operator != test.operator {
-                    panic!(
-                        "expr.operator is not '{}'. got='{}'",
-                        expr.operator, test.operator
-                    );
-                }
-                test_numeric_literal(&*expr.left, test.left);
-                test_numeric_literal(&*expr.right, test.right);
-            } else {
-                panic!("expr not an Infix expression. got={:?}", stmt);
-            }
+            test_infix_expression(&stmt.value, test.left, test.operator, test.right);
         } else {
             panic!(
                 "program.statements[0] is not an expression statement. got={}",
@@ -430,6 +492,26 @@ fn test_parsing_operator_precedence() {
             expected: "((1 + (2 + 3)) + 4)",
             num_stmts: 1,
         },
+        PrecedenceTest {
+            input: "(5 + 5) * 2",
+            expected: "((5 + 5) * 2)",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "2 / (5 + 5)",
+            expected: "(2 / (5 + 5))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "-(5 + 5)",
+            expected: "(-(5 + 5))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "!(true == true)",
+            expected: "(!(true == true))",
+            num_stmts: 1,
+        },
     ];
 
     for test in precedence_tests {
@@ -460,6 +542,80 @@ fn test_boolean_expressions() {
     } else {
         panic!(
             "program.statements[1] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_if_then_expression() {
+    let input = "if (x < y) { x }";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::If(expr) = &stmt.value {
+            test_infix_expression(&expr.condition, Literal::Str("x"), "<", Literal::Str("y"));
+            let num_stmts = expr.then_stmt.statements.len();
+            assert_eq!(num_stmts, 1, "then_stmt count not 1. got={}", num_stmts);
+            if let Statement::Expr(expr) = &expr.then_stmt.statements[0] {
+                test_identifier(&expr.value, "x");
+            } else {
+                panic!(
+                    "then_stmt.statements[0] is not an expression statement. got={}",
+                    expr.then_stmt.statements[0]
+                );
+            }
+            if expr.else_stmt.is_some() {
+                panic!("expr.else_stmt was not nil. got={:?}", expr.else_stmt);
+            }
+        } else {
+            panic!("stmt.expr is not an If expression. got={}", stmt.value);
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_if_then_else_expression() {
+    let input = "if (x < y) { x } else { y }";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::If(expr) = &stmt.value {
+            test_infix_expression(&expr.condition, Literal::Str("x"), "<", Literal::Str("y"));
+            let num_stmts = expr.then_stmt.statements.len();
+            assert_eq!(num_stmts, 1, "then_stmt count not 1. got={}", num_stmts);
+            if let Statement::Expr(expr) = &expr.then_stmt.statements[0] {
+                test_identifier(&expr.value, "x");
+            } else {
+                panic!(
+                    "then_stmt.statements[0] is not an expression statement. got={}",
+                    expr.then_stmt.statements[0]
+                );
+            }
+            // If an else branch exists
+            if let Some(else_stmt) = &expr.else_stmt {
+                if let Statement::Expr(expr) = &else_stmt.statements[0] {
+                    test_identifier(&expr.value, "y");
+                } else {
+                    panic!(
+                        "else_stmt.statements[0] is not an expression statement. got={}",
+                        else_stmt.statements[0]
+                    );
+                }
+            }
+        } else {
+            panic!("stmt.expr is not an If expression. got={}", stmt.value);
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
             stmt
         );
     }

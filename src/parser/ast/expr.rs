@@ -2,6 +2,8 @@ use std::fmt;
 
 use crate::token::*;
 
+use super::stmt::*;
+
 #[derive(Clone, Debug)]
 pub enum Expression {
     Ident(Identifier),
@@ -9,6 +11,7 @@ pub enum Expression {
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Bool(BooleanExpr),
+    If(IfExpr),
     Nil,
 }
 
@@ -75,6 +78,24 @@ impl fmt::Display for BooleanExpr {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct IfExpr {
+    pub token: Token, // if token
+    pub condition: Box<Expression>,
+    pub then_stmt: BlockStatement,
+    pub else_stmt: Option<BlockStatement>,
+}
+
+impl fmt::Display for IfExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "if {} {}", self.condition, self.then_stmt)?;
+        if let Some(else_stmt) = &self.else_stmt {
+            write!(f, "else {}", else_stmt)?;
+        }
+        Ok(())
+    }
+}
+
 impl Expression {
     fn token_literal(&self) -> String {
         match &self {
@@ -83,6 +104,7 @@ impl Expression {
             Expression::Unary(unary) => unary.token.literal.clone(),
             Expression::Binary(binary) => binary.token.literal.clone(),
             Expression::Bool(b) => b.token.literal.clone(),
+            Expression::If(i) => i.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
         }
     }
@@ -96,6 +118,7 @@ impl fmt::Display for Expression {
             Expression::Unary(prefix) => write!(f, "{}", prefix),
             Expression::Binary(binary) => write!(f, "{}", binary),
             Expression::Bool(b) => write!(f, "{}", b),
+            Expression::If(i) => write!(f, "{}", i),
             Expression::Nil => write!(f, "let"),
         }
     }

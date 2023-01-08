@@ -5,6 +5,8 @@ pub mod tests;
 
 use crate::scanner::*;
 use crate::token::*;
+use ast::expr::*;
+use ast::stmt::*;
 use ast::*;
 use rules::*;
 

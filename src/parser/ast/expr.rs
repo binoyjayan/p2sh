@@ -11,32 +11,6 @@ pub enum Expression {
     Nil,
 }
 
-#[derive(Debug)]
-pub enum Statement {
-    Let(LetStmt),
-    Return(ReturnStmt),
-    Expr(ExpressionStmt),
-}
-
-#[derive(Debug)]
-pub struct LetStmt {
-    pub token: Token,
-    pub name: Identifier,
-    pub value: Expression,
-}
-
-#[derive(Debug)]
-pub struct ExpressionStmt {
-    pub token: Token,
-    pub value: Expression,
-}
-
-#[derive(Debug)]
-pub struct ReturnStmt {
-    pub token: Token,
-    pub value: Expression,
-}
-
 #[derive(Clone, Debug)]
 pub struct Identifier {
     pub token: Token,
@@ -88,26 +62,6 @@ impl fmt::Display for BinaryExpr {
     }
 }
 
-impl Statement {
-    pub fn token_literal(&self) -> String {
-        match &self {
-            Statement::Let(stmt) => stmt.token.literal.clone(),
-            Statement::Return(stmt) => stmt.token.literal.clone(),
-            Statement::Expr(stmt) => stmt.token.literal.clone(),
-        }
-    }
-}
-
-impl fmt::Display for Statement {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            Statement::Let(l) => write!(f, "let {} = {};", l.name, l.value),
-            Statement::Return(r) => write!(f, "return {};", r.value),
-            Statement::Expr(e) => write!(f, "{}", e.value),
-        }
-    }
-}
-
 impl Expression {
     fn token_literal(&self) -> String {
         match &self {
@@ -129,38 +83,5 @@ impl fmt::Display for Expression {
             Expression::Binary(binary) => write!(f, "{}", binary),
             Expression::Nil => write!(f, "let"),
         }
-    }
-}
-
-#[derive(Default)]
-pub struct Program {
-    pub statements: Vec<Statement>,
-}
-
-impl Program {
-    fn token_literal(&self) -> String {
-        if self.statements.is_empty() {
-            "".to_string()
-        } else {
-            self.statements[0].token_literal()
-        }
-    }
-}
-
-impl fmt::Display for Program {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for s in &self.statements {
-            write!(f, "{}", s)?;
-        }
-        Ok(())
-    }
-}
-
-impl fmt::Debug for Program {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for s in &self.statements {
-            writeln!(f, "{:?}", s)?;
-        }
-        Ok(())
     }
 }

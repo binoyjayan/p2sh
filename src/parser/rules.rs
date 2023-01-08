@@ -75,6 +75,10 @@ lazy_static! {
             Some(Parser::parse_infix_expression),
             Precedence::Factor,
         );
+        rules[TokenType::True as usize] =
+            ParseRule::new(Some(Parser::parse_boolean), None, Precedence::Lowest);
+        rules[TokenType::False as usize] =
+            ParseRule::new(Some(Parser::parse_boolean), None, Precedence::Lowest);
         rules
     };
 }
@@ -136,6 +140,13 @@ impl Parser {
             operator,
             left: Box::new(left),
             right: Box::new(right),
+        })
+    }
+
+    fn parse_boolean(&mut self) -> Expression {
+        Expression::Bool(BooleanExpr {
+            token: self.current.clone(),
+            value: self.curr_token_is(&TokenType::True),
         })
     }
 }

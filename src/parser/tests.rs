@@ -42,6 +42,17 @@ fn test_numeric_literal(expr: &Expression, expected: f64) {
 }
 
 #[cfg(test)]
+fn test_boolean_literal(expr: &Expression, expected: bool) {
+    if let Expression::Bool(num) = expr {
+        if num.value != expected {
+            panic!("number.value not '{}'. got='{}'", expected, num.value);
+        }
+    } else {
+        panic!("expr not Boolean. got={:?}", expr);
+    }
+}
+
+#[cfg(test)]
 fn test_identifier(expression: &Expression, value: String) {
     if let Expression::Ident(ident) = expression {
         if ident.value == value {
@@ -171,7 +182,7 @@ fn test_identifier_expression() {
 }
 
 #[test]
-fn test_number_literal_expression() {
+fn test_numeric_literal_expression() {
     let input = "5;";
     let program = parse_test_program(input, 1);
 
@@ -394,11 +405,57 @@ fn test_parsing_operator_precedence() {
             expected: "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
             num_stmts: 1,
         },
+        PrecedenceTest {
+            input: "true",
+            expected: "true",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "false",
+            expected: "false",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "3 > 5 == false",
+            expected: "((3 > 5) == false)",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "3 < 5 == true",
+            expected: "((3 < 5) == true)",
+            num_stmts: 1,
+        },
     ];
 
     for test in precedence_tests {
         let program = parse_test_program(test.input, test.num_stmts);
         let actual = format!("{}", program);
         assert_eq!(actual, test.expected);
+    }
+}
+
+#[test]
+fn test_boolean_expressions() {
+    let input = "true;false;";
+    let program = parse_test_program(input, 2);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        test_boolean_literal(&stmt.value, true);
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+
+    let stmt = &program.statements[1];
+    if let Statement::Expr(stmt) = stmt {
+        test_boolean_literal(&stmt.value, false);
+    } else {
+        panic!(
+            "program.statements[1] is not an expression statement. got={}",
+            stmt
+        );
     }
 }

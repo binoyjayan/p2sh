@@ -8,6 +8,7 @@ pub enum Expression {
     Number(NumberLiteral),
     Unary(UnaryExpr),
     Binary(BinaryExpr),
+    Bool(BooleanExpr),
     Nil,
 }
 
@@ -62,6 +63,18 @@ impl fmt::Display for BinaryExpr {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct BooleanExpr {
+    pub token: Token,
+    pub value: bool,
+}
+
+impl fmt::Display for BooleanExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.token.literal)
+    }
+}
+
 impl Expression {
     fn token_literal(&self) -> String {
         match &self {
@@ -69,6 +82,7 @@ impl Expression {
             Expression::Number(num) => num.token.literal.clone(),
             Expression::Unary(unary) => unary.token.literal.clone(),
             Expression::Binary(binary) => binary.token.literal.clone(),
+            Expression::Bool(b) => b.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
         }
     }
@@ -81,6 +95,7 @@ impl fmt::Display for Expression {
             Expression::Number(num) => write!(f, "{}", num),
             Expression::Unary(prefix) => write!(f, "{}", prefix),
             Expression::Binary(binary) => write!(f, "{}", binary),
+            Expression::Bool(b) => write!(f, "{}", b),
             Expression::Nil => write!(f, "let"),
         }
     }

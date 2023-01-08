@@ -143,10 +143,60 @@ impl Parser {
         }))
     }
 
+    /// Parsing an expression statement starts with 'parse_expression()'
+    /// It first tries to find a prefix parser for the current token called.
+    /// with 'Precedence::Lowest' as the parameter. The first token will always
+    /// belong to some kind of prefix expression. It may turn out to be nested
+    /// as an operand inside one or more infix expressions but as the code is
+    /// read from left to right, the first token always belong to a prefix
+    /// expression. It can be as simple as an identifier or a numeric
+    /// expression, or as complicated as prefix expression such as '-' that
+    /// accepts an arbitrary expression as its operand. If there is no prefix
+    /// parse function, it is a syntax error. Otherwise, call the prefix
+    /// parse function to parse the the current token and assign the resulting
+    /// AST node into 'left_expr'. After parsing that, the prefix expression
+    /// is done. Now look for an infix parser for the next token. If one is found,
+    /// it means the prefix expression that was already compiled might be an
+    /// operand to the infix operator, but only if 'precedence' is low enough
+    /// to permit the infix operator. If the next token is too low precedence,
+    /// or isn't an infix operator at all, the parsing is done. Otherwise,
+    /// consume the operator and hand off control to the infix parser that was
+    /// found. It consumes whatever other tokens it needs (the operator and
+    /// the right operand) and returns back to parse_expression(). The infix
+    /// parse function then creates a binary operator ast node with the left
+    /// and right operand and the operator. Note that the infix parse function
+    /// is passed the left operand as argument since it was already consumed.
+    /// Also note that the right operand itself can be an prefix expression
+    /// in itself (e.g. a numeric expression) or another infix expression
+    /// such as a binary '+'. Then the loop continues and see if the next
+    /// token is also a valid infix operator that can take the entire preceding
+    /// expression as its operand. Continue the loop crunching through infix
+    /// operators and their operands until a token is hit that that isn't an
+    /// infix operator or is too low precedence.
+    ///
+    /// The associativity of infix expressions depends on the precedence
+    /// condition used in the loop.
+    /// 'a + b + c' -->> ((a + b) + c) when 'precedence < self.peek_precedence()'
+    /// 'a + b + c' -->> (a + (b + c)) when 'precedence <= self.peek_precedence()'
+    ///
+    /// The call to 'peek_token_is(&TokenType::Semicolon)' is actually redundant.
+    /// peek_precedence() returns 'Lowest' as the default precedence for the
+    /// token type Semicolon. It only makes the code look more logical.
     fn parse_expression(&mut self, precedence: Precedence) -> Expression {
         let ttype = self.current.ttype as usize;
         if let Some(prefix) = &PARSE_RULES[ttype].prefix {
-            prefix(self)
+            let mut left_expr = prefix(self);
+            while !self.peek_token_is(&TokenType::Semicolon) && precedence < self.peek_precedence()
+            {
+                let next_ttype = self.peek_next.ttype as usize;
+                if let Some(infix) = &PARSE_RULES[next_ttype].infix {
+                    self.next_token();
+                    left_expr = infix(self, left_expr);
+                } else {
+                    return left_expr;
+                }
+            }
+            left_expr
         } else {
             self.no_prefix_parse_error(self.current.ttype);
             Expression::Nil

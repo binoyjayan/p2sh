@@ -2,8 +2,9 @@
 
 use std::convert::From;
 
-#[derive(PartialEq, Eq, PartialOrd, Copy, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Copy, Clone, Default)]
 pub enum Precedence {
+    #[default]
     Lowest = 0,
     Assignment, // =
     Or,         // or

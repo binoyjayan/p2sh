@@ -7,6 +7,7 @@ pub enum Expression {
     Ident(Identifier),
     Number(NumberLiteral),
     Unary(UnaryExpr),
+    Binary(BinaryExpr),
     Nil,
 }
 
@@ -62,14 +63,28 @@ impl fmt::Display for NumberLiteral {
 
 #[derive(Clone, Debug)]
 pub struct UnaryExpr {
-    pub token: Token,
+    pub token: Token, //operator token
     pub operator: String,
     pub right: Box<Expression>,
 }
 
 impl fmt::Display for UnaryExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.token, self.right.token_literal())
+        write!(f, "({}{})", self.token, self.right)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct BinaryExpr {
+    pub token: Token, //operator token
+    pub operator: String,
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
+}
+
+impl fmt::Display for BinaryExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({} {} {})", self.left, self.token, self.right)
     }
 }
 
@@ -98,7 +113,8 @@ impl Expression {
         match &self {
             Expression::Ident(ident) => ident.token.literal.clone(),
             Expression::Number(num) => num.token.literal.clone(),
-            Expression::Unary(prefix) => prefix.token.literal.clone(),
+            Expression::Unary(unary) => unary.token.literal.clone(),
+            Expression::Binary(binary) => binary.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
         }
     }
@@ -110,6 +126,7 @@ impl fmt::Display for Expression {
             Expression::Ident(ident) => write!(f, "{}", ident),
             Expression::Number(num) => write!(f, "{}", num),
             Expression::Unary(prefix) => write!(f, "{}", prefix),
+            Expression::Binary(binary) => write!(f, "{}", binary),
             Expression::Nil => write!(f, "let"),
         }
     }

@@ -89,6 +89,9 @@ lazy_static! {
         // Control flow
         rules[TokenType::If as usize] =
             ParseRule::new(Some(Parser::parse_if_expr), None, Precedence::Lowest);
+        // Function
+        rules[TokenType::Function as usize] =
+            ParseRule::new(Some(Parser::parse_function_literal), None, Precedence::Lowest);
         rules
     };
 }
@@ -218,5 +221,54 @@ impl Parser {
             self.next_token();
         }
         BlockStatement { token, statements }
+    }
+
+    fn parse_function_literal(&mut self) -> Expression {
+        let token = self.current.clone();
+        if !self.expect_peek(&TokenType::LeftParen) {
+            return Expression::Nil;
+        }
+        let params = self.parse_function_params();
+        if !self.expect_peek(&TokenType::LeftBrace) {
+            return Expression::Nil;
+        }
+        let body = self.parse_block_statement();
+        Expression::Function(FunctionLiteral {
+            token,
+            params,
+            body,
+        })
+    }
+
+    fn parse_function_params(&mut self) -> Vec<Identifier> {
+        let mut identifiers = Vec::new();
+        if self.peek_token_is(&TokenType::RightParen) {
+            self.next_token();
+            return identifiers;
+        }
+        self.next_token();
+        let token_ident = self.current.clone();
+        let ident_value = token_ident.literal.clone();
+        identifiers.push(Identifier {
+            token: token_ident,
+            value: ident_value,
+        });
+
+        while self.peek_token_is(&TokenType::Comma) {
+            self.next_token();
+            self.next_token();
+            let token_ident = self.current.clone();
+            let ident_value = token_ident.literal.clone();
+            identifiers.push(Identifier {
+                token: token_ident,
+                value: ident_value,
+            });
+        }
+
+        if !self.expect_peek(&TokenType::RightParen) {
+            return Vec::new();
+        }
+
+        identifiers
     }
 }

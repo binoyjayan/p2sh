@@ -12,6 +12,7 @@ pub enum Expression {
     Binary(BinaryExpr),
     Bool(BooleanExpr),
     If(IfExpr),
+    Function(FunctionLiteral),
     Nil,
 }
 
@@ -96,6 +97,25 @@ impl fmt::Display for IfExpr {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct FunctionLiteral {
+    pub token: Token,
+    pub params: Vec<Identifier>,
+    pub body: BlockStatement,
+}
+
+impl fmt::Display for FunctionLiteral {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let params_str = self
+            .params
+            .iter()
+            .map(|p| format!("{}, ", p))
+            .collect::<String>();
+        let params_str = params_str.trim_end_matches(',');
+        write!(f, "{} ({}) {}", self.token, params_str, self.body)
+    }
+}
+
 impl Expression {
     fn token_literal(&self) -> String {
         match &self {
@@ -105,6 +125,7 @@ impl Expression {
             Expression::Binary(binary) => binary.token.literal.clone(),
             Expression::Bool(b) => b.token.literal.clone(),
             Expression::If(i) => i.token.literal.clone(),
+            Expression::Function(f) => f.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
         }
     }
@@ -119,6 +140,7 @@ impl fmt::Display for Expression {
             Expression::Binary(binary) => write!(f, "{}", binary),
             Expression::Bool(b) => write!(f, "{}", b),
             Expression::If(i) => write!(f, "{}", i),
+            Expression::Function(fun) => write!(f, "{}", fun),
             Expression::Nil => write!(f, "let"),
         }
     }

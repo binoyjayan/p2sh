@@ -60,18 +60,23 @@ fn test_boolean_literal(expr: &Expression, expected: bool) {
 }
 
 #[cfg(test)]
+fn test_ident_token_literal(ident: &Identifier, value: &str) {
+    if ident.value == value {
+        if ident.token.literal != value {
+            panic!(
+                "ident.token.literal not {}. got={}",
+                value, ident.token.literal
+            );
+        }
+    } else {
+        panic!("ident.value not {}. got={}", value, ident);
+    }
+}
+
+#[cfg(test)]
 fn test_identifier(expression: &Expression, value: &str) {
     if let Expression::Ident(ident) = expression {
-        if ident.value == value {
-            if ident.token.literal != value {
-                panic!(
-                    "ident.token.literal not {}. got={}",
-                    value, ident.token.literal
-                );
-            }
-        } else {
-            panic!("ident.value not {}. got={}", value, ident);
-        }
+        test_ident_token_literal(ident, value);
     } else {
         panic!("expr not an Identifier. got={:?}", expression);
     }
@@ -612,6 +617,52 @@ fn test_if_then_else_expression() {
             }
         } else {
             panic!("stmt.expr is not an If expression. got={}", stmt.value);
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_function_literal_parsing() {
+    let input = "fn(x, y) { x + y; }";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::Function(expr) = &stmt.value {
+            assert_eq!(
+                expr.params.len(),
+                2,
+                "FunctionLiteral params wrong. want 2, got={}",
+                expr.params.len()
+            );
+            test_ident_token_literal(&expr.params[0], "x");
+            test_ident_token_literal(&expr.params[1], "y");
+
+            assert_eq!(
+                expr.body.statements.len(),
+                1,
+                "function.body.statements has not one statements. got={}",
+                expr.body.statements.len()
+            );
+
+            if let Statement::Expr(expr) = &expr.body.statements[0] {
+                test_infix_expression(&expr.value, Literal::Str("x"), "+", Literal::Str("y"));
+            } else {
+                panic!(
+                    "function.body.statements[0] is not an expression statement. got={}",
+                    expr.body.statements[0]
+                );
+            }
+        } else {
+            panic!(
+                "stmt.expr is not a FunctionLiteral expression. got={}",
+                stmt.value
+            );
         }
     } else {
         panic!(

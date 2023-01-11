@@ -83,9 +83,9 @@ lazy_static! {
             ParseRule::new(Some(Parser::parse_boolean), None, Precedence::Lowest);
         rules[TokenType::False as usize] =
             ParseRule::new(Some(Parser::parse_boolean), None, Precedence::Lowest);
-        // Grouped
+        // Grouped expressions (prefix parser) and call expressions (infix parser)
         rules[TokenType::LeftParen as usize] =
-            ParseRule::new(Some(Parser::parse_grouped), None, Precedence::Lowest);
+            ParseRule::new(Some(Parser::parse_grouped), Some(Parser::parse_call_expression), Precedence::Call);
         // Control flow
         rules[TokenType::If as usize] =
             ParseRule::new(Some(Parser::parse_if_expr), None, Precedence::Lowest);
@@ -266,9 +266,46 @@ impl Parser {
         }
 
         if !self.expect_peek(&TokenType::RightParen) {
+            // TODO: return Nil
             return Vec::new();
         }
 
         identifiers
+    }
+
+    // Call expressions do not have new token types. A call expression is an
+    // identifier followed by a '(', a set of arguments separated by ','
+    // followed by a ')' token. That makes it an infix parse expression since
+    // the token '(' is in the middle of the identifier and the arguments list.
+    fn parse_call_expression(&mut self, func: Expression) -> Expression {
+        let token = self.current.clone();
+
+        Expression::Call(CallExpr {
+            token,
+            func: Box::new(func),
+            args: self.parse_call_args(),
+        })
+    }
+
+    fn parse_call_args(&mut self) -> Vec<Expression> {
+        let mut args = Vec::new();
+
+        if self.peek_token_is(&TokenType::RightParen) {
+            self.next_token();
+            return args;
+        }
+        self.next_token();
+        args.push(self.parse_expression(Precedence::Lowest));
+        while self.peek_token_is(&TokenType::Comma) {
+            self.next_token();
+            self.next_token();
+            args.push(self.parse_expression(Precedence::Lowest));
+        }
+
+        if !self.expect_peek(&TokenType::RightParen) {
+            // TODO: return Nil
+            return Vec::new();
+        }
+        args
     }
 }

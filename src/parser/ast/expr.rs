@@ -13,6 +13,7 @@ pub enum Expression {
     Bool(BooleanExpr),
     If(IfExpr),
     Function(FunctionLiteral),
+    Call(CallExpr),
     Nil,
 }
 
@@ -116,6 +117,25 @@ impl fmt::Display for FunctionLiteral {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct CallExpr {
+    pub token: Token,          // The '(' Token
+    pub func: Box<Expression>, // Identifier or FunctionLiteral
+    pub args: Vec<Expression>,
+}
+
+impl fmt::Display for CallExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let args_str = self
+            .args
+            .iter()
+            .map(|p| format!("{}, ", p))
+            .collect::<String>();
+        let args_str = args_str.trim_end_matches(|c| c == ' ' || c == ',');
+        write!(f, "{}({})", self.func, args_str)
+    }
+}
+
 impl Expression {
     fn token_literal(&self) -> String {
         match &self {
@@ -126,6 +146,7 @@ impl Expression {
             Expression::Bool(b) => b.token.literal.clone(),
             Expression::If(i) => i.token.literal.clone(),
             Expression::Function(f) => f.token.literal.clone(),
+            Expression::Call(c) => c.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
         }
     }
@@ -141,6 +162,7 @@ impl fmt::Display for Expression {
             Expression::Bool(b) => write!(f, "{}", b),
             Expression::If(i) => write!(f, "{}", i),
             Expression::Function(fun) => write!(f, "{}", fun),
+            Expression::Call(c) => write!(f, "{}", c),
             Expression::Nil => write!(f, "let"),
         }
     }

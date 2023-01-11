@@ -517,6 +517,21 @@ fn test_parsing_operator_precedence() {
             expected: "(!(true == true))",
             num_stmts: 1,
         },
+        PrecedenceTest {
+            input: "a + add(b * c) + d",
+            expected: "((a + add((b * c))) + d)",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+            expected: "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "add(a + b + c * d / f + g)",
+            expected: "add((((a + b) + ((c * d) / f)) + g))",
+            num_stmts: 1,
+        },
     ];
 
     for test in precedence_tests {
@@ -627,7 +642,7 @@ fn test_if_then_else_expression() {
 }
 
 #[test]
-fn test_function_literal_parsing() {
+fn test_parsing_function_literal() {
     let input = "fn(x, y) { x + y; }";
     let program = parse_test_program(input, 1);
 
@@ -663,6 +678,39 @@ fn test_function_literal_parsing() {
                 "stmt.expr is not a FunctionLiteral expression. got={}",
                 stmt.value
             );
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_parsing_call_expression() {
+    let input = "add(1, 2 * 3, 4 + 5);";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::Call(expr) = &stmt.value {
+            test_identifier(&expr.func, "add");
+            assert_eq!(
+                expr.args.len(),
+                3,
+                "wrong length of arguments. got={}",
+                expr.args.len()
+            );
+            test_literal(&expr.args[0], Literal::Numeric(1.));
+            test_infix_expression(
+                &expr.args[1],
+                Literal::Numeric(2.),
+                "*",
+                Literal::Numeric(3.),
+            );
+        } else {
+            panic!("stmt.expr is not a CallExpr expression. got={}", stmt.value);
         }
     } else {
         panic!(

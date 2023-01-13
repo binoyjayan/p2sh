@@ -1,8 +1,8 @@
 use std::io;
 use std::io::{BufRead, Write};
 
-use token::*;
-
+mod evaluator;
+mod object;
 mod parser;
 mod scanner;
 mod token;
@@ -39,7 +39,8 @@ fn run(source: &str) {
     if print_parse_errors(&parser) {
         return;
     }
-    println!("{}", program);
+    let evaluated = evaluator::eval_program(program);
+    println!("{}", evaluated);
 }
 
 fn print_parse_errors(parser: &parser::Parser) -> bool {

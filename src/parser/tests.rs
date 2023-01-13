@@ -132,30 +132,51 @@ fn test_infix_expression(expression: &Expression, left: Literal, operator: &str,
 
 #[test]
 fn test_let_statements() {
-    let input = "
-        let x = 5;
-        let y = 10;
-        let foobar = 838383;
-        ";
-    let identifiers = ["x", "y", "foobar"];
+    struct TestLet {
+        input: &'static str,
+        expected_id: &'static str,
+        expected_val: Literal,
+    }
+    let let_tests = vec![
+        TestLet {
+            input: "let x = 5;",
+            expected_id: "x",
+            expected_val: Literal::Numeric(5.),
+        },
+        TestLet {
+            input: "let y = true;",
+            expected_id: "y",
+            expected_val: Literal::Bool(true),
+        },
+        TestLet {
+            input: "let foobar = y;",
+            expected_id: "foobar",
+            expected_val: Literal::Str("y"),
+        },
+    ];
 
-    let program = parse_test_program(input, 3);
-    for (i, tt) in identifiers.iter().enumerate() {
-        let stmt = &program.statements[i];
-        test_let_statement(stmt, tt);
+    for test in let_tests {
+        let program = parse_test_program(test.input, 1);
+
+        let stmt = &program.statements[0];
+        test_let_statement(&stmt, test.expected_id, test.expected_val);
     }
 }
 
 #[cfg(test)]
-fn test_let_statement(stmt: &Statement, name: &str) {
+fn test_let_statement(stmt: &Statement, expected_id: &str, expected_val: Literal) {
     if stmt.token_literal() != "let" {
         panic!("stmt.token_literal not 'let'. got={}", stmt.token_literal());
     }
 
     if let Statement::Let(s) = stmt {
-        if s.name.value != name {
-            panic!("let_stmt.name.value not '{}'. got={}", name, s.name.value);
+        if s.name.value != expected_id {
+            panic!(
+                "let_stmt.name.value not '{}'. got={}",
+                expected_id, s.name.value
+            );
         }
+        test_literal(&s.value, expected_val);
     } else {
         panic!("stmt is not a 'let' statement");
     }

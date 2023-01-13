@@ -163,7 +163,7 @@ impl fmt::Display for Expression {
             Expression::If(i) => write!(f, "{}", i),
             Expression::Function(fun) => write!(f, "{}", fun),
             Expression::Call(c) => write!(f, "{}", c),
-            Expression::Nil => write!(f, "let"),
+            Expression::Nil => write!(f, "nil"),
         }
     }
 }

@@ -98,12 +98,17 @@ impl Parser {
 
     fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
         let token_let = self.current.clone();
-        // TODO: return false?
-        self.expect_peek(&TokenType::Identifier);
+        if !self.expect_peek(&TokenType::Identifier) {
+            return Ok(Statement::Nil);
+        }
         let token_ident = self.current.clone();
-        self.expect_peek(&TokenType::Assign);
+        if !self.expect_peek(&TokenType::Assign) {
+            return Ok(Statement::Nil);
+        }
+        self.next_token();
+        let value = self.parse_expression(Precedence::Lowest);
 
-        while !self.curr_token_is(&TokenType::Semicolon) && !self.is_at_end() {
+        if self.peek_token_is(&TokenType::Semicolon) {
             self.next_token();
         }
 
@@ -111,11 +116,10 @@ impl Parser {
             token: token_ident.clone(),
             value: token_ident.literal,
         };
-        // TODO: Use the right 'value'
         let let_stmt = LetStmt {
             token: token_let,
             name: identifier,
-            value: Expression::Nil,
+            value,
         };
         Ok(Statement::Let(let_stmt))
     }
@@ -123,12 +127,13 @@ impl Parser {
     fn parse_return_statement(&mut self) -> Result<Statement, ParseError> {
         let token_ret = self.current.clone();
         self.next_token();
-        while !self.curr_token_is(&TokenType::Semicolon) && !self.is_at_end() {
+        let value = self.parse_expression(Precedence::Lowest);
+        if self.peek_token_is(&TokenType::Semicolon) {
             self.next_token();
         }
         let ret_stmt = ReturnStmt {
             token: token_ret,
-            value: Expression::Nil,
+            value,
         };
         Ok(Statement::Return(ret_stmt))
     }

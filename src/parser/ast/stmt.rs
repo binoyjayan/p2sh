@@ -8,6 +8,7 @@ pub enum Statement {
     Let(LetStmt),
     Return(ReturnStmt),
     Expr(ExpressionStmt),
+    Nil,
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +51,7 @@ impl Statement {
             Statement::Let(stmt) => stmt.token.literal.clone(),
             Statement::Return(stmt) => stmt.token.literal.clone(),
             Statement::Expr(stmt) => stmt.token.literal.clone(),
+            Statement::Nil => "nil".to_string(),
         }
     }
 }
@@ -60,6 +62,7 @@ impl fmt::Display for Statement {
             Statement::Let(l) => write!(f, "let {} = {};", l.name, l.value),
             Statement::Return(r) => write!(f, "return {};", r.value),
             Statement::Expr(e) => write!(f, "{}", e.value),
+            Statement::Nil => write!(f, "nil"),
         }
     }
 }

@@ -266,7 +266,6 @@ impl Parser {
         }
 
         if !self.expect_peek(&TokenType::RightParen) {
-            // TODO: return Nil
             return Vec::new();
         }
 
@@ -303,7 +302,6 @@ impl Parser {
         }
 
         if !self.expect_peek(&TokenType::RightParen) {
-            // TODO: return Nil
             return Vec::new();
         }
         args

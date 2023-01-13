@@ -62,6 +62,11 @@ impl Parser {
         self.peek_next.ttype == TokenType::Eof
     }
 
+    pub fn push_error(&mut self, err: &str) {
+        self.errors
+            .push(format!("[line {}] {}", self.scanner.get_line(), err));
+    }
+
     pub fn parse_errors(&self) -> &Vec<String> {
         &self.errors
     }
@@ -71,7 +76,7 @@ impl Parser {
             "expected next token to be {}, got {} instead",
             ttype, self.peek_next.ttype
         );
-        self.errors.push(msg);
+        self.push_error(&msg);
     }
 
     pub fn parse_program(&mut self) -> Program {
@@ -212,6 +217,6 @@ impl Parser {
 
     fn no_prefix_parse_error(&mut self, ttype: TokenType) {
         let msg = format!("no prefix parser is available for token type '{}'", ttype);
-        self.errors.push(msg);
+        self.push_error(&msg);
     }
 }

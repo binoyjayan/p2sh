@@ -119,7 +119,7 @@ impl Parser {
             })
         } else {
             let msg = format!("could not parse {} as a number", self.current.literal);
-            self.errors.push(msg);
+            self.push_error(&msg);
             Expression::Nil
         }
     }
@@ -205,7 +205,7 @@ impl Parser {
             token,
             condition: Box::new(condition),
             then_stmt: then_stmt,
-            else_stmt: None,
+            else_stmt: else_stmt,
         })
     }
 

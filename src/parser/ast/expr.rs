@@ -90,9 +90,9 @@ pub struct IfExpr {
 
 impl fmt::Display for IfExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "if {} {}", self.condition, self.then_stmt)?;
+        write!(f, "if ({}) {{ {} }}", self.condition, self.then_stmt)?;
         if let Some(else_stmt) = &self.else_stmt {
-            write!(f, "else {}", else_stmt)?;
+            write!(f, " else {{ {} }}", else_stmt)?;
         }
         Ok(())
     }
@@ -112,7 +112,7 @@ impl fmt::Display for FunctionLiteral {
             .iter()
             .map(|p| format!("{}, ", p))
             .collect::<String>();
-        let params_str = params_str.trim_end_matches(',');
+        let params_str = params_str.trim_end_matches(|c| c == ' ' || c == ',');
         write!(f, "{} ({}) {}", self.token, params_str, self.body)
     }
 }

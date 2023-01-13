@@ -33,13 +33,23 @@ pub fn run_prompt() {
 }
 
 fn run(source: &str) {
-    let mut scanner = scanner::Scanner::new(source);
-
-    loop {
-        let token = scanner.next_token();
-        println!("{}", token);
-        if token.ttype == TokenType::Eof {
-            break;
-        }
+    let scanner = scanner::Scanner::new(source);
+    let mut parser = parser::Parser::new(scanner);
+    let program = parser.parse_program();
+    if print_parse_errors(&parser) {
+        return;
     }
+    println!("{}", program);
+}
+
+fn print_parse_errors(parser: &parser::Parser) -> bool {
+    let errors = parser.parse_errors();
+    if errors.is_empty() {
+        return false;
+    }
+    for msg in errors {
+        eprintln!("{}", msg);
+    }
+    eprintln!("{} parse error(s)", errors.len());
+    true
 }

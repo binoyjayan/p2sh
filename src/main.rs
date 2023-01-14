@@ -2,7 +2,6 @@ use std::io;
 use std::io::{BufRead, Write};
 
 mod evaluator;
-mod object;
 mod parser;
 mod scanner;
 mod token;

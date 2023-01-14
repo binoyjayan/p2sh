@@ -21,6 +21,10 @@ fn eval_expression(expr: Expression) -> Object {
     match expr {
         Expression::Number(num) => Object::Number(num.value),
         Expression::Bool(num) => Object::Bool(num.value),
+        Expression::Unary(unary) => {
+            let right = eval_expression(*unary.right);
+            eval_prefix_expr(&unary.operator, right)
+        }
         _ => Object::Nil,
     }
 }
@@ -28,6 +32,30 @@ fn eval_expression(expr: Expression) -> Object {
 fn eval_statement(stmt: Statement) -> Object {
     match stmt {
         Statement::Expr(stmt) => eval_expression(stmt.value),
+        _ => Object::Nil,
+    }
+}
+
+fn eval_prefix_expr(operator: &str, right: Object) -> Object {
+    match operator {
+        "!" => eval_bang_operator_expr(right),
+        "-" => eval_minus_operator_expr(right),
+        _ => Object::Nil,
+    }
+}
+
+fn eval_bang_operator_expr(right: Object) -> Object {
+    match right {
+        Object::Bool(true) => Object::Bool(false),
+        Object::Bool(false) => Object::Bool(true),
+        Object::Nil => Object::Bool(true),
+        _ => Object::Bool(false),
+    }
+}
+
+fn eval_minus_operator_expr(right: Object) -> Object {
+    match right {
+        Object::Number(num) => Object::Number(-num),
         _ => Object::Nil,
     }
 }
@@ -93,6 +121,14 @@ mod tests {
                 input: "10",
                 expected: 10.,
             },
+            NumericObj {
+                input: "-5",
+                expected: -5.,
+            },
+            NumericObj {
+                input: "-10",
+                expected: -10.,
+            },
         ];
         for test in numeric_tests {
             let evaluated = test_eval(test.input);
@@ -113,6 +149,40 @@ mod tests {
             },
             BooleanObj {
                 input: "false",
+                expected: false,
+            },
+        ];
+        for test in boolean_tests {
+            let evaluated = test_eval(test.input);
+            test_boolean_object(evaluated, test.expected);
+        }
+    }
+
+    #[test]
+    fn test_eval_bang_operator() {
+        struct BangExpr {
+            input: &'static str,
+            expected: bool,
+        }
+        let boolean_tests = vec![
+            BangExpr {
+                input: "!true",
+                expected: false,
+            },
+            BangExpr {
+                input: "!false",
+                expected: true,
+            },
+            BangExpr {
+                input: "!5",
+                expected: false,
+            },
+            BangExpr {
+                input: "!!true",
+                expected: true,
+            },
+            BangExpr {
+                input: "!!false",
                 expected: false,
             },
         ];

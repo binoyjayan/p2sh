@@ -1,5 +1,6 @@
 use crate::object::*;
 use crate::parser::ast::expr::*;
+use crate::parser::ast::stmt::BlockStatement;
 use crate::parser::ast::stmt::Statement;
 use crate::parser::ast::*;
 use crate::parser::*;
@@ -17,6 +18,10 @@ fn eval_statements(statements: Vec<Statement>) -> Object {
     result
 }
 
+fn eval_block_statement(stmt: BlockStatement) -> Object {
+    eval_statements(stmt.statements)
+}
+
 fn eval_expression(expr: Expression) -> Object {
     match expr {
         Expression::Number(num) => Object::Number(num.value),
@@ -30,6 +35,17 @@ fn eval_expression(expr: Expression) -> Object {
             let right = eval_expression(*binary.right);
             eval_infix_expr(&binary.operator, left, right)
         }
+        Expression::If(expr) => {
+            let condition = eval_expression(*expr.condition);
+            if is_truthy(condition) {
+                return eval_block_statement(expr.then_stmt);
+            } else {
+                if let Some(else_stmt) = expr.else_stmt {
+                    return eval_block_statement(else_stmt);
+                }
+            }
+            Object::Nil
+        }
         _ => Object::Nil,
     }
 }
@@ -38,6 +54,15 @@ fn eval_statement(stmt: Statement) -> Object {
     match stmt {
         Statement::Expr(stmt) => eval_expression(stmt.value),
         _ => Object::Nil,
+    }
+}
+
+fn is_truthy(obj: Object) -> bool {
+    match obj {
+        Object::Nil => false,
+        Object::Bool(b) => b,
+        Object::Number(n) => n != 0.,
+        _ => true,
     }
 }
 
@@ -122,6 +147,13 @@ mod tests {
             );
         } else {
             panic!("object is not boolean. got={}", evaluated);
+        }
+    }
+
+    fn test_nil_object(evaluated: Object) {
+        if let Object::Nil = evaluated {
+        } else {
+            panic!("object is not nil. got={}", evaluated);
         }
     }
 
@@ -328,6 +360,52 @@ mod tests {
         for test in boolean_tests {
             let evaluated = test_eval(test.input);
             test_boolean_object(evaluated, test.expected);
+        }
+    }
+
+    #[test]
+    fn test_if_else_expr() {
+        struct IfElseExpr {
+            input: &'static str,
+            expected: Object,
+        }
+        let if_else_tests = vec![
+            IfElseExpr {
+                input: "if (true) { 10 }",
+                expected: Object::Number(10.),
+            },
+            IfElseExpr {
+                input: "if (false) { 10 }",
+                expected: Object::Nil,
+            },
+            IfElseExpr {
+                input: "if (1) { 10 }",
+                expected: Object::Number(10.),
+            },
+            IfElseExpr {
+                input: "if (1 < 2) { 10 }",
+                expected: Object::Number(10.),
+            },
+            IfElseExpr {
+                input: "if (1 > 2) { 10 }",
+                expected: Object::Nil,
+            },
+            IfElseExpr {
+                input: "if (1 < 2) { 10 } else { 20 }",
+                expected: Object::Number(10.),
+            },
+            IfElseExpr {
+                input: "if (1 > 2) { 10 } else { 20 }",
+                expected: Object::Number(20.),
+            },
+        ];
+        for test in if_else_tests {
+            let evaluated = test_eval(test.input);
+            match test.expected {
+                Object::Number(expected) => test_numeric_object(evaluated, expected),
+                Object::Nil => test_nil_object(evaluated),
+                _ => panic!("Invalid expected object"),
+            }
         }
     }
 }

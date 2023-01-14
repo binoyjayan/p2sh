@@ -6,20 +6,51 @@ use crate::parser::ast::*;
 use crate::parser::*;
 use crate::scanner::*;
 
+// Unwrap return values here since this is the outer most block
 pub fn eval_program(program: Program) -> Object {
-    eval_statements(program.statements)
+    let mut result = Object::Nil;
+    for stmt in program.statements {
+        result = eval_statement(stmt);
+        if let Object::Return(retval) = result {
+            return *retval;
+        }
+    }
+    result
 }
 
 fn eval_statements(statements: Vec<Statement>) -> Object {
     let mut result = Object::Nil;
     for stmt in statements {
-        result = eval_statement(stmt)
+        result = eval_statement(stmt);
+        if let Object::Return(retval) = result {
+            return *retval;
+        }
     }
     result
 }
 
+// While evaluating block statements, do not unwrap return value.
+// Only check if it is a return value and if so, return the
+// Object::Return(val) object. This is so that a nested block
+// statement can return value correctly. This helps in the outer
+// block also return the wrapped return i.e. Object::Return(val)
+// Unwrapping only happens while executing the outer most block
+// statement which is a statement one level down the program.
 fn eval_block_statement(stmt: BlockStatement) -> Object {
-    eval_statements(stmt.statements)
+    let mut result = Object::Nil;
+    for stmt in stmt.statements {
+        result = eval_statement(stmt);
+        if let Object::Return(_) = result {
+            return result;
+        }
+    }
+    result
+}
+
+// Wrap the return value in a Return object
+fn eval_return_stmt(expr: Expression) -> Object {
+    let value = eval_expression(expr);
+    Object::Return(Box::new(value))
 }
 
 fn eval_expression(expr: Expression) -> Object {
@@ -53,6 +84,7 @@ fn eval_expression(expr: Expression) -> Object {
 fn eval_statement(stmt: Statement) -> Object {
     match stmt {
         Statement::Expr(stmt) => eval_expression(stmt.value),
+        Statement::Return(stmt) => eval_return_stmt(stmt.value),
         _ => Object::Nil,
     }
 }
@@ -404,6 +436,43 @@ mod tests {
             match test.expected {
                 Object::Number(expected) => test_numeric_object(evaluated, expected),
                 Object::Nil => test_nil_object(evaluated),
+                _ => panic!("Invalid expected object"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_return_stmt() {
+        struct ReturnTest {
+            input: &'static str,
+            expected: Object,
+        }
+        let if_else_tests = vec![
+            ReturnTest {
+                input: "return 10;",
+                expected: Object::Number(10.),
+            },
+            ReturnTest {
+                input: "return 10; 9;",
+                expected: Object::Number(10.),
+            },
+            ReturnTest {
+                input: "return 2 * 5; 9;",
+                expected: Object::Number(10.),
+            },
+            ReturnTest {
+                input: "9; return 2 * 5; 9;",
+                expected: Object::Number(10.),
+            },
+            ReturnTest {
+                input: "if (10 > 1) { if (10 > 1) { return 10; } return 1; }",
+                expected: Object::Number(10.),
+            },
+        ];
+        for test in if_else_tests {
+            let evaluated = test_eval(test.input);
+            match test.expected {
+                Object::Number(expected) => test_numeric_object(evaluated, expected),
                 _ => panic!("Invalid expected object"),
             }
         }

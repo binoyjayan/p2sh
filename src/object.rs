@@ -8,6 +8,7 @@ pub enum Object {
     Str(String),
     Number(f64),
     Bool(bool),
+    Return(Box<Object>),
 }
 
 impl PartialEq for Object {
@@ -41,6 +42,7 @@ impl Clone for Object {
             Object::Str(s) => Object::Str(s.clone()),
             Object::Number(n) => Object::Number(*n),
             Object::Bool(b) => Object::Bool(*b),
+            Object::Return(r) => Object::Return(r.clone()),
         }
     }
 }
@@ -64,6 +66,7 @@ impl fmt::Display for Object {
             Self::Str(s) => write!(f, "{}", s),
             Self::Number(val) => write!(f, "{}", val),
             Self::Bool(val) => write!(f, "{}", val),
+            Self::Return(val) => write!(f, "{}", val),
         }
     }
 }

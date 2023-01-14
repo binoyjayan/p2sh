@@ -219,4 +219,14 @@ impl Parser {
         let msg = format!("no prefix parser is available for token type '{}'", ttype);
         self.push_error(&msg);
     }
+
+    pub fn print_errors(&self) -> bool {
+        if self.errors.is_empty() {
+            return false;
+        }
+        for msg in &self.errors {
+            eprintln!("{}", msg);
+        }
+        true
+    }
 }

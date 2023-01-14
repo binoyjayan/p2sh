@@ -39,18 +39,16 @@ fn run(source: &str) {
     if print_parse_errors(&parser) {
         return;
     }
-    let evaluated = evaluator::eval_program(program);
+    let evaluator = evaluator::Evaluator::new();
+    let evaluated = evaluator.eval_program(program);
     println!("{}", evaluated);
 }
 
 fn print_parse_errors(parser: &parser::Parser) -> bool {
-    let errors = parser.parse_errors();
-    if errors.is_empty() {
-        return false;
+    if parser.print_errors() {
+        eprintln!("{} parse errors", parser.parse_errors().len());
+        true
+    } else {
+        false
     }
-    for msg in errors {
-        eprintln!("{}", msg);
-    }
-    eprintln!("{} parse error(s)", errors.len());
-    true
 }

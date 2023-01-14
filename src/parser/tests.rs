@@ -27,14 +27,9 @@ fn parse_test_program(input: &str, num_stmts: usize) -> Program {
 
 #[cfg(test)]
 fn check_parse_errors(parser: &Parser) {
-    if parser.errors.is_empty() {
-        return;
+    if parser.print_errors() {
+        panic!("{} parse errors", parser.parse_errors().len());
     }
-    eprintln!("parser has {} errors", parser.parse_errors().len());
-    for msg in parser.parse_errors() {
-        eprintln!("parser error: {}", msg);
-    }
-    panic!();
 }
 
 #[cfg(test)]

@@ -6,141 +6,149 @@ use crate::parser::ast::*;
 use crate::parser::*;
 use crate::scanner::*;
 
-// Unwrap return values here since this is the outer most block
-pub fn eval_program(program: Program) -> Object {
-    let mut result = Object::Nil;
-    for stmt in program.statements {
-        result = eval_statement(stmt);
-        if let Object::Return(retval) = result {
-            return *retval;
-        }
+pub struct Evaluator {}
+
+impl Evaluator {
+    pub fn new() -> Self {
+        Self {}
     }
-    result
-}
 
-fn eval_statements(statements: Vec<Statement>) -> Object {
-    let mut result = Object::Nil;
-    for stmt in statements {
-        result = eval_statement(stmt);
-        if let Object::Return(retval) = result {
-            return *retval;
-        }
-    }
-    result
-}
-
-// While evaluating block statements, do not unwrap return value.
-// Only check if it is a return value and if so, return the
-// Object::Return(val) object. This is so that a nested block
-// statement can return value correctly. This helps in the outer
-// block also return the wrapped return i.e. Object::Return(val)
-// Unwrapping only happens while executing the outer most block
-// statement which is a statement one level down the program.
-fn eval_block_statement(stmt: BlockStatement) -> Object {
-    let mut result = Object::Nil;
-    for stmt in stmt.statements {
-        result = eval_statement(stmt);
-        if let Object::Return(_) = result {
-            return result;
-        }
-    }
-    result
-}
-
-// Wrap the return value in a Return object
-fn eval_return_stmt(expr: Expression) -> Object {
-    let value = eval_expression(expr);
-    Object::Return(Box::new(value))
-}
-
-fn eval_expression(expr: Expression) -> Object {
-    match expr {
-        Expression::Number(num) => Object::Number(num.value),
-        Expression::Bool(num) => Object::Bool(num.value),
-        Expression::Unary(unary) => {
-            let right = eval_expression(*unary.right);
-            eval_prefix_expr(&unary.operator, right)
-        }
-        Expression::Binary(binary) => {
-            let left = eval_expression(*binary.left);
-            let right = eval_expression(*binary.right);
-            eval_infix_expr(&binary.operator, left, right)
-        }
-        Expression::If(expr) => {
-            let condition = eval_expression(*expr.condition);
-            if is_truthy(condition) {
-                return eval_block_statement(expr.then_stmt);
-            } else {
-                if let Some(else_stmt) = expr.else_stmt {
-                    return eval_block_statement(else_stmt);
-                }
+    // Unwrap return values here since this is the outer most block
+    pub fn eval_program(&self, program: Program) -> Object {
+        let mut result = Object::Nil;
+        for stmt in program.statements {
+            result = self.eval_statement(stmt);
+            if let Object::Return(retval) = result {
+                return *retval;
             }
-            Object::Nil
         }
-        _ => Object::Nil,
+        result
     }
-}
 
-fn eval_statement(stmt: Statement) -> Object {
-    match stmt {
-        Statement::Expr(stmt) => eval_expression(stmt.value),
-        Statement::Return(stmt) => eval_return_stmt(stmt.value),
-        _ => Object::Nil,
+    fn eval_statements(&self, statements: Vec<Statement>) -> Object {
+        let mut result = Object::Nil;
+        for stmt in statements {
+            result = self.eval_statement(stmt);
+            if let Object::Return(retval) = result {
+                return *retval;
+            }
+        }
+        result
     }
-}
 
-fn is_truthy(obj: Object) -> bool {
-    match obj {
-        Object::Nil => false,
-        Object::Bool(b) => b,
-        Object::Number(n) => n != 0.,
-        _ => true,
+    // While evaluating block statements, do not unwrap return value.
+    // Only check if it is a return value and if so, return the
+    // Object::Return(val) object. This is so that a nested block
+    // statement can return value correctly. This helps in the outer
+    // block also return the wrapped return i.e. Object::Return(val)
+    // Unwrapping only happens while executing the outer most block
+    // statement which is a statement one level down the program.
+    fn eval_block_statement(&self, stmt: BlockStatement) -> Object {
+        let mut result = Object::Nil;
+        for stmt in stmt.statements {
+            result = self.eval_statement(stmt);
+            if let Object::Return(_) = result {
+                return result;
+            }
+        }
+        result
     }
-}
 
-fn eval_prefix_expr(operator: &str, right: Object) -> Object {
-    match operator {
-        "!" => eval_bang_operator_expr(right),
-        "-" => eval_minus_operator_expr(right),
-        _ => Object::Nil,
+    // Wrap the return value in a Return object
+    fn eval_return_stmt(&self, expr: Expression) -> Object {
+        let value = self.eval_expression(expr);
+        Object::Return(Box::new(value))
     }
-}
 
-fn eval_bang_operator_expr(right: Object) -> Object {
-    match right {
-        Object::Bool(true) => Object::Bool(false),
-        Object::Bool(false) => Object::Bool(true),
-        Object::Nil => Object::Bool(true),
-        _ => Object::Bool(false),
-    }
-}
-
-fn eval_minus_operator_expr(right: Object) -> Object {
-    match right {
-        Object::Number(num) => Object::Number(-num),
-        _ => Object::Nil,
-    }
-}
-
-fn eval_infix_expr(operator: &str, left: Object, right: Object) -> Object {
-    match (left, right) {
-        (Object::Number(left), Object::Number(right)) => match operator {
-            "+" => Object::Number(left + right),
-            "-" => Object::Number(left - right),
-            "*" => Object::Number(left * right),
-            "/" => Object::Number(left / right),
-            "<" => Object::Bool(left < right),
-            ">" => Object::Bool(left > right),
-            "==" => Object::Bool(left == right),
-            "!=" => Object::Bool(left != right),
+    fn eval_expression(&self, expr: Expression) -> Object {
+        match expr {
+            Expression::Number(num) => Object::Number(num.value),
+            Expression::Bool(num) => Object::Bool(num.value),
+            Expression::Unary(unary) => {
+                let right = self.eval_expression(*unary.right);
+                self.eval_prefix_expr(&unary.operator, right)
+            }
+            Expression::Binary(binary) => {
+                let left = self.eval_expression(*binary.left);
+                let right = self.eval_expression(*binary.right);
+                self.eval_infix_expr(&binary.operator, left, right)
+            }
+            Expression::If(expr) => {
+                let condition = self.eval_expression(*expr.condition);
+                if Self::is_truthy(condition) {
+                    return self.eval_block_statement(expr.then_stmt);
+                } else {
+                    if let Some(else_stmt) = expr.else_stmt {
+                        return self.eval_block_statement(else_stmt);
+                    }
+                }
+                Object::Nil
+            }
             _ => Object::Nil,
-        },
-        (Object::Bool(left), Object::Bool(right)) => match operator {
-            "==" => Object::Bool(left == right),
-            "!=" => Object::Bool(left != right),
+        }
+    }
+
+    fn eval_statement(&self, stmt: Statement) -> Object {
+        match stmt {
+            Statement::Expr(stmt) => self.eval_expression(stmt.value),
+            Statement::Return(stmt) => self.eval_return_stmt(stmt.value),
             _ => Object::Nil,
-        },
-        _ => Object::Nil,
+        }
+    }
+
+    fn is_truthy(obj: Object) -> bool {
+        match obj {
+            Object::Nil => false,
+            Object::Bool(b) => b,
+            Object::Number(n) => n != 0.,
+            _ => true,
+        }
+    }
+
+    fn eval_prefix_expr(&self, operator: &str, right: Object) -> Object {
+        match operator {
+            "!" => self.eval_bang_operator_expr(right),
+            "-" => self.eval_minus_operator_expr(right),
+            _ => Object::Nil,
+        }
+    }
+
+    fn eval_bang_operator_expr(&self, right: Object) -> Object {
+        match right {
+            Object::Bool(true) => Object::Bool(false),
+            Object::Bool(false) => Object::Bool(true),
+            Object::Nil => Object::Bool(true),
+            _ => Object::Bool(false),
+        }
+    }
+
+    fn eval_minus_operator_expr(&self, right: Object) -> Object {
+        match right {
+            Object::Number(num) => Object::Number(-num),
+            _ => Object::Nil,
+        }
+    }
+
+    fn eval_infix_expr(&self, operator: &str, left: Object, right: Object) -> Object {
+        match (left, right) {
+            (Object::Number(left), Object::Number(right)) => match operator {
+                "+" => Object::Number(left + right),
+                "-" => Object::Number(left - right),
+                "*" => Object::Number(left * right),
+                "/" => Object::Number(left / right),
+                "<" => Object::Bool(left < right),
+                ">" => Object::Bool(left > right),
+                "==" => Object::Bool(left == right),
+                "!=" => Object::Bool(left != right),
+                _ => Object::Nil,
+            },
+            (Object::Bool(left), Object::Bool(right)) => match operator {
+                "==" => Object::Bool(left == right),
+                "!=" => Object::Bool(left != right),
+                _ => Object::Nil,
+            },
+            _ => Object::Nil,
+        }
     }
 }
 
@@ -148,14 +156,9 @@ fn eval_infix_expr(operator: &str, left: Object, right: Object) -> Object {
 mod tests {
     use super::*;
     fn check_parse_errors(parser: &Parser) {
-        let errors = parser.parse_errors();
-        if errors.is_empty() {
-            return;
+        if parser.print_errors() {
+            panic!("{} parse errors", parser.parse_errors().len());
         }
-        for msg in errors {
-            eprintln!("{}", msg);
-        }
-        panic!("{} parse error(s)", errors.len());
     }
 
     fn test_numeric_object(evaluated: Object, expected: f64) {
@@ -194,7 +197,8 @@ mod tests {
         let mut parser = Parser::new(scanner);
         let program = parser.parse_program();
         check_parse_errors(&parser);
-        eval_program(program)
+        let evaluator = Evaluator::new();
+        evaluator.eval_program(program)
     }
 
     #[test]

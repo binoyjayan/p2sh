@@ -25,6 +25,11 @@ fn eval_expression(expr: Expression) -> Object {
             let right = eval_expression(*unary.right);
             eval_prefix_expr(&unary.operator, right)
         }
+        Expression::Binary(binary) => {
+            let left = eval_expression(*binary.left);
+            let right = eval_expression(*binary.right);
+            eval_infix_expr(&binary.operator, left, right)
+        }
         _ => Object::Nil,
     }
 }
@@ -56,6 +61,28 @@ fn eval_bang_operator_expr(right: Object) -> Object {
 fn eval_minus_operator_expr(right: Object) -> Object {
     match right {
         Object::Number(num) => Object::Number(-num),
+        _ => Object::Nil,
+    }
+}
+
+fn eval_infix_expr(operator: &str, left: Object, right: Object) -> Object {
+    match (left, right) {
+        (Object::Number(left), Object::Number(right)) => match operator {
+            "+" => Object::Number(left + right),
+            "-" => Object::Number(left - right),
+            "*" => Object::Number(left * right),
+            "/" => Object::Number(left / right),
+            "<" => Object::Bool(left < right),
+            ">" => Object::Bool(left > right),
+            "==" => Object::Bool(left == right),
+            "!=" => Object::Bool(left != right),
+            _ => Object::Nil,
+        },
+        (Object::Bool(left), Object::Bool(right)) => match operator {
+            "==" => Object::Bool(left == right),
+            "!=" => Object::Bool(left != right),
+            _ => Object::Nil,
+        },
         _ => Object::Nil,
     }
 }
@@ -129,6 +156,50 @@ mod tests {
                 input: "-10",
                 expected: -10.,
             },
+            NumericObj {
+                input: "5 + 5 + 5 + 5 - 10",
+                expected: 10.,
+            },
+            NumericObj {
+                input: "2 * 2 * 2 * 2 * 2",
+                expected: 32.,
+            },
+            NumericObj {
+                input: "-50 + 100 + -50",
+                expected: 0.,
+            },
+            NumericObj {
+                input: "5 * 2 + 10",
+                expected: 20.,
+            },
+            NumericObj {
+                input: "5 + 2 * 10",
+                expected: 25.,
+            },
+            NumericObj {
+                input: "20 + 2 * -10",
+                expected: 0.,
+            },
+            NumericObj {
+                input: "50 / 2 * 2 + 10",
+                expected: 60.,
+            },
+            NumericObj {
+                input: "2 * (5 + 10)",
+                expected: 30.,
+            },
+            NumericObj {
+                input: "3 * 3 * 3 + 10",
+                expected: 37.,
+            },
+            NumericObj {
+                input: "3 * (3 * 3) + 10",
+                expected: 37.,
+            },
+            NumericObj {
+                input: "(5 + 10 * 2 + 15 / 3) * 2 + -10",
+                expected: 50.,
+            },
         ];
         for test in numeric_tests {
             let evaluated = test_eval(test.input);
@@ -150,6 +221,74 @@ mod tests {
             BooleanObj {
                 input: "false",
                 expected: false,
+            },
+            BooleanObj {
+                input: "1 < 2",
+                expected: true,
+            },
+            BooleanObj {
+                input: "1 > 2",
+                expected: false,
+            },
+            BooleanObj {
+                input: "1 < 1",
+                expected: false,
+            },
+            BooleanObj {
+                input: "1 > 1",
+                expected: false,
+            },
+            BooleanObj {
+                input: "1 == 1",
+                expected: true,
+            },
+            BooleanObj {
+                input: "1 != 1",
+                expected: false,
+            },
+            BooleanObj {
+                input: "1 == 2",
+                expected: false,
+            },
+            BooleanObj {
+                input: "1 != 2",
+                expected: true,
+            },
+            BooleanObj {
+                input: "true == true",
+                expected: true,
+            },
+            BooleanObj {
+                input: "false == false",
+                expected: true,
+            },
+            BooleanObj {
+                input: "true == false",
+                expected: false,
+            },
+            BooleanObj {
+                input: "true != false",
+                expected: true,
+            },
+            BooleanObj {
+                input: "false != true",
+                expected: true,
+            },
+            BooleanObj {
+                input: "(1 < 2) == true",
+                expected: true,
+            },
+            BooleanObj {
+                input: "(1 < 2) == false",
+                expected: false,
+            },
+            BooleanObj {
+                input: "(1 > 2) == true",
+                expected: false,
+            },
+            BooleanObj {
+                input: "(1 > 2) == false",
+                expected: true,
             },
         ];
         for test in boolean_tests {

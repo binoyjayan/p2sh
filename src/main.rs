@@ -40,7 +40,14 @@ fn run(source: &str) {
     }
     let evaluator = evaluator::Evaluator::new();
     let evaluated = evaluator.eval_program(program);
-    println!("{}", evaluated);
+    match evaluated {
+        Ok(obj) => {
+            println!("{}", obj);
+        }
+        Err(err) => {
+            eprintln!("{}", err);
+        }
+    }
 }
 
 fn print_parse_errors(parser: &parser::Parser) -> bool {

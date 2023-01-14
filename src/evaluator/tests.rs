@@ -52,7 +52,7 @@ fn test_eval(input: &str) -> Result<Object, RTError> {
     let program = parser.parse_program();
     check_parse_errors(&parser);
     let evaluator = Evaluator::new();
-    Ok(evaluator.eval_program(program))
+    evaluator.eval_program(program)
 }
 
 #[test]
@@ -347,6 +347,55 @@ fn test_return_stmt() {
                 _ => panic!("Invalid expected object"),
             },
             Err(e) => panic!("{}", e),
+        }
+    }
+}
+
+#[test]
+fn test_error_handling() {
+    struct ErrorTest {
+        input: &'static str,
+        expected: RTError,
+    }
+    let error_tests = vec![
+        ErrorTest {
+            input: "5 + true;",
+            expected: RTError::new("invalid binary operation", 1),
+        },
+        ErrorTest {
+            input: "5 + true; 5;",
+            expected: RTError::new("invalid binary operation", 1),
+        },
+        ErrorTest {
+            input: "-true",
+            expected: RTError::new("invalid unary operation", 1),
+        },
+        ErrorTest {
+            input: "true + false;",
+            expected: RTError::new("invalid binary operation", 1),
+        },
+        ErrorTest {
+            input: "5; true + false; 5",
+            expected: RTError::new("invalid binary operation", 1),
+        },
+        ErrorTest {
+            input: "if (10 > 1) { true + false; }",
+            expected: RTError::new("invalid binary operation", 1),
+        },
+        ErrorTest {
+            input: "if (10 > 1) { if (10 > 1) { return true + false; } return 1; }",
+            expected: RTError::new("invalid binary operation", 1),
+        },
+    ];
+    for (i, test) in error_tests.iter().enumerate() {
+        let evaluated = test_eval(test.input);
+        match evaluated {
+            Ok(obj) => {
+                panic!("[{}] No error object returned. got={:?}", i, obj);
+            }
+            Err(err) => {
+                assert_eq!(err.msg, test.expected.msg, "[{}] wrong error message", i);
+            }
         }
     }
 }

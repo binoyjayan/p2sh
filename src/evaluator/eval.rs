@@ -1,3 +1,4 @@
+use super::error::RTError;
 use super::object::*;
 use crate::parser::ast::expr::*;
 use crate::parser::ast::stmt::BlockStatement;
@@ -11,20 +12,20 @@ impl Evaluator {
         Self {}
     }
 
-    pub fn eval_program(&self, program: Program) -> Object {
+    pub fn eval_program(&self, program: Program) -> Result<Object, RTError> {
         self.eval_statements(program.statements)
     }
 
     // Unwrap return values here since this is the outer most block
-    fn eval_statements(&self, statements: Vec<Statement>) -> Object {
+    fn eval_statements(&self, statements: Vec<Statement>) -> Result<Object, RTError> {
         let mut result = Object::Nil;
         for stmt in statements {
-            result = self.eval_statement(stmt);
+            result = self.eval_statement(stmt)?;
             if let Object::Return(retval) = result {
-                return *retval;
+                return Ok(*retval);
             }
         }
-        result
+        Ok(result)
     }
 
     // While evaluating block statements, do not unwrap return value.
@@ -34,38 +35,38 @@ impl Evaluator {
     // block also return the wrapped return i.e. Object::Return(val)
     // Unwrapping only happens while executing the outer most block
     // statement which is a statement one level down the program.
-    fn eval_block_statement(&self, stmt: BlockStatement) -> Object {
+    fn eval_block_statement(&self, stmt: BlockStatement) -> Result<Object, RTError> {
         let mut result = Object::Nil;
         for stmt in stmt.statements {
-            result = self.eval_statement(stmt);
+            result = self.eval_statement(stmt)?;
             if let Object::Return(_) = result {
-                return result;
+                return Ok(result);
             }
         }
-        result
+        Ok(result)
     }
 
     // Wrap the return value in a Return object
-    fn eval_return_stmt(&self, expr: Expression) -> Object {
-        let value = self.eval_expression(expr);
-        Object::Return(Box::new(value))
+    fn eval_return_stmt(&self, expr: Expression) -> Result<Object, RTError> {
+        let value = self.eval_expression(expr)?;
+        Ok(Object::Return(Box::new(value)))
     }
 
-    fn eval_expression(&self, expr: Expression) -> Object {
+    fn eval_expression(&self, expr: Expression) -> Result<Object, RTError> {
         match expr {
-            Expression::Number(num) => Object::Number(num.value),
-            Expression::Bool(num) => Object::Bool(num.value),
+            Expression::Number(num) => Ok(Object::Number(num.value)),
+            Expression::Bool(num) => Ok(Object::Bool(num.value)),
             Expression::Unary(unary) => {
-                let right = self.eval_expression(*unary.right);
-                self.eval_prefix_expr(&unary.operator, right)
+                let right = self.eval_expression(*unary.right)?;
+                self.eval_prefix_expr(&unary.operator, right, unary.token.line)
             }
             Expression::Binary(binary) => {
-                let left = self.eval_expression(*binary.left);
-                let right = self.eval_expression(*binary.right);
-                self.eval_infix_expr(&binary.operator, left, right)
+                let left = self.eval_expression(*binary.left)?;
+                let right = self.eval_expression(*binary.right)?;
+                self.eval_infix_expr(&binary.operator, left, right, binary.token.line)
             }
             Expression::If(expr) => {
-                let condition = self.eval_expression(*expr.condition);
+                let condition = self.eval_expression(*expr.condition)?;
                 if Self::is_truthy(condition) {
                     return self.eval_block_statement(expr.then_stmt);
                 } else {
@@ -73,17 +74,17 @@ impl Evaluator {
                         return self.eval_block_statement(else_stmt);
                     }
                 }
-                Object::Nil
+                Ok(Object::Nil)
             }
-            _ => Object::Nil,
+            _ => Ok(Object::Nil),
         }
     }
 
-    fn eval_statement(&self, stmt: Statement) -> Object {
+    fn eval_statement(&self, stmt: Statement) -> Result<Object, RTError> {
         match stmt {
             Statement::Expr(stmt) => self.eval_expression(stmt.value),
             Statement::Return(stmt) => self.eval_return_stmt(stmt.value),
-            _ => Object::Nil,
+            _ => Ok(Object::Nil),
         }
     }
 
@@ -96,14 +97,20 @@ impl Evaluator {
         }
     }
 
-    fn eval_prefix_expr(&self, operator: &str, right: Object) -> Object {
+    fn eval_prefix_expr(
+        &self,
+        operator: &str,
+        right: Object,
+        line: usize,
+    ) -> Result<Object, RTError> {
         match operator {
-            "!" => self.eval_bang_operator_expr(right),
-            "-" => self.eval_minus_operator_expr(right),
-            _ => Object::Nil,
+            "!" => Ok(self.eval_bang_operator_expr(right)),
+            "-" => self.eval_minus_operator_expr(right, line),
+            _ => Err(RTError::new("invalid prefix operator", line)),
         }
     }
 
+    // Does not return runtime error
     fn eval_bang_operator_expr(&self, right: Object) -> Object {
         match right {
             Object::Bool(true) => Object::Bool(false),
@@ -113,32 +120,38 @@ impl Evaluator {
         }
     }
 
-    fn eval_minus_operator_expr(&self, right: Object) -> Object {
+    fn eval_minus_operator_expr(&self, right: Object, line: usize) -> Result<Object, RTError> {
         match right {
-            Object::Number(num) => Object::Number(-num),
-            _ => Object::Nil,
+            Object::Number(num) => Ok(Object::Number(-num)),
+            _ => Err(RTError::new("invalid unary operation", line)),
         }
     }
 
-    fn eval_infix_expr(&self, operator: &str, left: Object, right: Object) -> Object {
+    fn eval_infix_expr(
+        &self,
+        operator: &str,
+        left: Object,
+        right: Object,
+        line: usize,
+    ) -> Result<Object, RTError> {
         match (left, right) {
             (Object::Number(left), Object::Number(right)) => match operator {
-                "+" => Object::Number(left + right),
-                "-" => Object::Number(left - right),
-                "*" => Object::Number(left * right),
-                "/" => Object::Number(left / right),
-                "<" => Object::Bool(left < right),
-                ">" => Object::Bool(left > right),
-                "==" => Object::Bool(left == right),
-                "!=" => Object::Bool(left != right),
-                _ => Object::Nil,
+                "+" => Ok(Object::Number(left + right)),
+                "-" => Ok(Object::Number(left - right)),
+                "*" => Ok(Object::Number(left * right)),
+                "/" => Ok(Object::Number(left / right)),
+                "<" => Ok(Object::Bool(left < right)),
+                ">" => Ok(Object::Bool(left > right)),
+                "==" => Ok(Object::Bool(left == right)),
+                "!=" => Ok(Object::Bool(left != right)),
+                _ => Err(RTError::new("invalid binary operator", line)),
             },
             (Object::Bool(left), Object::Bool(right)) => match operator {
-                "==" => Object::Bool(left == right),
-                "!=" => Object::Bool(left != right),
-                _ => Object::Nil,
+                "==" => Ok(Object::Bool(left == right)),
+                "!=" => Ok(Object::Bool(left != right)),
+                _ => Err(RTError::new("invalid binary operation", line)),
             },
-            _ => Object::Nil,
+            _ => Err(RTError::new("invalid binary operation", line)),
         }
     }
 }

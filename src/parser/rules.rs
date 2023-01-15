@@ -1,6 +1,5 @@
-use lazy_static::lazy_static;
-
 use super::*;
+use lazy_static::lazy_static;
 
 type PrefixParserFn = fn(&mut Parser) -> Expression;
 type InfixParserFn = fn(&mut Parser, Expression) -> Expression;
@@ -210,7 +209,6 @@ impl Parser {
     }
 
     fn parse_block_statement(&mut self) -> BlockStatement {
-        let token = self.current.clone();
         let mut statements = Vec::new();
         self.next_token();
 
@@ -220,7 +218,7 @@ impl Parser {
             }
             self.next_token();
         }
-        BlockStatement { token, statements }
+        BlockStatement { statements }
     }
 
     fn parse_function_literal(&mut self) -> Expression {

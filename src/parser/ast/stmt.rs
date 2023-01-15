@@ -32,7 +32,6 @@ pub struct ExpressionStmt {
 
 #[derive(Clone, Debug)]
 pub struct BlockStatement {
-    pub token: Token,
     pub statements: Vec<Statement>,
 }
 

@@ -1,48 +1,47 @@
-use super::error::*;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use super::object::*;
 use crate::token::*;
-use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Environment {
-    pub values: HashMap<String, Object>,
+    env: HashMap<String, Object>,
+    enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
-    pub fn new() -> Environment {
+    pub fn new() -> Self {
+        Self {
+            env: HashMap::new(),
+            enclosing: None,
+        }
+    }
+    pub fn new_enclosing(enclosing: Rc<RefCell<Environment>>) -> Environment {
         Environment {
-            values: HashMap::new(),
+            env: HashMap::new(),
+            enclosing: Some(enclosing),
         }
     }
 }
 
 impl Environment {
-    pub fn get(&self, token: &Token) -> Result<Object, RTError> {
-        let name = token.literal.clone();
-        if let Some(obj) = self.values.get(&name) {
-            Ok(obj.clone())
+    /// While looking up the identifier in the environment, start with the
+    /// inner most which appears at the front of the linked list until the end.
+    /// Return  the value of the object when a match is found. Return None
+    /// if all the enclosing environments also does not define the identifier.
+    pub fn get(&self, name: &str) -> Option<Object> {
+        if let Some(obj) = self.env.get(name) {
+            Some(obj.clone())
+        } else if let Some(enclosing) = &self.enclosing {
+            enclosing.borrow().get(name)
         } else {
-            Err(RTError::new(
-                &format!("Undefined identifier: '{}'", name),
-                1,
-            ))
+            None
         }
     }
 
-    pub fn set(&mut self, token: &Token, value: Object) -> Result<Object, RTError> {
-        self.values.insert(token.literal.clone(), value.clone());
-        Ok(value)
-    }
-
-    pub fn assign(&mut self, token: &Token, value: Object) -> Result<Object, RTError> {
-        let name = token.literal.clone();
-        // Sets the value of the entry, and returns the entry’s old value
-        if let Some(obj) = self.values.insert(name.clone(), value) {
-            return Ok(obj);
-        }
-        return Err(RTError::new(
-            &format!("Undefined identifier: '{}'", name),
-            token.line,
-        ));
+    pub fn set(&mut self, token: &Token, value: Object) {
+        self.env.insert(token.literal.clone(), value.clone());
     }
 }

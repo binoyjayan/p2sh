@@ -1,5 +1,11 @@
+use std::cell::RefCell;
 use std::io;
 use std::io::{BufRead, Write};
+use std::rc::Rc;
+
+use evaluator::*;
+use parser::*;
+use scanner::*;
 
 mod evaluator;
 mod parser;
@@ -16,15 +22,16 @@ fn main() {
 }
 
 pub fn run_prompt() {
-    // Define evaluator outside REPL loop so the environment is retained
-    let mut evaluator = evaluator::Evaluator::new();
+    // Define environment outside REPL loop so the environment is retained
+    let environment = Rc::new(RefCell::new(Environment::new()));
+    let mut evaluator = Evaluator::new();
     let stdin = io::stdin();
     print!(">> ");
     io::stdout().flush().unwrap();
     for line in stdin.lock().lines() {
         if let Ok(line) = line {
             if !line.trim().is_empty() {
-                run(&line, &mut evaluator)
+                run(&line, &environment, &mut evaluator)
             }
         }
         print!(">> ");
@@ -33,14 +40,14 @@ pub fn run_prompt() {
     println!("\nExiting...");
 }
 
-fn run(source: &str, evaluator: &mut evaluator::Evaluator) {
-    let scanner = scanner::Scanner::new(source);
-    let mut parser = parser::Parser::new(scanner);
+fn run(source: &str, env: &Rc<RefCell<Environment>>, evaluator: &mut Evaluator) {
+    let scanner = Scanner::new(source);
+    let mut parser = Parser::new(scanner);
     let program = parser.parse_program();
     if print_parse_errors(&parser) {
         return;
     }
-    let evaluated = evaluator.eval_program(program);
+    let evaluated = evaluator.eval_program(env, program);
     match evaluated {
         Ok(obj) => {
             if !obj.is_nil() {

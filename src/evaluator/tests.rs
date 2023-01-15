@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use super::object::*;
 use super::*;
 use crate::evaluator::error::RTError;
@@ -51,8 +54,9 @@ fn test_eval(input: &str) -> Result<Object, RTError> {
     let mut parser = Parser::new(scanner);
     let program = parser.parse_program();
     check_parse_errors(&parser);
+    let environment = Rc::new(RefCell::new(Environment::new()));
     let mut evaluator = Evaluator::new();
-    evaluator.eval_program(program)
+    evaluator.eval_program(&environment, program)
 }
 
 #[test]
@@ -428,10 +432,118 @@ fn test_let_statement() {
             expected: 15.,
         },
     ];
-    for (i, test) in error_tests.iter().enumerate() {
+    for test in error_tests.iter() {
         let evaluated = test_eval(test.input);
         match evaluated {
             Ok(obj) => test_numeric_object(obj, test.expected),
+            Err(e) => panic!("{}", e),
+        }
+    }
+}
+
+#[test]
+fn test_function_object() {
+    let input = "fn(x) { x + 2; };";
+    let expected_body = "(x + 2)";
+    let evaluated = test_eval(input);
+    match evaluated {
+        Ok(obj) => {
+            if let Object::Func(fun) = obj {
+                if fun.params.len() != 1 {
+                    panic!("functon has wrong #paramters. got={:?}", fun.params.len());
+                }
+                if fun.params[0].to_string() != "x" {
+                    panic!("parameter is not 'x'. got={}", fun.params[0]);
+                }
+                assert_eq!(fun.body.to_string(), expected_body);
+            } else {
+                panic!("object is not a function. got={:?}", obj);
+            }
+        }
+        Err(e) => panic!("{}", e),
+    }
+}
+
+#[test]
+fn test_function_calls() {
+    struct FunTest {
+        input: &'static str,
+        expected: f64,
+    }
+    let fun_tests = vec![
+        FunTest {
+            input: "let identity = fn(x) { x; }; identity(5);",
+            expected: 5.,
+        },
+        FunTest {
+            input: "let identity = fn(x) { return x; }; identity(5);",
+            expected: 5.,
+        },
+        FunTest {
+            input: "let double = fn(x) { return x * 2; }; double(5);",
+            expected: 10.,
+        },
+        FunTest {
+            input: "let add = fn(x, y) { return x + y; }; add(5 + 5, add(5, 5));",
+            expected: 20.,
+        },
+        FunTest {
+            input: "fn(x) { x; }(5)",
+            expected: 5.,
+        },
+    ];
+    for test in fun_tests {
+        let evaluated = test_eval(test.input);
+        match evaluated {
+            Ok(obj) => test_numeric_object(obj, test.expected),
+            Err(e) => panic!("{}", e),
+        }
+    }
+}
+
+#[test]
+fn test_closures() {
+    struct ClosureTest {
+        input: &'static str,
+        expected: Object,
+    }
+    let closure_tests = vec![
+        ClosureTest {
+            input: "fn(x) { x == 10 } (5)",
+            expected: Object::Bool(false),
+        },
+        ClosureTest {
+            input: "fn(x) { x == 10 } (10)",
+            expected: Object::Bool(true),
+        },
+        ClosureTest {
+            input: "
+            let newAdder = fn(x) {
+                fn(y) {x + y};
+            }
+            let addTwo = newAdder(2);
+            addTwo(2);
+            ",
+            expected: Object::Number(4.),
+        },
+        ClosureTest {
+            input: "
+            let add = fn(a, b) { a + b;}
+            let sub = fn(a, b) { a - b;}
+            let applyFunc = fn(a, b, func) { func(a, b) };
+            applyFunc(2, 2, add);
+            ",
+            expected: Object::Number(4.),
+        },
+    ];
+    for test in closure_tests {
+        let evaluated = test_eval(test.input);
+        match evaluated {
+            Ok(evaluated) => match test.expected {
+                Object::Number(expected) => test_numeric_object(evaluated, expected),
+                Object::Bool(expected) => test_boolean_object(evaluated, expected),
+                _ => panic!("Invalid expected object"),
+            },
             Err(e) => panic!("{}", e),
         }
     }

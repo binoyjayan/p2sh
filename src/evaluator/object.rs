@@ -1,6 +1,12 @@
+use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::fmt;
 use std::ops;
+use std::rc::Rc;
+
+use super::*;
+use crate::parser::ast::expr::*;
+use crate::parser::ast::stmt::*;
 
 #[derive(Debug)]
 pub enum Object {
@@ -9,6 +15,7 @@ pub enum Object {
     Number(f64),
     Bool(bool),
     Return(Box<Object>),
+    Func(Function),
 }
 
 impl PartialEq for Object {
@@ -43,6 +50,7 @@ impl Clone for Object {
             Object::Number(n) => Object::Number(*n),
             Object::Bool(b) => Object::Bool(*b),
             Object::Return(r) => Object::Return(r.clone()),
+            Object::Func(f) => Object::Func(f.clone()),
         }
     }
 }
@@ -70,6 +78,7 @@ impl fmt::Display for Object {
             Self::Number(val) => write!(f, "{}", val),
             Self::Bool(val) => write!(f, "{}", val),
             Self::Return(val) => write!(f, "{}", val),
+            Self::Func(val) => write!(f, "{}", val),
         }
     }
 }
@@ -122,5 +131,24 @@ impl ops::Neg for &Object {
             &Object::Number(a) => Object::Number(-a),
             _ => panic!("Invalid operation"),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Function {
+    pub params: Vec<Identifier>,
+    pub body: BlockStatement,
+    pub env: Rc<RefCell<Environment>>,
+}
+
+impl fmt::Display for Function {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let params_str = self
+            .params
+            .iter()
+            .map(|p| format!("{}, ", p))
+            .collect::<String>();
+        let params_str = params_str.trim_end_matches(|c| c == ' ' || c == ',');
+        write!(f, "fn({}) {{\n{}\n}}\n", params_str, self.body)
     }
 }

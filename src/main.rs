@@ -16,13 +16,15 @@ fn main() {
 }
 
 pub fn run_prompt() {
+    // Define evaluator outside REPL loop so the environment is retained
+    let mut evaluator = evaluator::Evaluator::new();
     let stdin = io::stdin();
     print!(">> ");
     io::stdout().flush().unwrap();
     for line in stdin.lock().lines() {
         if let Ok(line) = line {
             if !line.trim().is_empty() {
-                run(&line)
+                run(&line, &mut evaluator)
             }
         }
         print!(">> ");
@@ -31,18 +33,19 @@ pub fn run_prompt() {
     println!("\nExiting...");
 }
 
-fn run(source: &str) {
+fn run(source: &str, evaluator: &mut evaluator::Evaluator) {
     let scanner = scanner::Scanner::new(source);
     let mut parser = parser::Parser::new(scanner);
     let program = parser.parse_program();
     if print_parse_errors(&parser) {
         return;
     }
-    let evaluator = evaluator::Evaluator::new();
     let evaluated = evaluator.eval_program(program);
     match evaluated {
         Ok(obj) => {
-            println!("{}", obj);
+            if !obj.is_nil() {
+                println!("{}", obj);
+            }
         }
         Err(err) => {
             eprintln!("{}", err);

@@ -1,5 +1,6 @@
 use super::*;
 
+#[cfg(test)]
 enum Literal {
     Str(&'static str),
     Numeric(f64),

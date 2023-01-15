@@ -1,3 +1,4 @@
+use super::environment::*;
 use super::error::RTError;
 use super::object::*;
 use crate::parser::ast::expr::*;
@@ -5,19 +6,23 @@ use crate::parser::ast::stmt::BlockStatement;
 use crate::parser::ast::stmt::Statement;
 use crate::parser::ast::*;
 
-pub struct Evaluator {}
+pub struct Evaluator {
+    environment: Environment,
+}
 
 impl Evaluator {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            environment: Environment::new(),
+        }
     }
 
-    pub fn eval_program(&self, program: Program) -> Result<Object, RTError> {
+    pub fn eval_program(&mut self, program: Program) -> Result<Object, RTError> {
         self.eval_statements(program.statements)
     }
 
     // Unwrap return values here since this is the outer most block
-    fn eval_statements(&self, statements: Vec<Statement>) -> Result<Object, RTError> {
+    fn eval_statements(&mut self, statements: Vec<Statement>) -> Result<Object, RTError> {
         let mut result = Object::Nil;
         for stmt in statements {
             result = self.eval_statement(stmt)?;
@@ -35,7 +40,7 @@ impl Evaluator {
     // block also return the wrapped return i.e. Object::Return(val)
     // Unwrapping only happens while executing the outer most block
     // statement which is a statement one level down the program.
-    fn eval_block_statement(&self, stmt: BlockStatement) -> Result<Object, RTError> {
+    fn eval_block_statement(&mut self, stmt: BlockStatement) -> Result<Object, RTError> {
         let mut result = Object::Nil;
         for stmt in stmt.statements {
             result = self.eval_statement(stmt)?;
@@ -47,12 +52,12 @@ impl Evaluator {
     }
 
     // Wrap the return value in a Return object
-    fn eval_return_stmt(&self, expr: Expression) -> Result<Object, RTError> {
+    fn eval_return_stmt(&mut self, expr: Expression) -> Result<Object, RTError> {
         let value = self.eval_expression(expr)?;
         Ok(Object::Return(Box::new(value)))
     }
 
-    fn eval_expression(&self, expr: Expression) -> Result<Object, RTError> {
+    fn eval_expression(&mut self, expr: Expression) -> Result<Object, RTError> {
         match expr {
             Expression::Number(num) => Ok(Object::Number(num.value)),
             Expression::Bool(num) => Ok(Object::Bool(num.value)),
@@ -76,14 +81,23 @@ impl Evaluator {
                 }
                 Ok(Object::Nil)
             }
+            Expression::Ident(expr) => Ok(self.environment.get(&expr.token)?),
             _ => Ok(Object::Nil),
         }
     }
 
-    fn eval_statement(&self, stmt: Statement) -> Result<Object, RTError> {
+    fn eval_let_stmt(&mut self, name: &Identifier, expr: Expression) -> Result<Object, RTError> {
+        let value = self.eval_expression(expr)?;
+        let name = name.token.clone();
+        self.environment.set(&name, value)?;
+        Ok(Object::Nil)
+    }
+
+    fn eval_statement(&mut self, stmt: Statement) -> Result<Object, RTError> {
         match stmt {
             Statement::Expr(stmt) => self.eval_expression(stmt.value),
             Statement::Return(stmt) => self.eval_return_stmt(stmt.value),
+            Statement::Let(stmt) => self.eval_let_stmt(&stmt.name, stmt.value),
             _ => Ok(Object::Nil),
         }
     }
@@ -112,12 +126,7 @@ impl Evaluator {
 
     // Does not return runtime error
     fn eval_bang_operator_expr(&self, right: Object) -> Object {
-        match right {
-            Object::Bool(true) => Object::Bool(false),
-            Object::Bool(false) => Object::Bool(true),
-            Object::Nil => Object::Bool(true),
-            _ => Object::Bool(false),
-        }
+        Object::Bool(right.is_falsey())
     }
 
     fn eval_minus_operator_expr(&self, right: Object, line: usize) -> Result<Object, RTError> {

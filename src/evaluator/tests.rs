@@ -51,7 +51,7 @@ fn test_eval(input: &str) -> Result<Object, RTError> {
     let mut parser = Parser::new(scanner);
     let program = parser.parse_program();
     check_parse_errors(&parser);
-    let evaluator = Evaluator::new();
+    let mut evaluator = Evaluator::new();
     evaluator.eval_program(program)
 }
 
@@ -386,6 +386,10 @@ fn test_error_handling() {
             input: "if (10 > 1) { if (10 > 1) { return true + false; } return 1; }",
             expected: RTError::new("invalid binary operation", 1),
         },
+        ErrorTest {
+            input: "foobar",
+            expected: RTError::new("Undefined identifier: 'foobar'", 1),
+        },
     ];
     for (i, test) in error_tests.iter().enumerate() {
         let evaluated = test_eval(test.input);
@@ -396,6 +400,39 @@ fn test_error_handling() {
             Err(err) => {
                 assert_eq!(err.msg, test.expected.msg, "[{}] wrong error message", i);
             }
+        }
+    }
+}
+
+#[test]
+fn test_let_statement() {
+    struct LetTest {
+        input: &'static str,
+        expected: f64,
+    }
+    let error_tests = vec![
+        LetTest {
+            input: "let a = 5; a;",
+            expected: 5.,
+        },
+        LetTest {
+            input: "let a = 5 * 5; a;",
+            expected: 25.,
+        },
+        LetTest {
+            input: "let a = 5; let b = a; b;",
+            expected: 5.,
+        },
+        LetTest {
+            input: "let a = 5; let b = a; let c = a + b + 5; c;",
+            expected: 15.,
+        },
+    ];
+    for (i, test) in error_tests.iter().enumerate() {
+        let evaluated = test_eval(test.input);
+        match evaluated {
+            Ok(obj) => test_numeric_object(obj, test.expected),
+            Err(e) => panic!("{}", e),
         }
     }
 }

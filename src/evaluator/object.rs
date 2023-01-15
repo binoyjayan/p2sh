@@ -48,6 +48,9 @@ impl Clone for Object {
 }
 
 impl Object {
+    pub fn is_nil(&self) -> bool {
+        matches!(self, Object::Nil)
+    }
     pub fn is_string(&self) -> bool {
         matches!(self, Object::Str(_))
     }

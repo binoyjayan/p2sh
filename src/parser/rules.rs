@@ -33,6 +33,8 @@ lazy_static! {
             ParseRule::new(Some(Parser::parse_identifier), None, Precedence::Lowest);
         rules[TokenType::Number as usize] =
             ParseRule::new(Some(Parser::parse_number), None, Precedence::Lowest);
+        rules[TokenType::Str as usize] =
+            ParseRule::new(Some(Parser::parse_string), None, Precedence::Lowest);
         // Logical
         rules[TokenType::Bang as usize] = ParseRule::new(
             Some(Parser::parse_prefix_expression),
@@ -118,6 +120,19 @@ impl Parser {
             })
         } else {
             let msg = format!("could not parse {} as a number", self.current.literal);
+            self.push_error(&msg);
+            Expression::Nil
+        }
+    }
+
+    fn parse_string(&mut self) -> Expression {
+        if let Ok(value) = self.current.literal.parse() {
+            Expression::Str(StringLiteral {
+                token: self.current.clone(),
+                value,
+            })
+        } else {
+            let msg = format!("could not parse {} as a string", self.current.literal);
             self.push_error(&msg);
             Expression::Nil
         }

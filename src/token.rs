@@ -42,6 +42,7 @@ pub enum TokenType {
     // Identifiers + literals
     Identifier,
     Number,
+    Str,
     // Operators
     Assign,
     Plus,
@@ -80,6 +81,7 @@ impl From<TokenType> for &'static str {
             TokenType::Eof => "EOF",
             TokenType::Identifier => "IDENT",
             TokenType::Number => "INT",
+            TokenType::Str => "STRING",
             TokenType::Assign => "=",
             TokenType::Plus => "+",
             TokenType::Minus => "-",

@@ -45,6 +45,17 @@ fn test_numeric_literal(expr: &Expression, expected: f64) {
 }
 
 #[cfg(test)]
+fn test_string_literal(expr: &Expression, expected: &str) {
+    if let Expression::Str(s) = expr {
+        if s.value != expected {
+            panic!("string.value not '{}'. got='{}'", expected, s.value);
+        }
+    } else {
+        panic!("expr not a String. got={:?}", expr);
+    }
+}
+
+#[cfg(test)]
 fn test_boolean_literal(expr: &Expression, expected: bool) {
     if let Expression::Bool(num) = expr {
         if num.value != expected {
@@ -267,6 +278,22 @@ fn test_numeric_literal_expression() {
     let stmt = &program.statements[0];
     if let Statement::Expr(stmt) = stmt {
         test_numeric_literal(&stmt.value, 5.);
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_string_literal_expression() {
+    let input = "\"hello world\";";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        test_string_literal(&stmt.value, "hello world");
     } else {
         panic!(
             "program.statements[0] is not an expression statement. got={}",

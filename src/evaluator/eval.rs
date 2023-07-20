@@ -85,6 +85,7 @@ impl Evaluator {
     ) -> Result<Object, RTError> {
         match expr {
             Expression::Number(num) => Ok(Object::Number(num.value)),
+            Expression::Str(s) => Ok(Object::Str(s.value)),
             Expression::Bool(num) => Ok(Object::Bool(num.value)),
             Expression::Unary(unary) => {
                 let right = self.eval_expression(env, *unary.right)?;
@@ -208,6 +209,18 @@ impl Evaluator {
                 "!=" => Ok(Object::Bool(left != right)),
                 _ => Err(RTError::new("invalid binary operator", line)),
             },
+            (Object::Str(left), Object::Str(right)) => match operator {
+                "+" => Ok(Object::Str(format!("{}{}", left, right))),
+                "==" => Ok(Object::Bool(left == right)),
+                "!=" => Ok(Object::Bool(left != right)),
+                _ => Err(RTError::new("invalid binary operator", line)),
+            },
+            (Object::Str(s), Object::Number(n)) | (Object::Number(n), Object::Str(s)) => {
+                match operator {
+                    "*" => Ok(Object::Str(s.to_string().repeat(n as usize))),
+                    _ => Err(RTError::new("invalid binary operator", line)),
+                }
+            }
             (Object::Bool(left), Object::Bool(right)) => match operator {
                 "==" => Ok(Object::Bool(left == right)),
                 "!=" => Ok(Object::Bool(left != right)),

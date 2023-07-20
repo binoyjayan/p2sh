@@ -28,6 +28,19 @@ fn test_numeric_object(evaluated: Object, expected: f64) {
 }
 
 #[cfg(test)]
+fn test_string_object(evaluated: Object, expected: &str) {
+    if let Object::Str(s) = evaluated {
+        assert_eq!(
+            s, expected,
+            "object has wrong value. got={}, want={}",
+            s, expected
+        );
+    } else {
+        panic!("object is not a string. got={}", evaluated);
+    }
+}
+
+#[cfg(test)]
 fn test_boolean_object(evaluated: Object, expected: bool) {
     if let Object::Bool(b) = evaluated {
         assert_eq!(
@@ -57,6 +70,17 @@ fn test_eval(input: &str) -> Result<Object, RTError> {
     let environment = Rc::new(RefCell::new(Environment::new()));
     let mut evaluator = Evaluator::new();
     evaluator.eval_program(&environment, program)
+}
+
+#[test]
+fn test_string_literal() {
+    let input = "\"Hello, World\"";
+    let expected = "Hello, World";
+    let evaluated = test_eval(input);
+    match evaluated {
+        Ok(evaluated) => test_string_object(evaluated, expected),
+        Err(e) => panic!("{}", e),
+    }
 }
 
 #[test]
@@ -131,6 +155,39 @@ fn test_eval_numeric_expr() {
         let evaluated = test_eval(test.input);
         match evaluated {
             Ok(evaluated) => test_numeric_object(evaluated, test.expected),
+            Err(e) => panic!("{}", e),
+        }
+    }
+}
+
+#[test]
+fn test_eval_string_expr() {
+    struct StringObj {
+        input: &'static str,
+        expected: &'static str,
+    }
+    let numeric_tests = vec![
+        StringObj {
+            input: "\"Hello, World\"",
+            expected: "Hello, World",
+        },
+        StringObj {
+            input: "\"Hello, \" + \"World!!\"",
+            expected: "Hello, World!!",
+        },
+        StringObj {
+            input: "\"*\" * 30",
+            expected: "******************************",
+        },
+        StringObj {
+            input: "30 * \"*\" ",
+            expected: "******************************",
+        },
+    ];
+    for test in numeric_tests {
+        let evaluated = test_eval(test.input);
+        match evaluated {
+            Ok(evaluated) => test_string_object(evaluated, test.expected),
             Err(e) => panic!("{}", e),
         }
     }
@@ -393,6 +450,10 @@ fn test_error_handling() {
         ErrorTest {
             input: "foobar",
             expected: RTError::new("Undefined identifier: 'foobar'", 1),
+        },
+        ErrorTest {
+            input: "\"foo\" - \"bar\"",
+            expected: RTError::new("invalid binary operator", 1),
         },
     ];
     for (i, test) in error_tests.iter().enumerate() {

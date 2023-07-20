@@ -83,6 +83,7 @@ impl Scanner {
             '!' => self.make_token_twin('=', TokenType::Bang, TokenType::BangEqual),
             '<' => self.make_token_twin('=', TokenType::Less, TokenType::LessEqual),
             '>' => self.make_token_twin('=', TokenType::Greater, TokenType::GreaterEqual),
+            '"' => self.read_string(),
             _ => {
                 if Self::is_identifier_first(self.ch) {
                     return self.read_identifier();
@@ -135,6 +136,20 @@ impl Scanner {
         }
         let number: String = self.input[position..self.position].iter().collect();
         self.make_token(TokenType::Number, &number)
+    }
+
+    fn read_string(&mut self) -> Token {
+        // move past the opening quotes (") character
+        let position = self.position + 1;
+        loop {
+            self.read_char();
+
+            if self.ch == '"' || self.ch == '\0' {
+                break;
+            }
+        }
+        let the_str: String = self.input[position..self.position].iter().collect();
+        self.make_token(TokenType::Str, &the_str)
     }
 
     fn is_identifier_first(ch: char) -> bool {
@@ -196,6 +211,8 @@ mod tests {
 
             10 == 10;
             10 != 9;
+            \"foobar\"
+            \"foo bar\"
         ";
 
         let tests = vec![
@@ -271,6 +288,8 @@ mod tests {
             ExpectedToken(TokenType::BangEqual, "!="),
             ExpectedToken(TokenType::Number, "9"),
             ExpectedToken(TokenType::Semicolon, ";"),
+            ExpectedToken(TokenType::Str, "foobar"),
+            ExpectedToken(TokenType::Str, "foo bar"),
             ExpectedToken(TokenType::Eof, ""),
         ];
 

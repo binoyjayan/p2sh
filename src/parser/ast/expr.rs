@@ -8,6 +8,7 @@ use super::stmt::*;
 pub enum Expression {
     Ident(Identifier),
     Number(NumberLiteral),
+    Str(StringLiteral),
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Bool(BooleanExpr),
@@ -24,6 +25,18 @@ pub struct Identifier {
 }
 
 impl fmt::Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.token)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct StringLiteral {
+    pub token: Token,
+    pub value: String,
+}
+
+impl fmt::Display for StringLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.token)
     }
@@ -141,6 +154,7 @@ impl Expression {
         match &self {
             Expression::Ident(ident) => ident.token.literal.clone(),
             Expression::Number(num) => num.token.literal.clone(),
+            Expression::Str(s) => s.token.literal.clone(),
             Expression::Unary(unary) => unary.token.literal.clone(),
             Expression::Binary(binary) => binary.token.literal.clone(),
             Expression::Bool(b) => b.token.literal.clone(),
@@ -157,6 +171,7 @@ impl fmt::Display for Expression {
         match &self {
             Expression::Ident(ident) => write!(f, "{}", ident),
             Expression::Number(num) => write!(f, "{}", num),
+            Expression::Str(s) => write!(f, "{}", s),
             Expression::Unary(prefix) => write!(f, "{}", prefix),
             Expression::Binary(binary) => write!(f, "{}", binary),
             Expression::Bool(b) => write!(f, "{}", b),

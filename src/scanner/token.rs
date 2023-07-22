@@ -63,6 +63,8 @@ pub enum TokenType {
     RightParen,
     LeftBrace,
     RightBrace,
+    LeftBracket,
+    RightBracket,
     // Keywords
     Function,
     Let,
@@ -100,6 +102,8 @@ impl From<TokenType> for &'static str {
             TokenType::RightParen => ")",
             TokenType::LeftBrace => "{",
             TokenType::RightBrace => "}",
+            TokenType::LeftBracket => "[",
+            TokenType::RightBracket => "]",
             TokenType::Function => "FUNCTION",
             TokenType::Let => "LET",
             TokenType::True => "TRUE",

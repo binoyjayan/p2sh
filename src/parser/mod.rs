@@ -3,8 +3,8 @@ pub mod precedence;
 pub mod rules;
 pub mod tests;
 
+use crate::scanner::token::*;
 use crate::scanner::*;
-use crate::token::*;
 use ast::expr::*;
 use ast::stmt::*;
 use ast::*;

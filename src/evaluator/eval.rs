@@ -9,7 +9,7 @@ use crate::parser::ast::expr::*;
 use crate::parser::ast::stmt::BlockStatement;
 use crate::parser::ast::stmt::Statement;
 use crate::parser::ast::*;
-use crate::token::*;
+use crate::scanner::token::*;
 
 pub struct Evaluator {}
 

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::token::*;
+use crate::scanner::token::*;
 
 use super::stmt::*;
 

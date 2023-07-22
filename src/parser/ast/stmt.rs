@@ -1,7 +1,7 @@
 use std::fmt;
 
 use super::expr::*;
-use crate::token::*;
+use crate::scanner::token::*;
 
 #[derive(Debug, Clone)]
 pub enum Statement {

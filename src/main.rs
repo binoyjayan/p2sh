@@ -10,7 +10,6 @@ use scanner::*;
 mod evaluator;
 mod parser;
 mod scanner;
-mod token;
 
 const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 const PKG_DESC: &str = env!("CARGO_PKG_DESCRIPTION");

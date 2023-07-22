@@ -15,6 +15,7 @@ pub enum Expression {
     If(IfExpr),
     Function(FunctionLiteral),
     Call(CallExpr),
+    Array(ArrayLiteral),
     Nil,
 }
 
@@ -149,6 +150,24 @@ impl fmt::Display for CallExpr {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct ArrayLiteral {
+    pub token: Token,
+    pub elements: Vec<Expression>,
+}
+
+impl fmt::Display for ArrayLiteral {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let elements_str = self
+            .elements
+            .iter()
+            .map(|p| format!("{}, ", p))
+            .collect::<String>();
+        let elements_str = elements_str.trim_end_matches(|c| c == ' ' || c == ',');
+        write!(f, "[{}]", elements_str)
+    }
+}
+
 impl Expression {
     #[allow(dead_code)]
     fn token_literal(&self) -> String {
@@ -162,6 +181,7 @@ impl Expression {
             Expression::If(i) => i.token.literal.clone(),
             Expression::Function(f) => f.token.literal.clone(),
             Expression::Call(c) => c.token.literal.clone(),
+            Expression::Array(s) => s.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
         }
     }
@@ -179,6 +199,7 @@ impl fmt::Display for Expression {
             Expression::If(i) => write!(f, "{}", i),
             Expression::Function(fun) => write!(f, "{}", fun),
             Expression::Call(c) => write!(f, "{}", c),
+            Expression::Array(s) => write!(f, "{}", s),
             Expression::Nil => write!(f, "nil"),
         }
     }

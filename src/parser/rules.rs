@@ -93,6 +93,9 @@ lazy_static! {
         // Function
         rules[TokenType::Function as usize] =
             ParseRule::new(Some(Parser::parse_function_literal), None, Precedence::Lowest);
+        // Function
+        rules[TokenType::LeftBracket as usize] =
+            ParseRule::new(Some(Parser::parse_array_literal), None, Precedence::Lowest);
         rules
     };
 }
@@ -295,14 +298,18 @@ impl Parser {
         Expression::Call(CallExpr {
             token,
             func: Box::new(func),
-            args: self.parse_call_args(),
+            args: self.parse_expression_list(TokenType::RightParen),
         })
     }
 
-    fn parse_call_args(&mut self) -> Vec<Expression> {
+    // Generic function that parses call arguments as well as array literal
+    // expression as both of those are essentially a comma separated list
+    // of expressions. The only difference is the end token that is used to
+    // indicate the end of the list. This token type is passed as an argument.
+    fn parse_expression_list(&mut self, ttype_end: TokenType) -> Vec<Expression> {
         let mut args = Vec::new();
 
-        if self.peek_token_is(&TokenType::RightParen) {
+        if self.peek_token_is(&ttype_end) {
             self.next_token();
             return args;
         }
@@ -314,9 +321,18 @@ impl Parser {
             args.push(self.parse_expression(Precedence::Lowest));
         }
 
-        if !self.expect_peek(&TokenType::RightParen) {
+        if !self.expect_peek(&ttype_end) {
             return Vec::new();
         }
         args
+    }
+
+    fn parse_array_literal(&mut self) -> Expression {
+        let token = self.current.clone();
+
+        Expression::Array(ArrayLiteral {
+            token,
+            elements: self.parse_expression_list(TokenType::RightBracket),
+        })
     }
 }

@@ -764,3 +764,47 @@ fn test_parsing_call_expression() {
         );
     }
 }
+
+#[test]
+fn test_parsing_array_literal_expression() {
+    let input = "[1, 2 * 2, 3 + 3]";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::Array(expr) = &stmt.value {
+            assert_eq!(
+                expr.elements.len(),
+                3,
+                "len(array.elements) not 3. got={}",
+                expr.elements.len()
+            );
+            // array element at index 0
+            test_literal(&expr.elements[0], Literal::Numeric(1.));
+            // array element at index 1
+            test_infix_expression(
+                &expr.elements[1],
+                Literal::Numeric(2.),
+                "*",
+                Literal::Numeric(2.),
+            );
+            // array element at index 2
+            test_infix_expression(
+                &expr.elements[2],
+                Literal::Numeric(3.),
+                "+",
+                Literal::Numeric(3.),
+            );
+        } else {
+            panic!(
+                "stmt.expr is not an ArrayLiteral expression. got={}",
+                stmt.value
+            );
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}

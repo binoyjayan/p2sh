@@ -17,6 +17,7 @@ pub enum Object {
     Return(Box<Object>),
     Func(Function),
     Builtin(BuiltinFunction),
+    Arr(Array),
 }
 
 impl PartialEq for Object {
@@ -53,6 +54,7 @@ impl Clone for Object {
             Object::Return(r) => Object::Return(r.clone()),
             Object::Func(f) => Object::Func(f.clone()),
             Object::Builtin(f) => Object::Builtin(f.clone()),
+            Object::Arr(a) => Object::Arr(a.clone()),
         }
     }
 }
@@ -82,6 +84,7 @@ impl fmt::Display for Object {
             Self::Return(val) => write!(f, "{}", val),
             Self::Func(val) => write!(f, "{}", val),
             Self::Builtin(val) => write!(f, "{}", val),
+            Self::Arr(val) => write!(f, "{}", val),
         }
     }
 }
@@ -174,5 +177,22 @@ impl fmt::Display for BuiltinFunction {
 impl BuiltinFunction {
     pub fn new(name: String, arity: usize, func: BuiltinFunctionProto) -> BuiltinFunction {
         BuiltinFunction { name, arity, func }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Array {
+    pub elements: Vec<Object>,
+}
+
+impl fmt::Display for Array {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let elements_str = self
+            .elements
+            .iter()
+            .map(|p| format!("{}, ", p))
+            .collect::<String>();
+        let elements_str = elements_str.trim_end_matches(|c| c == ' ' || c == ',');
+        write!(f, "[{}]", elements_str)
     }
 }

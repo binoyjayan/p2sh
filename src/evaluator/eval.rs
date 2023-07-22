@@ -114,6 +114,9 @@ impl Evaluator {
             Expression::Function(expr) => Ok(self.eval_function_expr(env, expr)),
             Expression::Ident(expr) => self.eval_identifier_expr(env, &expr.token),
             Expression::Call(expr) => Ok(self.eval_call_expr(env, expr)?),
+            Expression::Array(arr) => Ok(Object::Arr(Array {
+                elements: self.eval_expressions(env, (*arr.elements).to_vec())?,
+            })),
             _ => Ok(Object::Nil),
         }
     }

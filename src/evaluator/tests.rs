@@ -684,3 +684,16 @@ fn test_builtin_functions() {
         panic!("{} builtin function tests failed", failed);
     }
 }
+
+#[test]
+fn test_array_literals() {
+    let input = "[1, 2 * 2, 3 + 3]";
+    let evaluated = test_eval(input);
+    if let Ok(Object::Arr(arr)) = evaluated {
+        test_numeric_object(arr.elements[0].clone(), 1.);
+        test_numeric_object(arr.elements[1].clone(), 4.);
+        test_numeric_object(arr.elements[2].clone(), 6.);
+    } else {
+        panic!("object is not an array. got={:?}", evaluated);
+    }
+}

@@ -11,6 +11,7 @@ pub struct Program {
 }
 
 impl Program {
+    #[allow(dead_code)]
     fn token_literal(&self) -> String {
         if self.statements.is_empty() {
             "".to_string()

@@ -5,19 +5,13 @@ use std::rc::Rc;
 use super::object::*;
 use crate::token::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Environment {
     env: HashMap<String, Object>,
     enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
-    pub fn new() -> Self {
-        Self {
-            env: HashMap::new(),
-            enclosing: None,
-        }
-    }
     pub fn new_enclosing(enclosing: Rc<RefCell<Environment>>) -> Environment {
         Environment {
             env: HashMap::new(),
@@ -42,6 +36,6 @@ impl Environment {
     }
 
     pub fn set(&mut self, token: &Token, value: Object) {
-        self.env.insert(token.literal.clone(), value.clone());
+        self.env.insert(token.literal.clone(), value);
     }
 }

@@ -23,7 +23,7 @@ fn main() {
 
 pub fn run_prompt() {
     // Define environment outside REPL loop so the environment is retained
-    let environment = Rc::new(RefCell::new(Environment::new()));
+    let environment = Rc::new(RefCell::new(Environment::default()));
     let mut evaluator = Evaluator::new();
     let stdin = io::stdin();
     print!(">> ");

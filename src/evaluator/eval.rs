@@ -98,6 +98,7 @@ impl Evaluator {
             }
             Expression::If(expr) => {
                 let condition = self.eval_expression(env, *expr.condition)?;
+                #[allow(clippy::collapsible_else_if)]
                 if Self::is_truthy(condition) {
                     return self.eval_block_statement(env, expr.then_stmt);
                 } else {
@@ -217,7 +218,7 @@ impl Evaluator {
             },
             (Object::Str(s), Object::Number(n)) | (Object::Number(n), Object::Str(s)) => {
                 match operator {
-                    "*" => Ok(Object::Str(s.to_string().repeat(n as usize))),
+                    "*" => Ok(Object::Str(s.repeat(n as usize))),
                     _ => Err(RTError::new("invalid binary operator", line)),
                 }
             }
@@ -299,7 +300,7 @@ impl Evaluator {
         }
         // TODO: Do not clone the block statements
         self.eval_statements(
-            &mut Rc::new(RefCell::new(extended_env)),
+            &Rc::new(RefCell::new(extended_env)),
             function.body.statements.clone(),
         )
     }

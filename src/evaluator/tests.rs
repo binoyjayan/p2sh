@@ -1,11 +1,11 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
+#![allow(unused_imports)]
 use super::object::*;
 use super::*;
 use crate::evaluator::error::RTError;
 use crate::parser::*;
 use crate::scanner::*;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[cfg(test)]
 fn check_parse_errors(parser: &Parser) {
@@ -67,7 +67,7 @@ fn test_eval(input: &str) -> Result<Object, RTError> {
     let mut parser = Parser::new(scanner);
     let program = parser.parse_program();
     check_parse_errors(&parser);
-    let environment = Rc::new(RefCell::new(Environment::new()));
+    let environment = Rc::new(RefCell::new(Environment::default()));
     let mut evaluator = Evaluator::new();
     evaluator.eval_program(&environment, program)
 }

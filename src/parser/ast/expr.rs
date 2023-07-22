@@ -150,6 +150,7 @@ impl fmt::Display for CallExpr {
 }
 
 impl Expression {
+    #[allow(dead_code)]
     fn token_literal(&self) -> String {
         match &self {
             Expression::Ident(ident) => ident.token.literal.clone(),

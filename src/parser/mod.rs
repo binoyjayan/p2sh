@@ -58,6 +58,7 @@ impl Parser {
     }
 
     // check if we have run out of tokens
+    #[allow(dead_code)]
     fn is_at_end(&self) -> bool {
         self.peek_next.ttype == TokenType::Eof
     }
@@ -83,9 +84,9 @@ impl Parser {
         let mut program = Program::default();
 
         while self.current.ttype != TokenType::Eof {
-            match self.parse_statement() {
-                Ok(stmt) => program.statements.push(stmt),
-                Err(_) => {}
+            // TODO: Revisit error handling
+            if let Ok(stmt) = self.parse_statement() {
+                program.statements.push(stmt)
             }
             self.next_token();
         }

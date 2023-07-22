@@ -218,8 +218,8 @@ impl Parser {
         Expression::If(IfExpr {
             token,
             condition: Box::new(condition),
-            then_stmt: then_stmt,
-            else_stmt: else_stmt,
+            then_stmt,
+            else_stmt,
         })
     }
 

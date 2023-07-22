@@ -16,6 +16,7 @@ pub enum Object {
     Bool(bool),
     Return(Box<Object>),
     Func(Function),
+    Builtin(BuiltinFunction),
 }
 
 impl PartialEq for Object {
@@ -51,6 +52,7 @@ impl Clone for Object {
             Object::Bool(b) => Object::Bool(*b),
             Object::Return(r) => Object::Return(r.clone()),
             Object::Func(f) => Object::Func(f.clone()),
+            Object::Builtin(f) => Object::Builtin(f.clone()),
         }
     }
 }
@@ -79,6 +81,7 @@ impl fmt::Display for Object {
             Self::Bool(val) => write!(f, "{}", val),
             Self::Return(val) => write!(f, "{}", val),
             Self::Func(val) => write!(f, "{}", val),
+            Self::Builtin(val) => write!(f, "{}", val),
         }
     }
 }
@@ -150,5 +153,26 @@ impl fmt::Display for Function {
             .collect::<String>();
         let params_str = params_str.trim_end_matches(|c| c == ' ' || c == ',');
         write!(f, "fn({}) {{\n{}\n}}\n", params_str, self.body)
+    }
+}
+
+pub type BuiltinFunctionProto = fn(Vec<Object>) -> Result<Object, String>;
+
+#[derive(Debug, Clone)]
+pub struct BuiltinFunction {
+    pub name: String,
+    pub arity: usize,
+    pub func: BuiltinFunctionProto,
+}
+
+impl fmt::Display for BuiltinFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "builtin function")
+    }
+}
+
+impl BuiltinFunction {
+    pub fn new(name: String, arity: usize, func: BuiltinFunctionProto) -> BuiltinFunction {
+        BuiltinFunction { name, arity, func }
     }
 }

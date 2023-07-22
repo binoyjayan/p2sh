@@ -290,7 +290,7 @@ impl Parser {
     // followed by a ')' token. That makes it an infix parse expression since
     // the token '(' is in the middle of the identifier and the arguments list.
     fn parse_call_expression(&mut self, func: Expression) -> Expression {
-        let token = self.current.clone();
+        let token = self.previous.clone();
 
         Expression::Call(CallExpr {
             token,

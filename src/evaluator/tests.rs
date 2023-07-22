@@ -609,3 +609,78 @@ fn test_closures() {
         }
     }
 }
+
+#[test]
+fn test_builtin_functions() {
+    let mut failed = 0;
+    struct BuiltinTest {
+        input: &'static str,
+        expected: Object,
+    }
+    let builtin_tests = vec![
+        BuiltinTest {
+            input: "len(\"\")",
+            expected: Object::Number(0.),
+        },
+        BuiltinTest {
+            input: "len(\"four\")",
+            expected: Object::Number(4.),
+        },
+        BuiltinTest {
+            input: "len(\"hello world\")",
+            expected: Object::Number(11.),
+        },
+    ];
+    for test in builtin_tests {
+        let evaluated = test_eval(test.input);
+        match evaluated {
+            Ok(evaluated) => match test.expected {
+                Object::Number(expected) => test_numeric_object(evaluated, expected),
+                Object::Nil => test_nil_object(evaluated),
+                _ => {
+                    println!("Invalid expected object");
+                    failed += 1;
+                }
+            },
+            Err(e) => {
+                println!("{}", e);
+                failed += 1;
+            }
+        }
+    }
+    struct ErrorTest {
+        input: &'static str,
+        expected: RTError,
+    }
+    let error_tests = vec![
+        ErrorTest {
+            input: "len(1)",
+            expected: RTError::new("argument to 'len' not supported", 1),
+        },
+        ErrorTest {
+            input: "len(\"one\", \"two\")",
+            expected: RTError::new("wrong number of arguments. got=2 needs=1", 1),
+        },
+    ];
+
+    for (i, test) in error_tests.iter().enumerate() {
+        let evaluated = test_eval(test.input);
+        match evaluated {
+            Ok(obj) => {
+                panic!("[{}] No error object returned. got={:?}", i, obj);
+            }
+            Err(err) => {
+                if err.msg != test.expected.msg {
+                    println!(
+                        "[{}] wrong error message. expected='{}', got='{}'",
+                        i, err.msg, test.expected.msg
+                    );
+                    failed += 1;
+                }
+            }
+        }
+    }
+    if failed != 0 {
+        panic!("{} builtin function tests failed", failed);
+    }
+}

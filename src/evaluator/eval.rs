@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use super::builtins::BUILTINS;
 use super::environment::*;
 use super::error::RTError;
 use super::object::*;
@@ -238,6 +239,8 @@ impl Evaluator {
     ) -> Result<Object, RTError> {
         if let Some(obj) = environment.borrow().get(&token.literal.clone()) {
             Ok(obj)
+        } else if let Some(obj) = BUILTINS.get(&token.literal.clone()) {
+            Ok(Object::Builtin(obj.clone()))
         } else {
             Err(RTError::new(
                 &format!("Undefined identifier: '{}'", token.literal),
@@ -271,13 +274,13 @@ impl Evaluator {
     ) -> Result<Object, RTError> {
         let function = self.eval_expression(env, *call.func)?;
         let args = self.eval_expressions(env, (*call.args).to_vec())?;
-        if let Object::Func(func) = function {
-            self.invoke_function_call(&func, args)
-        } else {
-            Err(RTError::new(
+        match function {
+            Object::Func(func) => self.invoke_function_call(&func, args),
+            Object::Builtin(func) => self.invoke_builtin_function(func, args),
+            _ => Err(RTError::new(
                 &format!("Not a function: '{}'", call.token.literal),
                 call.token.line,
-            ))
+            )),
         }
     }
 
@@ -303,5 +306,27 @@ impl Evaluator {
             &Rc::new(RefCell::new(extended_env)),
             function.body.statements.clone(),
         )
+    }
+    fn invoke_builtin_function(
+        &mut self,
+        func: BuiltinFunction,
+        args: Vec<Object>,
+    ) -> Result<Object, RTError> {
+        let builtin_func = func.func;
+        if args.len() != func.arity {
+            Err(RTError::new(
+                &format!(
+                    "wrong number of arguments. got={} needs={}",
+                    args.len(),
+                    func.arity
+                ),
+                1,
+            ))
+        } else {
+            match builtin_func(args) {
+                Ok(obj) => Ok(obj),
+                Err(s) => Err(RTError::new(&s, 1)),
+            }
+        }
     }
 }

@@ -18,6 +18,7 @@ type ParseErrors = Vec<ParseError>;
 #[derive(Default)]
 pub struct Parser {
     scanner: Scanner,
+    previous: Token,
     current: Token,
     peek_next: Token,
     errors: ParseErrors,
@@ -35,6 +36,7 @@ impl Parser {
     }
 
     fn next_token(&mut self) {
+        self.previous = self.current.clone();
         self.current = self.peek_next.clone();
         self.peek_next = self.scanner.next_token();
     }

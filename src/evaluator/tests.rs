@@ -630,11 +630,60 @@ fn test_builtin_functions() {
             input: "len(\"hello world\")",
             expected: Object::Number(11.),
         },
+        BuiltinTest {
+            input: "len([])",
+            expected: Object::Number(0.),
+        },
+        BuiltinTest {
+            input: "len([1, 2, 3])",
+            expected: Object::Number(3.),
+        },
+        BuiltinTest {
+            input: "first([])",
+            expected: Object::Nil,
+        },
+        BuiltinTest {
+            input: "last([])",
+            expected: Object::Nil,
+        },
+        BuiltinTest {
+            input: "rest([])",
+            expected: Object::Nil,
+        },
+        BuiltinTest {
+            input: "first([1, 2, 3])",
+            expected: Object::Number(1.),
+        },
+        BuiltinTest {
+            input: "last([1, 2, 3])",
+            expected: Object::Number(3.),
+        },
+        BuiltinTest {
+            input: "rest([1, 2, 3])",
+            expected: Object::Arr(Array {
+                elements: vec![Object::Number(2.), Object::Number(3.)],
+            }),
+        },
+        BuiltinTest {
+            input: "let a = [1, 2, 3, 4]; rest(rest(rest(a)))",
+            expected: Object::Arr(Array {
+                elements: vec![Object::Number(4.)],
+            }),
+        },
     ];
     for test in builtin_tests {
-        let evaluated = test_eval(test.input);
-        match evaluated {
-            Ok(evaluated) => match test.expected {
+        let result = test_eval(test.input);
+        match result {
+            Ok(evaluated) => match evaluated {
+                Object::Arr(arr) => {
+                    for (i, item) in arr.elements.iter().enumerate() {
+                        if let Object::Arr(arr_exp) = test.expected.clone() {
+                            if let Object::Number(exp) = arr_exp.elements[i] {
+                                test_numeric_object((*item).clone(), exp)
+                            }
+                        }
+                    }
+                }
                 Object::Number(expected) => test_numeric_object(evaluated, expected),
                 Object::Nil => test_nil_object(evaluated),
                 _ => {

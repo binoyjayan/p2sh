@@ -2,7 +2,7 @@
 
 use std::convert::From;
 
-#[derive(PartialEq, Eq, PartialOrd, Copy, Clone, Default)]
+#[derive(PartialEq, Eq, PartialOrd, Copy, Clone, Default, Debug)]
 pub enum Precedence {
     #[default]
     Lowest = 0,
@@ -14,7 +14,7 @@ pub enum Precedence {
     Term,       // + -
     Factor,     // * /
     Unary,      // ! - (Prefix)
-    Call,       // . ()
+    Call,       // [] . ()
     Primary,
 }
 

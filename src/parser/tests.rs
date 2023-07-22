@@ -577,6 +577,16 @@ fn test_parsing_operator_precedence() {
             expected: "add((((a + b) + ((c * d) / f)) + g))",
             num_stmts: 1,
         },
+        PrecedenceTest {
+            input: "a * [1, 2, 3, 4][b * c] * d",
+            expected: "((a * ([1, 2, 3, 4][(b * c)])) * d)",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "add(a * b[2], b[1], 2 * [1, 2][1])",
+            expected: "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
+            num_stmts: 1,
+        },
     ];
 
     for test in precedence_tests {
@@ -800,6 +810,28 @@ fn test_parsing_array_literal_expression() {
                 "stmt.expr is not an ArrayLiteral expression. got={}",
                 stmt.value
             );
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_parsing_array_index_expression() {
+    let input = "myArray[1 + 1]";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::Index(expr) = &stmt.value {
+            test_identifier(&expr.left, "myArray");
+            // array element at index 1
+            test_infix_expression(&expr.index, Literal::Numeric(1.), "+", Literal::Numeric(1.));
+        } else {
+            panic!("stmt.expr is not an Array IndexExpr. got={}", stmt.value);
         }
     } else {
         panic!(

@@ -16,6 +16,7 @@ pub enum Expression {
     Function(FunctionLiteral),
     Call(CallExpr),
     Array(ArrayLiteral),
+    Index(IndexExpr),
     Nil,
 }
 
@@ -152,7 +153,7 @@ impl fmt::Display for CallExpr {
 
 #[derive(Clone, Debug)]
 pub struct ArrayLiteral {
-    pub token: Token,
+    pub token: Token, // [
     pub elements: Vec<Expression>,
 }
 
@@ -165,6 +166,20 @@ impl fmt::Display for ArrayLiteral {
             .collect::<String>();
         let elements_str = elements_str.trim_end_matches(|c| c == ' ' || c == ',');
         write!(f, "[{}]", elements_str)
+    }
+}
+
+// Index expression looks like '<expr>[<expr>]'
+#[derive(Clone, Debug)]
+pub struct IndexExpr {
+    pub token: Token, // [
+    pub left: Box<Expression>,
+    pub index: Box<Expression>,
+}
+
+impl fmt::Display for IndexExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}[{}])", self.left, self.index)
     }
 }
 
@@ -182,6 +197,7 @@ impl Expression {
             Expression::Function(f) => f.token.literal.clone(),
             Expression::Call(c) => c.token.literal.clone(),
             Expression::Array(s) => s.token.literal.clone(),
+            Expression::Index(idx) => idx.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
         }
     }
@@ -200,6 +216,7 @@ impl fmt::Display for Expression {
             Expression::Function(fun) => write!(f, "{}", fun),
             Expression::Call(c) => write!(f, "{}", c),
             Expression::Array(s) => write!(f, "{}", s),
+            Expression::Index(idx) => write!(f, "{}", idx),
             Expression::Nil => write!(f, "nil"),
         }
     }

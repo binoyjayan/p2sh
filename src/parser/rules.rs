@@ -93,9 +93,9 @@ lazy_static! {
         // Function
         rules[TokenType::Function as usize] =
             ParseRule::new(Some(Parser::parse_function_literal), None, Precedence::Lowest);
-        // Function
+        // Array literal (prefix) and index operator (infix) parser
         rules[TokenType::LeftBracket as usize] =
-            ParseRule::new(Some(Parser::parse_array_literal), None, Precedence::Lowest);
+            ParseRule::new(Some(Parser::parse_array_literal), Some(Parser::parse_index_expression), Precedence::Call);
         rules
     };
 }
@@ -333,6 +333,26 @@ impl Parser {
         Expression::Array(ArrayLiteral {
             token,
             elements: self.parse_expression_list(TokenType::RightBracket),
+        })
+    }
+
+    // The index operator do not have a single operator between the operands
+    // on each side. But in order to parse them, it is easier to pretend that
+    // they do. The index expression 'a[0]' is treated as an infix expression
+    // with an expression 'a' on the left and an index '0' on the right.
+    fn parse_index_expression(&mut self, left: Expression) -> Expression {
+        let token = self.current.clone();
+        // advance to the next token
+        self.next_token();
+        let index = self.parse_expression(Precedence::Lowest);
+        if !self.expect_peek(&TokenType::RightBracket) {
+            return Expression::Nil;
+        }
+
+        Expression::Index(IndexExpr {
+            token,
+            left: Box::new(left),
+            index: Box::new(index),
         })
     }
 }

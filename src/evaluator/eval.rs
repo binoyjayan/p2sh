@@ -117,6 +117,7 @@ impl Evaluator {
             Expression::Array(arr) => Ok(Object::Arr(Array {
                 elements: self.eval_expressions(env, (*arr.elements).to_vec())?,
             })),
+            Expression::Index(expr) => Ok(self.eval_index_expr(env, expr)?),
             _ => Ok(Object::Nil),
         }
     }
@@ -330,6 +331,40 @@ impl Evaluator {
                 Ok(obj) => Ok(obj),
                 Err(s) => Err(RTError::new(&s, 1)),
             }
+        }
+    }
+
+    fn eval_index_expr(
+        &mut self,
+        env: &Rc<RefCell<Environment>>,
+        expr: IndexExpr,
+    ) -> Result<Object, RTError> {
+        let arr_obj = self.eval_expression(env, (*expr.left).clone())?;
+        if let Object::Arr(arr) = arr_obj {
+            let index = self.eval_expression(env, *expr.index)?;
+            self.eval_array_index_expr(arr, index)
+        } else {
+            Err(RTError::new(
+                &format!("index operator not supported: {:?}", expr.left),
+                1,
+            ))
+        }
+    }
+
+    fn eval_array_index_expr(&mut self, arr: Array, index: Object) -> Result<Object, RTError> {
+        if let Object::Number(idx) = index {
+            let idx = idx as f64;
+            if idx < 0. || idx >= arr.elements.len() as f64 {
+                // Out of bounds
+                Ok(Object::Nil)
+            } else {
+                Ok(arr.elements[idx as usize].clone())
+            }
+        } else {
+            Err(RTError::new(
+                &format!("invalid index to array object: {}", index),
+                1,
+            ))
         }
     }
 }

@@ -697,3 +697,57 @@ fn test_array_literals() {
         panic!("object is not an array. got={:?}", evaluated);
     }
 }
+
+#[test]
+fn test_array_index_expressions() {
+    struct ArrayIndexExpr {
+        input: &'static str,
+        expected: Object,
+    }
+    let index_exprs = vec![
+        ArrayIndexExpr {
+            input: "[1, 2, 3][0]",
+            expected: Object::Number(1.),
+        },
+        ArrayIndexExpr {
+            input: "[1, 2, 3][1]",
+            expected: Object::Number(2.),
+        },
+        ArrayIndexExpr {
+            input: "[1, 2, 3][2]",
+            expected: Object::Number(3.),
+        },
+        ArrayIndexExpr {
+            input: "let i = 0; [1][i]",
+            expected: Object::Number(1.),
+        },
+        ArrayIndexExpr {
+            input: "let my_arr = [1, 2, 3]; my_arr[0] + my_arr[1] + my_arr[2];",
+            expected: Object::Number(6.),
+        },
+        ArrayIndexExpr {
+            input: "let my_arr = [1, 2, 3]; let i = my_arr[0]; my_arr[i];",
+            expected: Object::Number(2.),
+        },
+        ArrayIndexExpr {
+            input: "[1, 2, 3][3]",
+            expected: Object::Nil,
+        },
+        ArrayIndexExpr {
+            input: "[1, 2, 3][-1]",
+            expected: Object::Nil,
+        },
+    ];
+
+    for test in index_exprs {
+        let evaluated = test_eval(test.input);
+        match evaluated {
+            Ok(evaluated) => match test.expected {
+                Object::Number(expect) => test_numeric_object(evaluated, expect),
+                Object::Nil => test_nil_object(evaluated),
+                _ => panic!("Invalid expected object"),
+            },
+            Err(e) => panic!("{}", e),
+        }
+    }
+}

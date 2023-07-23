@@ -1,8 +1,6 @@
-use std::fmt;
-
-use crate::scanner::token::*;
-
 use super::stmt::*;
+use crate::scanner::token::*;
+use std::fmt;
 
 #[derive(Clone, Debug)]
 pub enum Expression {
@@ -16,6 +14,7 @@ pub enum Expression {
     Function(FunctionLiteral),
     Call(CallExpr),
     Array(ArrayLiteral),
+    Hash(HashLiteral),
     Index(IndexExpr),
     Nil,
 }
@@ -169,6 +168,27 @@ impl fmt::Display for ArrayLiteral {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct HashLiteral {
+    pub token: Token, // {
+    // A HashMap is not required here since this is just a literal
+    // that exists only during parsing. During evaluation, the
+    // literal maybe converted into a Object of type HashMap.
+    pub pairs: Vec<(Expression, Expression)>,
+}
+
+impl fmt::Display for HashLiteral {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let pairs_str = self
+            .pairs
+            .iter()
+            .map(|p| format!("{}: {}, ", p.0, p.1))
+            .collect::<String>();
+        let pairs_str = pairs_str.trim_end_matches(|c| c == ' ' || c == ',');
+        write!(f, "{{{}}}", pairs_str)
+    }
+}
+
 // Index expression looks like '<expr>[<expr>]'
 #[derive(Clone, Debug)]
 pub struct IndexExpr {
@@ -197,6 +217,7 @@ impl Expression {
             Expression::Function(f) => f.token.literal.clone(),
             Expression::Call(c) => c.token.literal.clone(),
             Expression::Array(s) => s.token.literal.clone(),
+            Expression::Hash(h) => h.token.literal.clone(),
             Expression::Index(idx) => idx.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
         }
@@ -216,6 +237,7 @@ impl fmt::Display for Expression {
             Expression::Function(fun) => write!(f, "{}", fun),
             Expression::Call(c) => write!(f, "{}", c),
             Expression::Array(s) => write!(f, "{}", s),
+            Expression::Hash(h) => write!(f, "{}", h),
             Expression::Index(idx) => write!(f, "{}", idx),
             Expression::Nil => write!(f, "nil"),
         }

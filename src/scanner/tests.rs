@@ -27,6 +27,7 @@ fn test_next_token() {
             \"foobar\"
             \"foo bar\"
             [1, 2];
+            {\"foo\": \"bar\"}
         ";
 
     let tests = vec![
@@ -110,6 +111,11 @@ fn test_next_token() {
         ExpectedToken(TokenType::Number, "2"),
         ExpectedToken(TokenType::RightBracket, "]"),
         ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::LeftBrace, "{"),
+        ExpectedToken(TokenType::Str, "foo"),
+        ExpectedToken(TokenType::Colon, ":"),
+        ExpectedToken(TokenType::Str, "bar"),
+        ExpectedToken(TokenType::RightBrace, "}"),
         ExpectedToken(TokenType::Eof, ""),
     ];
 

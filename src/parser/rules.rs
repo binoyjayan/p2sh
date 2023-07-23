@@ -96,6 +96,8 @@ lazy_static! {
         // Array literal (prefix) and index operator (infix) parser
         rules[TokenType::LeftBracket as usize] =
             ParseRule::new(Some(Parser::parse_array_literal), Some(Parser::parse_index_expression), Precedence::Call);
+        rules[TokenType::LeftBrace as usize] =
+            ParseRule::new(Some(Parser::parse_hash_literal), None, Precedence::Lowest);
         rules
     };
 }
@@ -354,5 +356,33 @@ impl Parser {
             left: Box::new(left),
             index: Box::new(index),
         })
+    }
+
+    fn parse_hash_literal(&mut self) -> Expression {
+        let token = self.current.clone();
+        let mut pairs = Vec::new();
+
+        while !self.peek_token_is(&TokenType::RightBrace) {
+            // consume the first '{' or a ',' in each iteration
+            self.next_token();
+            let key = self.parse_expression(Precedence::Lowest);
+
+            if !self.expect_peek(&TokenType::Colon) {
+                return Expression::Nil;
+            }
+            // consume the colon (':') character
+            self.next_token();
+            let value = self.parse_expression(Precedence::Lowest);
+            pairs.push((key, value));
+
+            if !self.peek_token_is(&TokenType::RightBrace) && !self.expect_peek(&TokenType::Comma) {
+                return Expression::Nil;
+            }
+        }
+        // Consume the end brace '}'
+        if !self.expect_peek(&TokenType::RightBrace) {
+            return Expression::Nil;
+        }
+        Expression::Hash(HashLiteral { token, pairs })
     }
 }

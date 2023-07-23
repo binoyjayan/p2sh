@@ -1,7 +1,9 @@
 #![allow(unused_imports)]
 use super::*;
+use std::collections::HashMap;
 
 #[cfg(test)]
+#[derive(Clone)]
 enum Literal {
     Str(&'static str),
     Numeric(f64),
@@ -832,6 +834,160 @@ fn test_parsing_array_index_expression() {
             test_infix_expression(&expr.index, Literal::Numeric(1.), "+", Literal::Numeric(1.));
         } else {
             panic!("stmt.expr is not an Array IndexExpr. got={}", stmt.value);
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_parsing_hash_literals_strings_keys() {
+    let input = "{ \"one\": 1, \"two\": 2, \"three\": 3}";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::Hash(map_expr) = &stmt.value {
+            assert_eq!(
+                map_expr.pairs.len(),
+                3,
+                "hash.pairs has wrong length. wants=3 got={}",
+                map_expr.pairs.len()
+            );
+            let mut map_expected: HashMap<&str, f64> = HashMap::new();
+            map_expected.insert("one", 1.);
+            map_expected.insert("two", 2.);
+            map_expected.insert("three", 3.);
+
+            for (key, value) in map_expr.pairs.iter() {
+                if let Expression::Str(k) = key {
+                    if let Some(val) = map_expected.get(k.value.as_str()) {
+                        test_numeric_literal(value, *val);
+                    } else {
+                        panic!("key {} not found in hash", key);
+                    }
+                } else {
+                    panic!("hash key is not a string literal. got={}", key);
+                }
+            }
+        } else {
+            panic!(
+                "stmt.expr is not an HashLiteral expression. got={}",
+                stmt.value
+            );
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_parsing_empty_hash_literal() {
+    let input = "{}";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::Hash(map_expr) = &stmt.value {
+            assert_eq!(
+                map_expr.pairs.len(),
+                0,
+                "hash.pairs has wrong length. wants=0 got={}",
+                map_expr.pairs.len()
+            );
+        } else {
+            panic!(
+                "stmt.expr is not an HashLiteral expression. got={}",
+                stmt.value
+            );
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_parsing_hash_literals_with_exprs() {
+    let input = "{ \"one\": 0 + 1, \"two\": 10 - 8, \"three\": 15 / 5}";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::Hash(map_expr) = &stmt.value {
+            assert_eq!(
+                map_expr.pairs.len(),
+                3,
+                "hash.pairs has wrong length. wants=3 got={}",
+                map_expr.pairs.len()
+            );
+
+            #[derive(Clone)]
+            struct InfixTest {
+                operator: &'static str,
+                left: Literal,
+                right: Literal,
+            }
+
+            let mut map_expected: HashMap<&str, InfixTest> = HashMap::new();
+            // "one" = Infix(1  + 0)
+            map_expected.insert(
+                "one",
+                InfixTest {
+                    operator: "+",
+                    left: Literal::Numeric(0.),
+                    right: Literal::Numeric(1.),
+                },
+            );
+            // "two" = Infix(10 - 8)
+            map_expected.insert(
+                "two",
+                InfixTest {
+                    operator: "-",
+                    left: Literal::Numeric(10.),
+                    right: Literal::Numeric(8.),
+                },
+            );
+            // "three" = Infix(15 / 5)
+            map_expected.insert(
+                "three",
+                InfixTest {
+                    operator: "/",
+                    left: Literal::Numeric(15.),
+                    right: Literal::Numeric(5.),
+                },
+            );
+
+            for (key, value) in map_expr.pairs.iter() {
+                println!("test: {} -->> {}", key, value);
+                if let Expression::Str(k) = key {
+                    if let Some(exp_val) = map_expected.get(k.value.as_str()) {
+                        test_infix_expression(
+                            value,
+                            exp_val.left.clone(),
+                            exp_val.operator,
+                            exp_val.right.clone(),
+                        );
+                    } else {
+                        panic!("key {} not found in hash", key);
+                    }
+                } else {
+                    panic!("hash key is not a string literal. got={}", key);
+                }
+            }
+        } else {
+            panic!(
+                "stmt.expr is not an HashLiteral expression. got={}",
+                stmt.value
+            );
         }
     } else {
         panic!(

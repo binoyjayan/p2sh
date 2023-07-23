@@ -74,6 +74,7 @@ impl Scanner {
             '\0' => self.make_token(TokenType::Eof, ""),
             ';' => self.make_token_ch(TokenType::Semicolon),
             ',' => self.make_token_ch(TokenType::Comma),
+            ':' => self.make_token_ch(TokenType::Colon),
             '(' => self.make_token_ch(TokenType::LeftParen),
             ')' => self.make_token_ch(TokenType::RightParen),
             '{' => self.make_token_ch(TokenType::LeftBrace),

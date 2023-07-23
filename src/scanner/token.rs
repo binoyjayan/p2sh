@@ -58,6 +58,7 @@ pub enum TokenType {
     BangEqual,
     // Delimiters
     Comma,
+    Colon,
     Semicolon,
     LeftParen,
     RightParen,
@@ -97,6 +98,7 @@ impl From<TokenType> for &'static str {
             TokenType::Equal => "==",
             TokenType::BangEqual => "!=",
             TokenType::Comma => ",",
+            TokenType::Colon => ":",
             TokenType::Semicolon => ";",
             TokenType::LeftParen => "(",
             TokenType::RightParen => ")",

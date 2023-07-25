@@ -1,6 +1,8 @@
 use std::cell::RefCell;
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::ops;
 use std::rc::Rc;
 
@@ -18,6 +20,7 @@ pub enum Object {
     Func(Function),
     Builtin(BuiltinFunction),
     Arr(Array),
+    Map(HMap),
 }
 
 impl PartialEq for Object {
@@ -55,6 +58,7 @@ impl Clone for Object {
             Object::Func(f) => Object::Func(f.clone()),
             Object::Builtin(f) => Object::Builtin(f.clone()),
             Object::Arr(a) => Object::Arr(a.clone()),
+            Object::Map(m) => Object::Map(m.clone()),
         }
     }
 }
@@ -85,6 +89,7 @@ impl fmt::Display for Object {
             Self::Func(val) => write!(f, "{}", val),
             Self::Builtin(val) => write!(f, "{}", val),
             Self::Arr(val) => write!(f, "{}", val),
+            Self::Map(val) => write!(f, "{}", val),
         }
     }
 }
@@ -140,6 +145,20 @@ impl ops::Neg for &Object {
     }
 }
 
+impl Hash for Object {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Object::Number(ref n) => {
+                // Use the built-in hash function for f64
+                state.write_u64(n.to_bits());
+            }
+            Object::Bool(ref b) => b.hash(state),
+            Object::Str(ref s) => s.hash(state),
+            _ => "".hash(state),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Function {
     pub params: Vec<Identifier>,
@@ -185,6 +204,11 @@ pub struct Array {
     pub elements: Vec<Object>,
 }
 
+#[derive(Debug, Clone)]
+pub struct HMap {
+    pub pairs: HashMap<Object, Object>,
+}
+
 impl fmt::Display for Array {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let elements_str = self
@@ -194,5 +218,17 @@ impl fmt::Display for Array {
             .collect::<String>();
         let elements_str = elements_str.trim_end_matches(|c| c == ' ' || c == ',');
         write!(f, "[{}]", elements_str)
+    }
+}
+
+impl fmt::Display for HMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let pairs_str = self
+            .pairs
+            .iter()
+            .map(|(k, v)| format!("{}: {}, ", k, v))
+            .collect::<String>();
+        let pairs_str = pairs_str.trim_end_matches(|c| c == ' ' || c == ',');
+        write!(f, "[{}]", pairs_str)
     }
 }

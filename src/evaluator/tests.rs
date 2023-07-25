@@ -5,6 +5,9 @@ use crate::evaluator::error::RTError;
 use crate::parser::*;
 use crate::scanner::*;
 use std::cell::RefCell;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::rc::Rc;
 
 #[cfg(test)]
@@ -799,4 +802,52 @@ fn test_array_index_expressions() {
             Err(e) => panic!("{}", e),
         }
     }
+}
+
+#[cfg(test)]
+fn make_object_hash(obj: Object) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    obj.hash(&mut hasher);
+    hasher.finish()
+}
+
+#[test]
+fn test_hash_key() {
+    let hash_s1 = make_object_hash(Object::Str("Hello, World!".into()));
+    let hash_s2 = make_object_hash(Object::Str("Hello, World!".into()));
+    let hash_s3 = make_object_hash(Object::Str("Hello  World!".into()));
+    assert_eq!(
+        hash_s1, hash_s2,
+        "strings with the same content have different hash keys"
+    );
+    assert_ne!(
+        hash_s1, hash_s3,
+        "strings with different content have the same hash keys"
+    );
+
+    let hash_n1 = make_object_hash(Object::Number(11111.11));
+    let hash_n2 = make_object_hash(Object::Number(11111.11));
+    let hash_n3 = make_object_hash(Object::Number(22222.22));
+
+    assert_eq!(
+        hash_n1, hash_n2,
+        "numbers with the same content have different hash keys"
+    );
+    assert_ne!(
+        hash_n1, hash_n3,
+        "numbers with different content have the same hash keys"
+    );
+
+    let hash_b1 = make_object_hash(Object::Bool(true));
+    let hash_b2 = make_object_hash(Object::Bool(true));
+    let hash_b3 = make_object_hash(Object::Bool(false));
+
+    assert_eq!(
+        hash_b1, hash_b2,
+        "booleans with the same content have different hash keys"
+    );
+    assert_ne!(
+        hash_b1, hash_b3,
+        "booleans with different content have the same hash keys"
+    );
 }

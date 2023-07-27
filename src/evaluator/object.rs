@@ -35,6 +35,8 @@ impl PartialEq for Object {
     }
 }
 
+impl Eq for Object {}
+
 impl PartialOrd for Object {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
@@ -75,6 +77,9 @@ impl Object {
     }
     pub fn is_falsey(&self) -> bool {
         matches!(self, Object::Bool(false) | Object::Nil)
+    }
+    pub fn is_a_valid_key(&self) -> bool {
+        matches!(self, Object::Str(_) | Object::Number(_) | Object::Bool(_))
     }
 }
 

@@ -851,3 +851,27 @@ fn test_hash_key() {
         "booleans with different content have the same hash keys"
     );
 }
+
+#[test]
+fn test_hash_literals() {
+    let input = "let two = \"two\";
+    {
+        \"one\": 10 - 9,
+        two: 1 + 1,
+        \"three\": 6 / 2,
+        4: 4,
+        true: 5,
+        false: 6
+    }";
+    let evaluated = test_eval(input);
+    if let Ok(Object::Map(map)) = evaluated {
+        test_numeric_object(map.pairs[&Object::Str("one".into())].clone(), 1.);
+        test_numeric_object(map.pairs[&Object::Str("two".into())].clone(), 2.);
+        test_numeric_object(map.pairs[&Object::Str("three".into())].clone(), 3.);
+        test_numeric_object(map.pairs[&Object::Number(4.)].clone(), 4.);
+        test_numeric_object(map.pairs[&Object::Bool(true)].clone(), 5.);
+        test_numeric_object(map.pairs[&Object::Bool(false)].clone(), 6.);
+    } else {
+        panic!("object is not an hash literal. got={:?}", evaluated);
+    }
+}

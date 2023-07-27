@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use super::builtins::BUILTINS;
@@ -117,6 +118,7 @@ impl Evaluator {
             Expression::Array(arr) => Ok(Object::Arr(Array {
                 elements: self.eval_expressions(env, (*arr.elements).to_vec())?,
             })),
+            Expression::Hash(expr) => Ok(self.eval_hash_literal(env, expr)?),
             Expression::Index(expr) => Ok(self.eval_index_expr(env, expr)?),
             _ => Ok(Object::Nil),
         }
@@ -280,7 +282,7 @@ impl Evaluator {
         let args = self.eval_expressions(env, (*call.args).to_vec())?;
         match function {
             Object::Func(func) => self.invoke_function_call(&func, args),
-            Object::Builtin(func) => self.invoke_builtin_function(func, args),
+            Object::Builtin(func) => self.invoke_builtin_function(func, args, call.token.line),
             _ => Err(RTError::new(
                 &format!("Not a function: '{}'", call.token.literal),
                 call.token.line,
@@ -315,6 +317,7 @@ impl Evaluator {
         &mut self,
         func: BuiltinFunction,
         args: Vec<Object>,
+        line: usize,
     ) -> Result<Object, RTError> {
         let builtin_func = func.func;
         if args.len() != func.arity {
@@ -324,7 +327,7 @@ impl Evaluator {
                     args.len(),
                     func.arity
                 ),
-                1,
+                line,
             ))
         } else {
             match builtin_func(args) {
@@ -342,16 +345,21 @@ impl Evaluator {
         let arr_obj = self.eval_expression(env, (*expr.left).clone())?;
         if let Object::Arr(arr) = arr_obj {
             let index = self.eval_expression(env, *expr.index)?;
-            self.eval_array_index_expr(arr, index)
+            self.eval_array_index_expr(arr, index, expr.token.line)
         } else {
             Err(RTError::new(
                 &format!("index operator not supported: {:?}", expr.left),
-                1,
+                expr.token.line,
             ))
         }
     }
 
-    fn eval_array_index_expr(&mut self, arr: Array, index: Object) -> Result<Object, RTError> {
+    fn eval_array_index_expr(
+        &mut self,
+        arr: Array,
+        index: Object,
+        line: usize,
+    ) -> Result<Object, RTError> {
         if let Object::Number(idx) = index {
             let idx = idx as f64;
             if idx < 0. || idx >= arr.elements.len() as f64 {
@@ -363,8 +371,35 @@ impl Evaluator {
         } else {
             Err(RTError::new(
                 &format!("invalid index to array object: {}", index),
-                1,
+                line,
             ))
+        }
+    }
+
+    fn eval_hash_literal(
+        &mut self,
+        env: &Rc<RefCell<Environment>>,
+        expr: HashLiteral,
+    ) -> Result<Object, RTError> {
+        let pairs: Result<HashMap<Object, Object>, RTError> = expr
+            .pairs
+            .into_iter()
+            .map(|(key, value)| {
+                let obj_key = self.eval_expression(env, key)?;
+                let obj_val = self.eval_expression(env, value)?;
+                if !obj_key.is_a_valid_key() {
+                    return Err(RTError::new(
+                        "hash key should be a numeric, a string or a boolean",
+                        expr.token.line,
+                    ));
+                }
+                Ok((obj_key, obj_val))
+            })
+            .collect();
+
+        match pairs {
+            Ok(pairs) => Ok(Object::Map(HMap { pairs })),
+            Err(e) => Err(e),
         }
     }
 }

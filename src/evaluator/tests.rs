@@ -458,6 +458,30 @@ fn test_error_handling() {
             input: "\"foo\" - \"bar\"",
             expected: RTError::new("invalid binary operator", 1),
         },
+        ErrorTest {
+            input: "1[1]",
+            expected: RTError::new("index operator not supported", 1),
+        },
+        ErrorTest {
+            input: "true[1]",
+            expected: RTError::new("index operator not supported", 1),
+        },
+        ErrorTest {
+            input: "\"not_array\"[1]",
+            expected: RTError::new("index operator not supported", 1),
+        },
+        ErrorTest {
+            input: "fn(x) {x}[1]",
+            expected: RTError::new("index operator not supported", 1),
+        },
+        ErrorTest {
+            input: "[1, 2, 3] [fn(x) {x}]",
+            expected: RTError::new("invalid index to array object", 1),
+        },
+        ErrorTest {
+            input: "{\"name\": \"p2sh\"} [fn(x) {x}]",
+            expected: RTError::new("hash key should be a numeric, a string or a boolean", 1),
+        },
     ];
     for (i, test) in error_tests.iter().enumerate() {
         let evaluated = test_eval(test.input);
@@ -873,5 +897,64 @@ fn test_hash_literals() {
         test_numeric_object(map.pairs[&Object::Bool(false)].clone(), 6.);
     } else {
         panic!("object is not an hash literal. got={:?}", evaluated);
+    }
+}
+
+#[test]
+fn test_hash_index_expressions() {
+    struct IndexExpression {
+        input: &'static str,
+        expected: Object,
+    }
+    let index_exprs = vec![
+        IndexExpression {
+            input: "{\"foo\": 5}[\"foo\"]",
+            expected: Object::Number(5.),
+        },
+        IndexExpression {
+            input: "{\"foo\": 5}[\"bar\"]",
+            expected: Object::Nil,
+        },
+        IndexExpression {
+            input: "{}[\"foo\"]",
+            expected: Object::Nil,
+        },
+        IndexExpression {
+            input: "{5: 5}[5]",
+            expected: Object::Number(5.),
+        },
+        IndexExpression {
+            input: "{true: 1}[true]",
+            expected: Object::Number(1.),
+        },
+        IndexExpression {
+            input: "{false: 0}[false]",
+            expected: Object::Number(0.),
+        },
+        IndexExpression {
+            input: "{true: \"true\"}[true]",
+            expected: Object::Str("true".to_string()),
+        },
+        IndexExpression {
+            input: "[{\"name\": \"Alice\", \"age\": 24}, {\"name\": \"Anna\", \"age\": 28}][0][\"name\"]",
+            expected: Object::Str("Alice".to_string()),
+        },
+        IndexExpression {
+            input: "[{\"name\": \"Alice\", \"age\": 24}, {\"name\": \"Anna\", \"age\": 28}][1][\"name\"]",
+            expected: Object::Str("Anna".to_string()),
+        },
+    ];
+
+    for test in index_exprs {
+        let evaluated = test_eval(test.input);
+        match evaluated {
+            Ok(evaluated) => match test.expected {
+                Object::Number(expect) => test_numeric_object(evaluated, expect),
+                Object::Nil => test_nil_object(evaluated),
+                Object::Str(s) => test_string_object(evaluated, &s),
+                _ => panic!("Invalid expected object"),
+            },
+            Err(e) => panic!("{}", e),
+        }
     }
 }

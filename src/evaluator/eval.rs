@@ -342,13 +342,16 @@ impl Evaluator {
         env: &Rc<RefCell<Environment>>,
         expr: IndexExpr,
     ) -> Result<Object, RTError> {
-        let arr_obj = self.eval_expression(env, (*expr.left).clone())?;
-        if let Object::Arr(arr) = arr_obj {
+        let obj = self.eval_expression(env, (*expr.left).clone())?;
+        if let Object::Arr(arr) = obj {
             let index = self.eval_expression(env, *expr.index)?;
             self.eval_array_index_expr(arr, index, expr.token.line)
+        } else if let Object::Map(map) = obj {
+            let index = self.eval_expression(env, *expr.index)?;
+            self.eval_hash_index_expr(map, index, expr.token.line)
         } else {
             Err(RTError::new(
-                &format!("index operator not supported: {:?}", expr.left),
+                "index operator not supported",
                 expr.token.line,
             ))
         }
@@ -369,10 +372,7 @@ impl Evaluator {
                 Ok(arr.elements[idx as usize].clone())
             }
         } else {
-            Err(RTError::new(
-                &format!("invalid index to array object: {}", index),
-                line,
-            ))
+            Err(RTError::new("invalid index to array object", line))
         }
     }
 
@@ -400,6 +400,25 @@ impl Evaluator {
         match pairs {
             Ok(pairs) => Ok(Object::Map(HMap { pairs })),
             Err(e) => Err(e),
+        }
+    }
+
+    fn eval_hash_index_expr(
+        &mut self,
+        map: HMap,
+        index: Object,
+        line: usize,
+    ) -> Result<Object, RTError> {
+        if !index.is_a_valid_key() {
+            return Err(RTError::new(
+                "hash key should be a numeric, a string or a boolean",
+                line,
+            ));
+        }
+        if let Some(val) = map.pairs.get(&index) {
+            Ok(val.clone())
+        } else {
+            Ok(Object::Nil)
         }
     }
 }

@@ -320,20 +320,23 @@ impl Evaluator {
         line: usize,
     ) -> Result<Object, RTError> {
         let builtin_func = func.func;
-        if args.len() != func.arity {
-            Err(RTError::new(
-                &format!(
-                    "wrong number of arguments. got={} needs={}",
-                    args.len(),
-                    func.arity
-                ),
-                line,
-            ))
-        } else {
-            match builtin_func(args) {
-                Ok(obj) => Ok(obj),
-                Err(s) => Err(RTError::new(&s, 1)),
+        // Validate arity for non variadic functions
+        if let Some(arity) = func.arity {
+            if args.len() != arity {
+                return Err(RTError::new(
+                    &format!(
+                        "wrong number of arguments. got={} needs={}",
+                        args.len(),
+                        arity
+                    ),
+                    line,
+                ));
             }
+        }
+
+        match builtin_func(args) {
+            Ok(obj) => Ok(obj),
+            Err(s) => Err(RTError::new(&s, 1)),
         }
     }
 

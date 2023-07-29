@@ -697,24 +697,31 @@ fn test_builtin_functions() {
                 elements: vec![Object::Number(4.)],
             }),
         },
+        BuiltinTest {
+            input: "puts(\"Hello\")",
+            expected: Object::Nil,
+        },
     ];
-    for test in builtin_tests {
+    for (i, test) in builtin_tests.iter().enumerate() {
         let result = test_eval(test.input);
         match result {
-            Ok(evaluated) => match evaluated {
-                Object::Arr(arr) => {
-                    for (i, item) in arr.elements.iter().enumerate() {
-                        if let Object::Arr(arr_exp) = test.expected.clone() {
-                            if let Object::Number(exp) = arr_exp.elements[i] {
+            Ok(evaluated) => match test.expected.clone() {
+                Object::Arr(arr_exp) => {
+                    if let Object::Arr(arr) = evaluated {
+                        for (i, item) in arr_exp.elements.iter().enumerate() {
+                            if let Object::Number(exp) = arr.elements[i] {
                                 test_numeric_object((*item).clone(), exp)
                             }
                         }
+                    } else {
+                        println!("[{}] failed built-in test - array expected", i);
+                        failed += 1;
                     }
                 }
                 Object::Number(expected) => test_numeric_object(evaluated, expected),
                 Object::Nil => test_nil_object(evaluated),
                 _ => {
-                    println!("Invalid expected object");
+                    println!("[{}] unhandled expected value", i);
                     failed += 1;
                 }
             },
@@ -722,6 +729,9 @@ fn test_builtin_functions() {
                 println!("{}", e);
                 failed += 1;
             }
+        }
+        if failed != 0 {
+            panic!("{} built-in tests failed", failed);
         }
     }
     struct ErrorTest {

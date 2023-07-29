@@ -9,19 +9,23 @@ lazy_static! {
         let mut m: HashMap<String, BuiltinFunction> = HashMap::new();
         m.insert(
             "len".into(),
-            BuiltinFunction::new("len".into(), 1, builtin_len),
+            BuiltinFunction::new("len".into(), Some(1), builtin_len),
         );
         m.insert(
             "first".into(),
-            BuiltinFunction::new("first".into(), 1, builtin_first),
+            BuiltinFunction::new("first".into(), Some(1), builtin_first),
         );
         m.insert(
             "last".into(),
-            BuiltinFunction::new("last".into(), 1, builtin_last),
+            BuiltinFunction::new("last".into(), Some(1), builtin_last),
         );
         m.insert(
             "rest".into(),
-            BuiltinFunction::new("rest".into(), 1, builtin_rest),
+            BuiltinFunction::new("rest".into(), Some(1), builtin_rest),
+        );
+        m.insert(
+            "puts".into(),
+            BuiltinFunction::new("puts".into(), None, builtin_puts),
         );
         m
     };
@@ -75,4 +79,19 @@ fn builtin_rest(args: Vec<Object>) -> Result<Object, String> {
         }
         _ => Err(String::from("argument to 'last' not supported")),
     }
+}
+
+fn builtin_puts(args: Vec<Object>) -> Result<Object, String> {
+    for obj in args {
+        match obj {
+            Object::Str(t) => {
+                println!("{}", t);
+            }
+            o => {
+                println!("{}", o);
+            }
+        }
+    }
+    // puts returns Nil
+    Ok(Object::Nil)
 }

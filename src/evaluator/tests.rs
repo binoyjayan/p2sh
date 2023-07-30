@@ -1,7 +1,8 @@
 #![allow(unused_imports)]
-use super::object::*;
-use super::*;
-use crate::evaluator::error::RTError;
+use crate::common::environment::Environment;
+use crate::common::error::RTError;
+use crate::common::object::*;
+use crate::evaluator::Evaluator;
 use crate::parser::*;
 use crate::scanner::*;
 use std::cell::RefCell;
@@ -714,19 +715,19 @@ fn test_builtin_functions() {
                             }
                         }
                     } else {
-                        println!("[{}] failed built-in test - array expected", i);
+                        eprintln!("[{}] failed built-in test - array expected", i);
                         failed += 1;
                     }
                 }
                 Object::Number(expected) => test_numeric_object(evaluated, expected),
                 Object::Nil => test_nil_object(evaluated),
                 _ => {
-                    println!("[{}] unhandled expected value", i);
+                    eprintln!("[{}] unhandled expected value", i);
                     failed += 1;
                 }
             },
             Err(e) => {
-                println!("{}", e);
+                eprintln!("{}", e);
                 failed += 1;
             }
         }
@@ -757,7 +758,7 @@ fn test_builtin_functions() {
             }
             Err(err) => {
                 if err.msg != test.expected.msg {
-                    println!(
+                    eprintln!(
                         "[{}] wrong error message. expected='{}', got='{}'",
                         i, err.msg, test.expected.msg
                     );

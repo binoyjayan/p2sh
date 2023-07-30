@@ -967,7 +967,7 @@ fn test_parsing_hash_literals_with_exprs() {
             );
 
             for (key, value) in map_expr.pairs.iter() {
-                println!("test: {} -->> {}", key, value);
+                eprintln!("test: {} -->> {}", key, value);
                 if let Expression::Str(k) = key {
                     if let Some(exp_val) = map_expected.get(k.value.as_str()) {
                         test_infix_expression(

@@ -2,10 +2,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use super::builtins::BUILTINS;
-use super::environment::*;
-use super::error::RTError;
-use super::object::*;
+use crate::common::builtins::BUILTINS;
+use crate::common::environment::*;
+use crate::common::error::RTError;
+use crate::common::object::*;
 use crate::parser::ast::expr::*;
 use crate::parser::ast::stmt::BlockStatement;
 use crate::parser::ast::stmt::Statement;

@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use super::object::*;
+use crate::common::object::*;
 use crate::scanner::token::*;
 
 #[derive(Clone, Debug, Default)]

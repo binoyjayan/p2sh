@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::ops;
 use std::rc::Rc;
 
-use super::*;
+use crate::common::environment::Environment;
 use crate::parser::ast::expr::*;
 use crate::parser::ast::stmt::*;
 

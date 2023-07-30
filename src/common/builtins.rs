@@ -1,6 +1,4 @@
-use crate::evaluator::object::Array;
-use crate::evaluator::object::BuiltinFunction;
-use crate::evaluator::object::Object;
+use crate::common::object::*;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 

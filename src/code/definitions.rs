@@ -26,6 +26,9 @@ lazy_static! {
         map.insert(Opcode::Constant, Definition::new("OpConstant", &[2]));
         map.insert(Opcode::Pop, Definition::new("OpPop", &[]));
         map.insert(Opcode::Add, Definition::new("OpAdd", &[]));
+        map.insert(Opcode::Sub, Definition::new("OpSub", &[]));
+        map.insert(Opcode::Mul, Definition::new("OpMul", &[]));
+        map.insert(Opcode::Div, Definition::new("OpDiv", &[]));
         map
     };
 }
@@ -53,7 +56,7 @@ pub fn make(op: Opcode, operands: &[usize], line: usize) -> Instructions {
             instruction_len += w;
         }
 
-        let mut instruction = Vec::with_capacity(instruction_len as usize);
+        let mut instruction = Vec::with_capacity(instruction_len);
         instruction.push(op.into());
 
         // Iterate through operands and its widths

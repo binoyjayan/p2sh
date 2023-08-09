@@ -132,6 +132,36 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
+            input: "1 - 2".to_string(),
+            expected_constants: vec![Object::Number(1.), Object::Number(2.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Sub, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "1 * 2".to_string(),
+            expected_constants: vec![Object::Number(1.), Object::Number(2.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Mul, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "2 / 1".to_string(),
+            expected_constants: vec![Object::Number(2.), Object::Number(1.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Div, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
             input: "1; 2".to_string(),
             expected_constants: vec![Object::Number(1.), Object::Number(2.)],
             expected_instructions: vec![

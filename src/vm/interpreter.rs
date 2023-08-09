@@ -87,7 +87,7 @@ impl VM {
                         BigEndian::read_u16(&instructions.code[ip + 1..ip + 3]) as usize;
                     let constant = self
                         .constants
-                        .get(const_index as usize)
+                        .get(const_index)
                         .ok_or_else(|| RTError::new("constant not found", line))?;
                     self.push(Rc::new(constant.clone()));
                     ip += 2;
@@ -97,6 +97,15 @@ impl VM {
                 }
                 Opcode::Add => {
                     self.binary_op(OperandType::TwoNumbers, |a, b| a + b, line)?;
+                }
+                Opcode::Sub => {
+                    self.binary_op(OperandType::TwoNumbers, |a, b| a - b, line)?;
+                }
+                Opcode::Mul => {
+                    self.binary_op(OperandType::TwoNumbers, |a, b| a * b, line)?;
+                }
+                Opcode::Div => {
+                    self.binary_op(OperandType::TwoNumbers, |a, b| a / b, line)?;
                 }
                 Opcode::Invalid => {
                     return Err(RTError::new(&format!("opcode {:?} undefined", op), line))

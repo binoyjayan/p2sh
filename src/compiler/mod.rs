@@ -118,6 +118,15 @@ impl Compiler {
             "+" => {
                 self.emit(Opcode::Add, &[0], line);
             }
+            "-" => {
+                self.emit(Opcode::Sub, &[0], line);
+            }
+            "*" => {
+                self.emit(Opcode::Mul, &[0], line);
+            }
+            "/" => {
+                self.emit(Opcode::Div, &[0], line);
+            }
             _ => return Err(CompileError::new("invalid binary operator", line)),
         }
         Ok(())

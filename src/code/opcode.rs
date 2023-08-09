@@ -4,6 +4,9 @@ pub enum Opcode {
     Constant,
     Pop,
     Add,
+    Sub,
+    Mul,
+    Div,
     Invalid,
 }
 
@@ -13,6 +16,9 @@ impl From<u8> for Opcode {
             0 => Opcode::Constant,
             1 => Opcode::Pop,
             2 => Opcode::Add,
+            3 => Opcode::Sub,
+            4 => Opcode::Mul,
+            5 => Opcode::Div,
             _ => Opcode::Invalid,
         }
     }

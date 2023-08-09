@@ -367,7 +367,7 @@ impl Evaluator {
         line: usize,
     ) -> Result<Object, RTError> {
         if let Object::Number(idx) = index {
-            let idx = idx as f64;
+            let idx = idx;
             if idx < 0. || idx >= arr.elements.len() as f64 {
                 // Out of bounds
                 Ok(Object::Nil)

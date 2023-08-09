@@ -7,6 +7,8 @@ pub enum Opcode {
     Sub,
     Mul,
     Div,
+    True,
+    False,
     Invalid,
 }
 
@@ -19,6 +21,8 @@ impl From<u8> for Opcode {
             3 => Opcode::Sub,
             4 => Opcode::Mul,
             5 => Opcode::Div,
+            6 => Opcode::True,
+            7 => Opcode::False,
             _ => Opcode::Invalid,
         }
     }

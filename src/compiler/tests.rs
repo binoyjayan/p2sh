@@ -14,7 +14,7 @@ use crate::scanner::*;
 
 #[cfg(test)]
 struct CompilerTestCase {
-    input: String,
+    input: &'static str,
     expected_constants: Vec<Object>,
     expected_instructions: Vec<Instructions>,
 }
@@ -122,7 +122,7 @@ fn run_compiler_tests(tests: &[CompilerTestCase]) {
 fn test_integer_arithmetic() {
     let tests = vec![
         CompilerTestCase {
-            input: "1 + 2".to_string(),
+            input: "1 + 2",
             expected_constants: vec![Object::Number(1.), Object::Number(2.)],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
@@ -132,7 +132,7 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "1 - 2".to_string(),
+            input: "1 - 2",
             expected_constants: vec![Object::Number(1.), Object::Number(2.)],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
@@ -142,7 +142,7 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "1 * 2".to_string(),
+            input: "1 * 2",
             expected_constants: vec![Object::Number(1.), Object::Number(2.)],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
@@ -152,7 +152,7 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "2 / 1".to_string(),
+            input: "2 / 1",
             expected_constants: vec![Object::Number(2.), Object::Number(1.)],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
@@ -162,12 +162,36 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
-            input: "1; 2".to_string(),
+            input: "1; 2",
             expected_constants: vec![Object::Number(1.), Object::Number(2.)],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Pop, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_boolean_expressions() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "true",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::True, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "false",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::False, &[0], 1),
                 definitions::make(Opcode::Pop, &[0], 1),
             ],
         },

@@ -108,6 +108,13 @@ impl Compiler {
                 self.compile_expression(*binary.right)?;
                 self.compile_infix_expr(&binary.operator, binary.token.line)?;
             }
+            Expression::Bool(b) => {
+                if b.value {
+                    self.emit(Opcode::True, &[0], b.token.line);
+                } else {
+                    self.emit(Opcode::False, &[0], b.token.line);
+                }
+            }
             _ => {}
         }
         Ok(())

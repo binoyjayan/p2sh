@@ -107,6 +107,8 @@ impl VM {
                 Opcode::Div => {
                     self.binary_op(OperandType::TwoNumbers, |a, b| a / b, line)?;
                 }
+                Opcode::True => self.push(Rc::new(Object::Bool(true))),
+                Opcode::False => self.push(Rc::new(Object::Bool(false))),
                 Opcode::Invalid => {
                     return Err(RTError::new(&format!("opcode {:?} undefined", op), line))
                 }

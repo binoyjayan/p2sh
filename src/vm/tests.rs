@@ -143,3 +143,19 @@ fn test_integer_arithmetic() {
 
     run_vm_tests(&tests);
 }
+
+#[test]
+fn test_boolean_expressions() {
+    let tests = vec![
+        VmTestCase {
+            input: "true",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "false",
+            expected: Object::Bool(false),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}

@@ -104,8 +104,17 @@ impl Compiler {
                 self.emit(Opcode::Constant, &[idx], num.token.line);
             }
             Expression::Binary(binary) => {
-                self.compile_expression(*binary.left)?;
-                self.compile_expression(*binary.right)?;
+                // In case of '<', re order the operands to reuse the '>' operator
+                match binary.operator.as_ref() {
+                    "<" => {
+                        self.compile_expression(*binary.right)?;
+                        self.compile_expression(*binary.left)?;
+                    }
+                    _ => {
+                        self.compile_expression(*binary.left)?;
+                        self.compile_expression(*binary.right)?;
+                    }
+                }
                 self.compile_infix_expr(&binary.operator, binary.token.line)?;
             }
             Expression::Bool(b) => {
@@ -133,6 +142,15 @@ impl Compiler {
             }
             "/" => {
                 self.emit(Opcode::Div, &[0], line);
+            }
+            "==" => {
+                self.emit(Opcode::Equal, &[0], line);
+            }
+            "!=" => {
+                self.emit(Opcode::NotEqual, &[0], line);
+            }
+            ">" | "<" => {
+                self.emit(Opcode::Greater, &[0], line);
             }
             _ => return Err(CompileError::new("invalid binary operator", line)),
         }

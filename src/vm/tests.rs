@@ -155,6 +155,74 @@ fn test_boolean_expressions() {
             input: "false",
             expected: Object::Bool(false),
         },
+        VmTestCase {
+            input: "1 < 2",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "1 > 2",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1 < 1",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1 > 1",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1 == 1",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "1 != 1",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1 == 2",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1 != 2",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "true == true",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "false == false",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "true == false",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "true != false",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "false != true",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "(1 < 2) == true",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "(1 < 2) == false",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "(1 > 2) == true",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "(1 > 2) == false",
+            expected: Object::Bool(true),
+        },
     ];
 
     run_vm_tests(&tests);

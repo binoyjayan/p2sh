@@ -109,8 +109,24 @@ impl VM {
                 }
                 Opcode::True => self.push(Rc::new(Object::Bool(true))),
                 Opcode::False => self.push(Rc::new(Object::Bool(false))),
+                Opcode::Equal => {
+                    let b = self.pop();
+                    let a = self.pop();
+                    self.push(Rc::new(Object::Bool(a == b)));
+                }
+                Opcode::NotEqual => {
+                    let b = self.pop();
+                    let a = self.pop();
+                    self.push(Rc::new(Object::Bool(a != b)));
+                }
+                Opcode::Greater => {
+                    self.binary_op(OperandType::TwoNumbers, |a, b| Object::Bool(a > b), line)?;
+                }
                 Opcode::Invalid => {
-                    return Err(RTError::new(&format!("opcode {:?} undefined", op), line))
+                    return Err(RTError::new(
+                        &format!("opcode {} undefined", op as u8),
+                        line,
+                    ))
                 }
             }
             ip += 1;

@@ -31,6 +31,9 @@ lazy_static! {
         map.insert(Opcode::Div, Definition::new("OpDiv", &[]));
         map.insert(Opcode::True, Definition::new("OpTrue", &[]));
         map.insert(Opcode::False, Definition::new("OpFalse", &[]));
+        map.insert(Opcode::Equal, Definition::new("OpEqual", &[]));
+        map.insert(Opcode::NotEqual, Definition::new("OpNotEqual", &[]));
+        map.insert(Opcode::Greater, Definition::new("OpGreater", &[]));
         map
     };
 }

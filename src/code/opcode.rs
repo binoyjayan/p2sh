@@ -9,6 +9,9 @@ pub enum Opcode {
     Div,
     True,
     False,
+    Equal,
+    NotEqual,
+    Greater,
     Invalid,
 }
 
@@ -23,6 +26,9 @@ impl From<u8> for Opcode {
             5 => Opcode::Div,
             6 => Opcode::True,
             7 => Opcode::False,
+            8 => Opcode::Equal,
+            9 => Opcode::NotEqual,
+            10 => Opcode::Greater,
             _ => Opcode::Invalid,
         }
     }

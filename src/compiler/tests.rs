@@ -195,6 +195,67 @@ fn test_boolean_expressions() {
                 definitions::make(Opcode::Pop, &[0], 1),
             ],
         },
+        CompilerTestCase {
+            input: "1 > 2",
+            expected_constants: vec![Object::Number(1.), Object::Number(2.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Greater, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "1 < 2",
+            // Constants are in reverse order: '1 < 2' is '2 > 1'
+            expected_constants: vec![Object::Number(2.), Object::Number(1.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Greater, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "1 == 2",
+            expected_constants: vec![Object::Number(1.), Object::Number(2.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Equal, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "1 != 2",
+            expected_constants: vec![Object::Number(1.), Object::Number(2.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::NotEqual, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "true == false",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::True, &[0], 1),
+                definitions::make(Opcode::False, &[0], 1),
+                definitions::make(Opcode::Equal, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "true != false",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::True, &[0], 1),
+                definitions::make(Opcode::False, &[0], 1),
+                definitions::make(Opcode::NotEqual, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
     ];
 
     run_compiler_tests(&tests);

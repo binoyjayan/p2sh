@@ -12,6 +12,8 @@ pub enum Opcode {
     Equal,
     NotEqual,
     Greater,
+    Minus,
+    Bang,
     Invalid,
 }
 
@@ -29,6 +31,8 @@ impl From<u8> for Opcode {
             8 => Opcode::Equal,
             9 => Opcode::NotEqual,
             10 => Opcode::Greater,
+            11 => Opcode::Minus,
+            12 => Opcode::Bang,
             _ => Opcode::Invalid,
         }
     }

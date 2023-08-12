@@ -122,6 +122,18 @@ impl VM {
                 Opcode::Greater => {
                     self.binary_op(OperandType::TwoNumbers, |a, b| Object::Bool(a > b), line)?;
                 }
+                Opcode::Minus => {
+                    if !self.peek(0).is_number() {
+                        return Err(RTError::new("Operand must be a number", line));
+                    }
+                    let obj = self.pop().clone();
+                    let val = -&*obj;
+                    self.push(Rc::new(val));
+                }
+                Opcode::Bang => {
+                    let obj = self.pop();
+                    self.push(Rc::new(Object::Bool(obj.is_falsey())));
+                }
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),

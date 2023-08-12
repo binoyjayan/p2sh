@@ -171,6 +171,15 @@ fn test_integer_arithmetic() {
                 definitions::make(Opcode::Pop, &[0], 1),
             ],
         },
+        CompilerTestCase {
+            input: "-1",
+            expected_constants: vec![Object::Number(1.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Minus, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
     ];
 
     run_compiler_tests(&tests);
@@ -253,6 +262,15 @@ fn test_boolean_expressions() {
                 definitions::make(Opcode::True, &[0], 1),
                 definitions::make(Opcode::False, &[0], 1),
                 definitions::make(Opcode::NotEqual, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "!false",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::False, &[0], 1),
+                definitions::make(Opcode::Bang, &[0], 1),
                 definitions::make(Opcode::Pop, &[0], 1),
             ],
         },

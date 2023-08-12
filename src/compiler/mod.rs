@@ -117,6 +117,18 @@ impl Compiler {
                 }
                 self.compile_infix_expr(&binary.operator, binary.token.line)?;
             }
+            Expression::Unary(u) => {
+                self.compile_expression(*u.right)?;
+                match u.operator.as_ref() {
+                    "!" => {
+                        self.emit(Opcode::Bang, &[0], u.token.line);
+                    }
+                    "-" => {
+                        self.emit(Opcode::Minus, &[0], u.token.line);
+                    }
+                    _ => return Err(CompileError::new("invalid binary operator", u.token.line)),
+                }
+            }
             Expression::Bool(b) => {
                 if b.value {
                     self.emit(Opcode::True, &[0], b.token.line);

@@ -17,6 +17,8 @@ pub enum Opcode {
     Jump,
     JumpIfFalse,
     Nil,
+    GetGlobal,
+    SetGlobal,
     #[default]
     Invalid,
 }
@@ -40,6 +42,8 @@ impl From<u8> for Opcode {
             13 => Opcode::Jump,
             14 => Opcode::JumpIfFalse,
             15 => Opcode::Nil,
+            16 => Opcode::GetGlobal,
+            17 => Opcode::SetGlobal,
             _ => Opcode::Invalid,
         }
     }

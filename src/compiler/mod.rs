@@ -2,11 +2,14 @@ use crate::code::definitions::{self, *};
 use crate::code::opcode::Opcode;
 use crate::common::error::CompileError;
 use crate::common::object::Object;
+use crate::compiler::symtab::SymbolTable;
 use crate::parser::ast::expr::*;
 use crate::parser::ast::stmt::BlockStatement;
 use crate::parser::ast::stmt::Statement;
 use crate::parser::ast::*;
 
+pub mod symtab;
+pub mod symtab_test;
 pub mod tests;
 
 pub struct Bytecode {
@@ -28,9 +31,10 @@ impl EmittedInstruction {
 
 pub struct Compiler {
     instructions: Instructions,
-    constants: Vec<Object>,
+    pub constants: Vec<Object>,
     last_ins: EmittedInstruction, // instruction before the current
     prev_ins: EmittedInstruction, // instruction before the last
+    pub symtab: SymbolTable,
 }
 
 impl Compiler {
@@ -40,7 +44,15 @@ impl Compiler {
             constants: Vec::new(),
             last_ins: EmittedInstruction::default(),
             prev_ins: EmittedInstruction::default(),
+            symtab: SymbolTable::default(),
         }
+    }
+
+    pub fn new_with_state(symtab: SymbolTable, constants: Vec<Object>) -> Compiler {
+        let mut compiler = Self::new();
+        compiler.constants = constants;
+        compiler.symtab = symtab;
+        compiler
     }
 
     pub fn bytecode(&self) -> Bytecode {
@@ -150,10 +162,15 @@ impl Compiler {
             Statement::Expr(stmt) => {
                 self.compile_expression(stmt.value)?;
                 self.emit(Opcode::Pop, &[0], stmt.token.line);
-                Ok(())
             }
-            _ => Ok(()),
+            Statement::Let(stmt) => {
+                self.compile_let_stmt(stmt.value)?;
+                let symbol = self.symtab.define(&stmt.name.value);
+                self.emit(Opcode::SetGlobal, &[symbol.index], stmt.token.line);
+            }
+            _ => {}
         }
+        Ok(())
     }
 
     fn compile_expression(&mut self, expr: Expression) -> Result<(), CompileError> {
@@ -236,6 +253,16 @@ impl Compiler {
                 // else branch – it could be Nil or a real 'else_stmt'
                 self.change_operand(jump_pos, after_else_pos);
             }
+            Expression::Ident(expr) => {
+                if let Some(symbol) = self.symtab.resolve(&expr.token.literal) {
+                    self.emit(Opcode::GetGlobal, &[symbol.index], expr.token.line);
+                } else {
+                    return Err(CompileError::new(
+                        &format!("undefined variable {}", expr.token.literal),
+                        expr.token.line,
+                    ));
+                }
+            }
             _ => {}
         }
         Ok(())
@@ -267,5 +294,10 @@ impl Compiler {
             _ => return Err(CompileError::new("invalid binary operator", line)),
         }
         Ok(())
+    }
+
+    fn compile_let_stmt(&mut self, expr: Expression) -> Result<Object, CompileError> {
+        self.compile_expression(expr)?;
+        Ok(Object::Nil)
     }
 }

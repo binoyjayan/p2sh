@@ -328,3 +328,23 @@ fn test_conditionals() {
 
     run_vm_tests(&tests);
 }
+
+#[test]
+fn test_global_let_statements() {
+    let tests = vec![
+        VmTestCase {
+            input: "let one = 1; one",
+            expected: Object::Number(1.),
+        },
+        VmTestCase {
+            input: "let one = 1; let two = 2; one + two",
+            expected: Object::Number(3.),
+        },
+        VmTestCase {
+            input: "let one = 1; let two = one + one; one + two",
+            expected: Object::Number(3.),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}

@@ -105,13 +105,14 @@ fn test_instructions(expected: &[Instructions], actual: &Instructions) {
 
 #[cfg(test)]
 fn run_compiler_tests(tests: &[CompilerTestCase]) {
-    for t in tests {
+    for (n, t) in tests.iter().enumerate() {
         let program = parse_program(&t.input);
         let mut compiler = Compiler::new();
         let result = compiler.compile(program);
         if let Err(err) = result {
-            panic!("{}", err);
+            panic!("[{}] {}", n, err);
         }
+        // println!("[{}] Compiler Test", n);
         let bytecode = compiler.bytecode();
         test_instructions(&t.expected_instructions, &bytecode.instructions);
         test_constants(&t.expected_constants, &bytecode.constants);
@@ -327,6 +328,46 @@ fn test_conditional() {
                 // 0014 : The instruction following the if expr
                 definitions::make(Opcode::Constant, &[2], 1),
                 // 0017
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_global_let_statements() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "let one = 1;let two = 2;",
+            expected_constants: vec![Object::Number(1.), Object::Number(2.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::SetGlobal, &[1], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "let one = 1;one;",
+            expected_constants: vec![Object::Number(1.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "let one = 1;let two = one;two;",
+            expected_constants: vec![Object::Number(1.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::SetGlobal, &[1], 1),
+                definitions::make(Opcode::GetGlobal, &[1], 1),
                 definitions::make(Opcode::Pop, &[0], 1),
             ],
         },

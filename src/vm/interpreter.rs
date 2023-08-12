@@ -58,13 +58,13 @@ impl VM {
         self.sp += 1;
     }
 
-    pub fn pop(&mut self) -> Rc<Object> {
+    pub fn pop(&mut self, line: usize) -> Result<Rc<Object>, RTError> {
         if self.sp == 0 {
-            panic!("Stack underflow!");
+            return Err(RTError::new("Stack underflow!", line));
         }
         let obj = self.stack[self.sp - 1].clone();
         self.sp -= 1;
-        obj
+        Ok(obj)
     }
 
     pub fn last_popped(&mut self) -> Rc<Object> {
@@ -94,7 +94,7 @@ impl VM {
                     ip += 2;
                 }
                 Opcode::Pop => {
-                    self.pop();
+                    self.pop(line)?;
                 }
                 Opcode::Add => {
                     self.binary_op(OperandType::TwoNumbers, |a, b| a + b, line)?;
@@ -111,13 +111,13 @@ impl VM {
                 Opcode::True => self.push(Rc::new(Object::Bool(true))),
                 Opcode::False => self.push(Rc::new(Object::Bool(false))),
                 Opcode::Equal => {
-                    let b = self.pop();
-                    let a = self.pop();
+                    let b = self.pop(line)?;
+                    let a = self.pop(line)?;
                     self.push(Rc::new(Object::Bool(a == b)));
                 }
                 Opcode::NotEqual => {
-                    let b = self.pop();
-                    let a = self.pop();
+                    let b = self.pop(line)?;
+                    let a = self.pop(line)?;
                     self.push(Rc::new(Object::Bool(a != b)));
                 }
                 Opcode::Greater => {
@@ -127,12 +127,12 @@ impl VM {
                     if !self.peek(0).is_number() {
                         return Err(RTError::new("Operand must be a number", line));
                     }
-                    let obj = self.pop().clone();
+                    let obj = self.pop(line)?.clone();
                     let val = -&*obj;
                     self.push(Rc::new(val));
                 }
                 Opcode::Bang => {
-                    let obj = self.pop();
+                    let obj = self.pop(line)?;
                     self.push(Rc::new(Object::Bool(obj.is_falsey())));
                 }
                 Opcode::Jump => {
@@ -146,7 +146,7 @@ impl VM {
                     let pos = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
                     // skip over the two bytes of the operand in the next cycle
                     ip += 2;
-                    let condition = self.pop();
+                    let condition = self.pop(line)?;
                     if condition.is_falsey() {
                         ip = pos - 1;
                     }
@@ -175,14 +175,14 @@ impl VM {
     ) -> Result<(), RTError> {
         if self.peek(0).is_string() && self.peek(1).is_string() {
             // pop b before a
-            let b = self.pop();
-            let a = self.pop();
+            let b = self.pop(line)?;
+            let a = self.pop(line)?;
             self.push(Rc::new(Object::Str(format!("{}{}", a, b))));
             Ok(())
         } else if self.peek(0).is_number() && self.peek(1).is_number() {
             // pop b before a
-            let b = self.pop();
-            let a = self.pop();
+            let b = self.pop(line)?;
+            let a = self.pop(line)?;
             self.push(Rc::new(op(&a, &b)));
             Ok(())
         } else {

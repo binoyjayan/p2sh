@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 
 pub enum Opcode {
     Constant,
@@ -14,6 +14,10 @@ pub enum Opcode {
     Greater,
     Minus,
     Bang,
+    Jump,
+    JumpIfFalse,
+    Nil,
+    #[default]
     Invalid,
 }
 
@@ -33,6 +37,9 @@ impl From<u8> for Opcode {
             10 => Opcode::Greater,
             11 => Opcode::Minus,
             12 => Opcode::Bang,
+            13 => Opcode::Jump,
+            14 => Opcode::JumpIfFalse,
+            15 => Opcode::Nil,
             _ => Opcode::Invalid,
         }
     }

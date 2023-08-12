@@ -3,6 +3,7 @@ use crate::code::opcode::Opcode;
 use crate::common::error::CompileError;
 use crate::common::object::Object;
 use crate::parser::ast::expr::*;
+use crate::parser::ast::stmt::BlockStatement;
 use crate::parser::ast::stmt::Statement;
 use crate::parser::ast::*;
 
@@ -13,9 +14,23 @@ pub struct Bytecode {
     pub constants: Vec<Object>,
 }
 
+#[derive(Default, Clone)]
+struct EmittedInstruction {
+    opcode: Opcode,
+    position: usize,
+}
+
+impl EmittedInstruction {
+    fn new(opcode: Opcode, position: usize) -> Self {
+        Self { opcode, position }
+    }
+}
+
 pub struct Compiler {
     instructions: Instructions,
     constants: Vec<Object>,
+    last_ins: EmittedInstruction, // instruction before the current
+    prev_ins: EmittedInstruction, // instruction before the last
 }
 
 impl Compiler {
@@ -23,6 +38,8 @@ impl Compiler {
         Compiler {
             instructions: Instructions::default(),
             constants: Vec::new(),
+            last_ins: EmittedInstruction::default(),
+            prev_ins: EmittedInstruction::default(),
         }
     }
 
@@ -47,10 +64,49 @@ impl Compiler {
         new_pos
     }
 
-    // Helper to emit instruction and returnits starting position
+    // Helper to emit instruction and return its starting position
     pub fn emit(&mut self, op: Opcode, operands: &[usize], line: usize) -> usize {
         let ins = definitions::make(op, operands, line);
-        self.add_instruction(ins)
+        let pos = self.add_instruction(ins);
+        self.set_last_instruction(op, pos);
+        pos
+    }
+
+    // Save the last and the previous instructions
+    fn set_last_instruction(&mut self, op: Opcode, pos: usize) {
+        let prev_ins = self.last_ins.clone();
+        let last_ins = EmittedInstruction::new(op, pos);
+        self.prev_ins = prev_ins;
+        self.last_ins = last_ins;
+    }
+
+    fn is_last_instruction_pop(&self) -> bool {
+        self.last_ins.opcode == Opcode::Pop
+    }
+
+    // shortens 'instructions' to cut off the last instruction
+    fn remove_last_pop(&mut self) {
+        self.instructions.code.truncate(self.last_ins.position);
+        self.instructions.lines.truncate(self.last_ins.position);
+        self.last_ins = self.prev_ins.clone();
+    }
+
+    // Helper to replace an instruction at an arbitrary offset
+    fn replace_instruction(&mut self, pos: usize, new_instruction: &[u8]) {
+        for (i, &byte) in new_instruction.iter().enumerate() {
+            self.instructions.code[pos + i] = byte;
+        }
+    }
+
+    // Recreate instruction with new operand and use 'replace_instruction()'
+    // to swap an old instuction for the new one - including the operand
+    // The underlying assumption is that only instructions that are of
+    // the same type and length are replaced
+    fn change_operand(&mut self, op_pos: usize, operand: usize) {
+        let op = Opcode::from(self.instructions.code[op_pos]);
+        let line = self.instructions.lines[op_pos];
+        let new_instruction = definitions::make(op, &[operand], line);
+        self.replace_instruction(op_pos, &new_instruction.code);
     }
 
     pub fn compile(&mut self, pgm: Program) -> Result<(), CompileError> {
@@ -60,6 +116,10 @@ impl Compiler {
 
     pub fn compile_program(&mut self, program: Program) -> Result<(), CompileError> {
         self.compile_statements(program.statements)
+    }
+
+    fn compile_block_statement(&mut self, stmt: BlockStatement) -> Result<(), CompileError> {
+        self.compile_statements_nounwrap(stmt.statements)
     }
 
     fn compile_statements(&mut self, statements: Vec<Statement>) -> Result<(), CompileError> {
@@ -135,6 +195,46 @@ impl Compiler {
                 } else {
                     self.emit(Opcode::False, &[0], b.token.line);
                 }
+            }
+            Expression::If(expr) => {
+                self.compile_expression(*expr.condition)?;
+                // Emit an 'JumpIfFalse' with a placeholder. Save it's position so it can be altered later
+                let jump_if_false_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], expr.token.line);
+                self.compile_block_statement(expr.then_stmt)?;
+                // Get rid of the extra Pop that comes with the result of compiling 'then_stmt'
+                // This is so that we don't loose the result of the 'if' expression
+                if self.is_last_instruction_pop() {
+                    self.remove_last_pop();
+                }
+
+                // Emit an 'Jump' with a placeholder. Save it's position so it can be altered later
+                let jump_pos = self.emit(Opcode::Jump, &[0xFFFF], expr.token.line);
+
+                // offset of the next-to-be-emitted instruction
+                let after_then_pos = self.instructions.len();
+                // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
+                // position of the instruction that comes after the 'then' statement
+                self.change_operand(jump_if_false_pos, after_then_pos);
+
+                // Look for an 'else' branch
+                match expr.else_stmt {
+                    None => {
+                        // Result of if expression when there is no 'else' branch
+                        self.emit(Opcode::Nil, &[0], expr.token.line);
+                    }
+                    Some(else_stmt) => {
+                        // TODO: Find line number of 'else_stmt'
+                        self.compile_block_statement(else_stmt)?;
+                        if self.is_last_instruction_pop() {
+                            self.remove_last_pop();
+                        }
+                    }
+                }
+                // offset of the next-to-be-emitted instruction
+                let after_else_pos = self.instructions.len();
+                // change the operand of the Jump instruction to jump over the
+                // else branch – it could be Nil or a real 'else_stmt'
+                self.change_operand(jump_pos, after_else_pos);
             }
             _ => {}
         }

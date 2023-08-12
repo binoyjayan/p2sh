@@ -278,3 +278,59 @@ fn test_boolean_expressions() {
 
     run_compiler_tests(&tests);
 }
+
+#[test]
+fn test_conditional() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "if (true) { 10 }; 3333;",
+            expected_constants: vec![Object::Number(10.), Object::Number(3333.)],
+            expected_instructions: vec![
+                // 0000 : The condition
+                definitions::make(Opcode::True, &[0], 1),
+                // 0001 : Jump to the 'Nil' instruction following 'then_stmt'
+                definitions::make(Opcode::JumpIfFalse, &[10], 1),
+                // 0004 : The 'then_stmt'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0007 : To Jump over the 'else_stmt' which is 'Nil' here.
+                definitions::make(Opcode::Jump, &[11], 1),
+                // 0010
+                definitions::make(Opcode::Nil, &[0], 1),
+                // 0011 : [ Not part of the if expr - Pop its result ]
+                definitions::make(Opcode::Pop, &[0], 1),
+                // 0012 : The instruction following the if expr
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0015
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "if (true) { 10 } else { 20 } ; 3333;",
+            expected_constants: vec![
+                Object::Number(10.),
+                Object::Number(20.),
+                Object::Number(3333.),
+            ],
+            expected_instructions: vec![
+                // 0000 : The condition
+                definitions::make(Opcode::True, &[0], 1),
+                // 0001: Jump to 'else_stmt' if condition is false
+                definitions::make(Opcode::JumpIfFalse, &[10], 1),
+                // 0004 : The 'then_stmt'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0007 : Jump to the instruction following the 'if' expression
+                definitions::make(Opcode::Jump, &[13], 1),
+                // 0010 : The 'else_stmt'
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0013 : [ Not part of the if expr - Pop its result ]
+                definitions::make(Opcode::Pop, &[0], 1),
+                // 0014 : The instruction following the if expr
+                definitions::make(Opcode::Constant, &[2], 1),
+                // 0017
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}

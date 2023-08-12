@@ -90,6 +90,7 @@ impl VM {
                         .get(const_index)
                         .ok_or_else(|| RTError::new("constant not found", line))?;
                     self.push(Rc::new(constant.clone()));
+                    // skip over the two bytes of the operand in the next cycle
                     ip += 2;
                 }
                 Opcode::Pop => {
@@ -133,6 +134,25 @@ impl VM {
                 Opcode::Bang => {
                     let obj = self.pop();
                     self.push(Rc::new(Object::Bool(obj.is_falsey())));
+                }
+                Opcode::Jump => {
+                    let bytes = &instructions.code[ip + 1..ip + 3];
+                    // decode the operand (jump address) right after the opcode
+                    ip = u16::from_be_bytes([bytes[0], bytes[1]]) as usize - 1;
+                }
+                Opcode::JumpIfFalse => {
+                    let bytes = &instructions.code[ip + 1..ip + 3];
+                    // decode the operand (jump address) right after the opcode
+                    let pos = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
+                    // skip over the two bytes of the operand in the next cycle
+                    ip += 2;
+                    let condition = self.pop();
+                    if condition.is_falsey() {
+                        ip = pos - 1;
+                    }
+                }
+                Opcode::Nil => {
+                    self.push(Rc::new(Object::Nil));
                 }
                 Opcode::Invalid => {
                     return Err(RTError::new(

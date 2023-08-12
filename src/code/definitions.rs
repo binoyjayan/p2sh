@@ -36,6 +36,9 @@ lazy_static! {
         map.insert(Opcode::Greater, Definition::new("OpGreater", &[]));
         map.insert(Opcode::Minus, Definition::new("OpMinus", &[]));
         map.insert(Opcode::Bang, Definition::new("OpBang", &[]));
+        map.insert(Opcode::Jump, Definition::new("OpJump", &[2]));
+        map.insert(Opcode::JumpIfFalse, Definition::new("OpJumpIfFalse", &[2]));
+        map.insert(Opcode::Nil, Definition::new("OpNil", &[]));
         map
     };
 }

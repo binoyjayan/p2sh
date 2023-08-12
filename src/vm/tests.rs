@@ -40,8 +40,13 @@ fn test_expected_object(evaluated: Rc<Object>, expected: &Object) {
                 eval, exp
             );
         }
-        (Object::Nil, Object::Nil) => {
-            panic!("object is not Nil. got={:?}", evaluated);
+        (_, Object::Nil) => {
+            assert_eq!(
+                evaluated,
+                Rc::new(Object::Nil),
+                "object is not Nil. got={:?}",
+                evaluated
+            );
         }
         _ => {
             panic!(
@@ -266,6 +271,58 @@ fn test_boolean_expressions() {
         VmTestCase {
             input: "(10 + 50 + -5 - 5 * 2 / 2) < (100 - 35)",
             expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "!(if (false) { 5; })",
+            expected: Object::Bool(true),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_conditionals() {
+    let tests = vec![
+        VmTestCase {
+            input: "if (true) { 10 }",
+            expected: Object::Number(10.),
+        },
+        VmTestCase {
+            input: "if (true) { 10 } else { 20 }",
+            expected: Object::Number(10.),
+        },
+        VmTestCase {
+            input: "if (false) { 10 } else { 20 } ",
+            expected: Object::Number(20.),
+        },
+        VmTestCase {
+            input: "if (1) { 10 }",
+            expected: Object::Number(10.),
+        },
+        VmTestCase {
+            input: "if (1 < 2) { 10 }",
+            expected: Object::Number(10.),
+        },
+        VmTestCase {
+            input: "if (1 < 2) { 10 } else { 20 }",
+            expected: Object::Number(10.),
+        },
+        VmTestCase {
+            input: "if (1 > 2) { 10 } else { 20 }",
+            expected: Object::Number(20.),
+        },
+        VmTestCase {
+            input: "if (1 > 2) { 10 }",
+            expected: Object::Nil,
+        },
+        VmTestCase {
+            input: "if (false) { 10 }",
+            expected: Object::Nil,
+        },
+        VmTestCase {
+            input: "if ((if (false) { 10 })) { 10 } else { 20 }",
+            expected: Object::Number(20.),
         },
     ];
 

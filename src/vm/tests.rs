@@ -348,3 +348,22 @@ fn test_global_let_statements() {
 
     run_vm_tests(&tests);
 }
+
+#[test]
+fn test_string_expressions() {
+    let tests = vec![
+        VmTestCase {
+            input: "\"p2sh\"",
+            expected: Object::Str("p2sh".to_string()),
+        },
+        VmTestCase {
+            input: "\"p2\" + \"sh\"",
+            expected: Object::Str("p2sh".to_string()),
+        },
+        VmTestCase {
+            input: "\"p2\" + \"sh\" + \"banana\"",
+            expected: Object::Str("p2shbanana".to_string()),
+        },
+    ];
+    run_vm_tests(&tests);
+}

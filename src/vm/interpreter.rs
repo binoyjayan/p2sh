@@ -23,10 +23,12 @@ pub struct VM {
     pub globals: Vec<Rc<Object>>,
 }
 
-#[allow(dead_code)]
-enum OperandType {
-    TwoNumbers,
-    NumbersOrStrings,
+enum BinaryOperation {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Greater,
 }
 
 impl VM {
@@ -50,7 +52,7 @@ impl VM {
         if self.sp - distance == 0 {
             Rc::new(Object::Nil)
         } else {
-            Rc::clone(&self.stack[self.sp - 1])
+            Rc::clone(&self.stack[self.sp - distance - 1])
         }
     }
 
@@ -107,16 +109,16 @@ impl VM {
                     self.pop(line)?;
                 }
                 Opcode::Add => {
-                    self.binary_op(OperandType::TwoNumbers, |a, b| a + b, line)?;
+                    self.binary_op(BinaryOperation::Add, |a, b| a + b, line)?;
                 }
                 Opcode::Sub => {
-                    self.binary_op(OperandType::TwoNumbers, |a, b| a - b, line)?;
+                    self.binary_op(BinaryOperation::Sub, |a, b| a - b, line)?;
                 }
                 Opcode::Mul => {
-                    self.binary_op(OperandType::TwoNumbers, |a, b| a * b, line)?;
+                    self.binary_op(BinaryOperation::Mul, |a, b| a * b, line)?;
                 }
                 Opcode::Div => {
-                    self.binary_op(OperandType::TwoNumbers, |a, b| a / b, line)?;
+                    self.binary_op(BinaryOperation::Div, |a, b| a / b, line)?;
                 }
                 Opcode::True => self.push(Rc::new(Object::Bool(true))),
                 Opcode::False => self.push(Rc::new(Object::Bool(false))),
@@ -131,7 +133,7 @@ impl VM {
                     self.push(Rc::new(Object::Bool(a != b)));
                 }
                 Opcode::Greater => {
-                    self.binary_op(OperandType::TwoNumbers, |a, b| Object::Bool(a > b), line)?;
+                    self.binary_op(BinaryOperation::Greater, |a, b| Object::Bool(a > b), line)?;
                 }
                 Opcode::Minus => {
                     if !self.peek(0).is_number() {
@@ -193,30 +195,36 @@ impl VM {
 
     fn binary_op(
         &mut self,
-        optype: OperandType,
+        optype: BinaryOperation,
         op: fn(a: &Object, b: &Object) -> Object,
         line: usize,
     ) -> Result<(), RTError> {
-        if self.peek(0).is_string() && self.peek(1).is_string() {
-            // pop b before a
-            let b = self.pop(line)?;
-            let a = self.pop(line)?;
-            self.push(Rc::new(Object::Str(format!("{}{}", a, b))));
-            Ok(())
-        } else if self.peek(0).is_number() && self.peek(1).is_number() {
-            // pop b before a
-            let b = self.pop(line)?;
-            let a = self.pop(line)?;
-            self.push(Rc::new(op(&a, &b)));
-            Ok(())
-        } else {
-            match optype {
-                OperandType::TwoNumbers => Err(RTError::new("Operands must be numbers.", line)),
-                OperandType::NumbersOrStrings => Err(RTError::new(
-                    "Operands must be two numbers or two strings.",
-                    1,
-                )),
+        // pop right before left
+        let right = self.pop(line)?;
+        let left = self.pop(line)?;
+
+        match (&*left, &*right) {
+            (Object::Number(_), Object::Number(_)) => {
+                self.push(Rc::new(op(&left, &right)));
+                Ok(())
             }
+            (Object::Str(left), Object::Str(right)) => {
+                if matches!(optype, BinaryOperation::Add) {
+                    self.push(Rc::new(Object::Str(format!("{}{}", left, right))));
+                    Ok(())
+                } else {
+                    Err(RTError::new("Invalid operation on strings.", line))
+                }
+            }
+            (Object::Str(s), Object::Number(n)) | (Object::Number(n), Object::Str(s)) => {
+                if matches!(optype, BinaryOperation::Mul) {
+                    self.push(Rc::new(Object::Str(s.repeat(*n as usize))));
+                    Ok(())
+                } else {
+                    Err(RTError::new("Invalid operation on strings.", line))
+                }
+            }
+            _ => Err(RTError::new("Invalid binary operation.", line)),
         }
     }
 }

@@ -19,8 +19,8 @@ fn check_parse_errors(parser: &Parser) {
 }
 
 #[cfg(test)]
-fn test_numeric_object(evaluated: Object, expected: f64) {
-    if let Object::Number(num) = evaluated {
+fn test_numeric_object(evaluated: Rc<Object>, expected: f64) {
+    if let Object::Number(num) = *evaluated {
         assert_eq!(
             num, expected,
             "object has wrong value. got={}, want={}",
@@ -32,8 +32,8 @@ fn test_numeric_object(evaluated: Object, expected: f64) {
 }
 
 #[cfg(test)]
-fn test_string_object(evaluated: Object, expected: &str) {
-    if let Object::Str(s) = evaluated {
+fn test_string_object(evaluated: Rc<Object>, expected: &str) {
+    if let Object::Str(s) = &*evaluated {
         assert_eq!(
             s, expected,
             "object has wrong value. got={}, want={}",
@@ -45,8 +45,8 @@ fn test_string_object(evaluated: Object, expected: &str) {
 }
 
 #[cfg(test)]
-fn test_boolean_object(evaluated: Object, expected: bool) {
-    if let Object::Bool(b) = evaluated {
+fn test_boolean_object(evaluated: Rc<Object>, expected: bool) {
+    if let Object::Bool(b) = *evaluated {
         assert_eq!(
             b, expected,
             "object has wrong value. got={}, want={}",
@@ -58,15 +58,15 @@ fn test_boolean_object(evaluated: Object, expected: bool) {
 }
 
 #[cfg(test)]
-fn test_nil_object(evaluated: Object) {
-    if let Object::Nil = evaluated {
+fn test_nil_object(evaluated: Rc<Object>) {
+    if let Object::Nil = *evaluated {
     } else {
         panic!("object is not nil. got={}", evaluated);
     }
 }
 
 #[cfg(test)]
-fn test_eval(input: &str) -> Result<Object, RTError> {
+fn test_eval(input: &str) -> Result<Rc<Object>, RTError> {
     let scanner = Scanner::new(input);
     let mut parser = Parser::new(scanner);
     let program = parser.parse_program();
@@ -537,7 +537,7 @@ fn test_function_object() {
     let evaluated = test_eval(input);
     match evaluated {
         Ok(obj) => {
-            if let Object::Func(fun) = obj {
+            if let Object::Func(fun) = &*obj.clone() {
                 if fun.params.len() != 1 {
                     panic!("functon has wrong #paramters. got={:?}", fun.params.len());
                 }
@@ -689,13 +689,13 @@ fn test_builtin_functions() {
         BuiltinTest {
             input: "rest([1, 2, 3])",
             expected: Object::Arr(Array {
-                elements: vec![Object::Number(2.), Object::Number(3.)],
+                elements: vec![Rc::new(Object::Number(2.)), Rc::new(Object::Number(3.))],
             }),
         },
         BuiltinTest {
             input: "let a = [1, 2, 3, 4]; rest(rest(rest(a)))",
             expected: Object::Arr(Array {
-                elements: vec![Object::Number(4.)],
+                elements: vec![Rc::new(Object::Number(4.))],
             }),
         },
         BuiltinTest {
@@ -708,9 +708,9 @@ fn test_builtin_functions() {
         match result {
             Ok(evaluated) => match test.expected.clone() {
                 Object::Arr(arr_exp) => {
-                    if let Object::Arr(arr) = evaluated {
+                    if let Object::Arr(arr) = &*evaluated.clone() {
                         for (i, item) in arr_exp.elements.iter().enumerate() {
-                            if let Object::Number(exp) = arr.elements[i] {
+                            if let Object::Number(exp) = *arr.elements[i] {
                                 test_numeric_object((*item).clone(), exp)
                             }
                         }
@@ -776,12 +776,17 @@ fn test_builtin_functions() {
 fn test_array_literals() {
     let input = "[1, 2 * 2, 3 + 3]";
     let evaluated = test_eval(input);
-    if let Ok(Object::Arr(arr)) = evaluated {
-        test_numeric_object(arr.elements[0].clone(), 1.);
-        test_numeric_object(arr.elements[1].clone(), 4.);
-        test_numeric_object(arr.elements[2].clone(), 6.);
-    } else {
-        panic!("object is not an array. got={:?}", evaluated);
+
+    match evaluated {
+        Ok(obj) => match &*obj {
+            Object::Arr(arr) => {
+                test_numeric_object(arr.elements[0].clone(), 1.);
+                test_numeric_object(arr.elements[1].clone(), 4.);
+                test_numeric_object(arr.elements[2].clone(), 6.);
+            }
+            _ => panic!("object is not an array. got={:?}", *obj),
+        },
+        _ => panic!("object is not an array. got={:?}", evaluated),
     }
 }
 
@@ -899,13 +904,18 @@ fn test_hash_literals() {
         false: 6
     }";
     let evaluated = test_eval(input);
-    if let Ok(Object::Map(map)) = evaluated {
-        test_numeric_object(map.pairs[&Object::Str("one".into())].clone(), 1.);
-        test_numeric_object(map.pairs[&Object::Str("two".into())].clone(), 2.);
-        test_numeric_object(map.pairs[&Object::Str("three".into())].clone(), 3.);
-        test_numeric_object(map.pairs[&Object::Number(4.)].clone(), 4.);
-        test_numeric_object(map.pairs[&Object::Bool(true)].clone(), 5.);
-        test_numeric_object(map.pairs[&Object::Bool(false)].clone(), 6.);
+    if let Ok(obj) = evaluated {
+        match &*obj {
+            Object::Map(map) => {
+                test_numeric_object(map.pairs[&Object::Str("one".into())].clone(), 1.);
+                test_numeric_object(map.pairs[&Object::Str("two".into())].clone(), 2.);
+                test_numeric_object(map.pairs[&Object::Str("three".into())].clone(), 3.);
+                test_numeric_object(map.pairs[&Object::Number(4.)].clone(), 4.);
+                test_numeric_object(map.pairs[&Object::Bool(true)].clone(), 5.);
+                test_numeric_object(map.pairs[&Object::Bool(false)].clone(), 6.);
+            }
+            _ => panic!("object is not an hash literal. got={:?}", *obj),
+        }
     } else {
         panic!("object is not an hash literal. got={:?}", evaluated);
     }

@@ -7,7 +7,7 @@ use crate::scanner::token::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct Environment {
-    env: HashMap<String, Object>,
+    env: HashMap<String, Rc<Object>>,
     enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
@@ -25,7 +25,7 @@ impl Environment {
     /// inner most which appears at the front of the linked list until the end.
     /// Return  the value of the object when a match is found. Return None
     /// if all the enclosing environments also does not define the identifier.
-    pub fn get(&self, name: &str) -> Option<Object> {
+    pub fn get(&self, name: &str) -> Option<Rc<Object>> {
         if let Some(obj) = self.env.get(name) {
             Some(obj.clone())
         } else if let Some(enclosing) = &self.enclosing {
@@ -35,7 +35,7 @@ impl Environment {
         }
     }
 
-    pub fn set(&mut self, token: &Token, value: Object) {
+    pub fn set(&mut self, token: &Token, value: Rc<Object>) {
         self.env.insert(token.literal.clone(), value);
     }
 }

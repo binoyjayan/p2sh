@@ -5,6 +5,7 @@ use std::rc::Rc;
 use crate::code::definitions::*;
 use crate::code::opcode::Opcode;
 use crate::common::error::RTError;
+use crate::common::object::Array;
 use crate::common::object::Object;
 
 const STACK_SIZE: usize = 4096;
@@ -180,6 +181,17 @@ impl VM {
                     ip += 2;
                     self.globals[globals_index] = self.pop(line)?;
                 }
+                Opcode::Array => {
+                    // Read the first operand i.e. the number of array elements
+                    let num_elements = BigEndian::read_u16(&instructions.code[ip + 1..]) as usize;
+                    let elements = self.build_array(self.sp - num_elements, self.sp);
+                    // pop 'num_elements' off the stack
+                    self.sp -= num_elements;
+                    // Push the array back onto the stack as an object
+                    self.push(Rc::new(Object::Arr(Array { elements })));
+                    // skip over the two bytes of the operand in the next cycle
+                    ip += 2;
+                }
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),
@@ -226,5 +238,14 @@ impl VM {
             }
             _ => Err(RTError::new("Invalid binary operation.", line)),
         }
+    }
+
+    // Build array from elements on stack
+    fn build_array(&self, start_index: usize, end_index: usize) -> Vec<Rc<Object>> {
+        let mut elements = Vec::with_capacity(end_index - start_index);
+        for i in start_index..end_index {
+            elements.push(self.stack[i].clone());
+        }
+        elements
     }
 }

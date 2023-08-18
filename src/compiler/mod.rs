@@ -185,6 +185,13 @@ impl Compiler {
                 let idx = self.add_constant(obj);
                 self.emit(Opcode::Constant, &[idx], s.token.line);
             }
+            Expression::Array(arr) => {
+                let len = arr.elements.len();
+                for e in arr.elements {
+                    self.compile_expression(e)?;
+                }
+                self.emit(Opcode::Array, &[len], arr.token.line);
+            }
             Expression::Binary(binary) => {
                 // In case of '<', re order the operands to reuse the '>' operator
                 match binary.operator.as_ref() {

@@ -41,6 +41,7 @@ lazy_static! {
         map.insert(Opcode::Nil, Definition::new("OpNil", &[]));
         map.insert(Opcode::GetGlobal, Definition::new("OpGetGlobal", &[2]));
         map.insert(Opcode::SetGlobal, Definition::new("OpSetGlobal", &[2]));
+        map.insert(Opcode::Array, Definition::new("OpArray", &[2]));
         map
     };
 }

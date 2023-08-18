@@ -418,3 +418,56 @@ fn test_string_expressions() {
 
     run_compiler_tests(&tests);
 }
+
+#[test]
+fn test_array_literals() {
+    // An array literal expression involves building 'n' elements on the stack
+    // followed by an OpArray instruction
+    let tests = vec![
+        CompilerTestCase {
+            input: "[]",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::Array, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "[1, 2, 3]",
+            expected_constants: vec![Object::Number(1.), Object::Number(2.), Object::Number(3.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Array, &[3], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "[1 + 2, 3 - 4, 5 * 6]",
+            expected_constants: vec![
+                Object::Number(1.),
+                Object::Number(2.),
+                Object::Number(3.),
+                Object::Number(4.),
+                Object::Number(5.),
+                Object::Number(6.),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Add, &[0], 1),
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Constant, &[3], 1),
+                definitions::make(Opcode::Sub, &[0], 1),
+                definitions::make(Opcode::Constant, &[4], 1),
+                definitions::make(Opcode::Constant, &[5], 1),
+                definitions::make(Opcode::Mul, &[0], 1),
+                definitions::make(Opcode::Array, &[3], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}

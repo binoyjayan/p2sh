@@ -40,6 +40,18 @@ fn test_expected_object(evaluated: Rc<Object>, expected: &Object) {
                 eval, exp
             );
         }
+        (Object::Arr(eval), Object::Arr(exp)) => {
+            assert_eq!(
+                eval.elements.len(),
+                exp.elements.len(),
+                "object has wrong array length. got={}, want={}",
+                eval.elements.len(),
+                exp.elements.len()
+            );
+            for (ex, ev) in exp.elements.iter().zip(eval.elements.iter()) {
+                assert_eq!(ex, ev);
+            }
+        }
         (_, Object::Nil) => {
             assert_eq!(
                 evaluated,
@@ -363,6 +375,39 @@ fn test_string_expressions() {
         VmTestCase {
             input: "\"p2\" + \"sh\" + \"banana\"",
             expected: Object::Str("p2shbanana".to_string()),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_array_literals() {
+    let tests = vec![
+        VmTestCase {
+            input: "[]",
+            expected: Object::Arr(Array {
+                elements: Vec::new(),
+            }),
+        },
+        VmTestCase {
+            input: "[1, 2, 3]",
+            expected: Object::Arr(Array {
+                elements: vec![
+                    Rc::new(Object::Number(1.0)),
+                    Rc::new(Object::Number(2.0)),
+                    Rc::new(Object::Number(3.0)),
+                ],
+            }),
+        },
+        VmTestCase {
+            input: "[1 + 2, 3 * 4, 5 + 6]",
+            expected: Object::Arr(Array {
+                elements: vec![
+                    Rc::new(Object::Number(3.0)),
+                    Rc::new(Object::Number(12.0)),
+                    Rc::new(Object::Number(11.0)),
+                ],
+            }),
         },
     ];
     run_vm_tests(&tests);

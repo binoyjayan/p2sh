@@ -16,7 +16,7 @@ pub enum Object {
     Str(String),
     Number(f64),
     Bool(bool),
-    Return(Box<Object>),
+    Return(Rc<Object>),
     Func(Function),
     Builtin(BuiltinFunction),
     Arr(Array),
@@ -183,7 +183,7 @@ impl fmt::Display for Function {
     }
 }
 
-pub type BuiltinFunctionProto = fn(Vec<Object>) -> Result<Object, String>;
+pub type BuiltinFunctionProto = fn(Vec<Rc<Object>>) -> Result<Rc<Object>, String>;
 
 #[derive(Debug, Clone)]
 pub struct BuiltinFunction {
@@ -207,12 +207,12 @@ impl BuiltinFunction {
 
 #[derive(Debug, Clone)]
 pub struct Array {
-    pub elements: Vec<Object>,
+    pub elements: Vec<Rc<Object>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct HMap {
-    pub pairs: HashMap<Object, Object>,
+    pub pairs: HashMap<Rc<Object>, Rc<Object>>,
 }
 
 impl fmt::Display for Array {

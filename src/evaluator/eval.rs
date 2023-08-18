@@ -23,7 +23,7 @@ impl Evaluator {
         &mut self,
         env: &Rc<RefCell<Environment>>,
         program: Program,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         self.eval_statements(env, program.statements)
     }
 
@@ -38,11 +38,11 @@ impl Evaluator {
         &mut self,
         env: &Rc<RefCell<Environment>>,
         statements: Vec<Statement>,
-    ) -> Result<Object, RTError> {
-        let mut result = Object::Nil;
+    ) -> Result<Rc<Object>, RTError> {
+        let mut result = Rc::new(Object::Nil);
         for stmt in statements {
             result = self.eval_statement(env, stmt)?;
-            if let Object::Return(_) = result {
+            if let Object::Return(_) = *result {
                 return Ok(result);
             }
         }
@@ -53,7 +53,7 @@ impl Evaluator {
         &mut self,
         env: &Rc<RefCell<Environment>>,
         stmt: BlockStatement,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         self.eval_statements_nounwrap(env, stmt.statements)
     }
 
@@ -62,10 +62,10 @@ impl Evaluator {
         &mut self,
         env: &Rc<RefCell<Environment>>,
         statements: Vec<Statement>,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         let result = self.eval_statements_nounwrap(env, statements)?;
-        if let Object::Return(retval) = result {
-            return Ok(*retval);
+        if let Object::Return(retval) = &*result {
+            return Ok(Rc::clone(retval));
         }
         Ok(result)
     }
@@ -75,33 +75,33 @@ impl Evaluator {
         &mut self,
         env: &Rc<RefCell<Environment>>,
         expr: Expression,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         let value = self.eval_expression(env, expr)?;
-        Ok(Object::Return(Box::new(value)))
+        Ok(Rc::new(Object::Return(Rc::clone(&value))))
     }
 
     fn eval_expression(
         &mut self,
         env: &Rc<RefCell<Environment>>,
         expr: Expression,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         match expr {
-            Expression::Number(num) => Ok(Object::Number(num.value)),
-            Expression::Str(s) => Ok(Object::Str(s.value)),
-            Expression::Bool(num) => Ok(Object::Bool(num.value)),
+            Expression::Number(num) => Ok(Rc::new(Object::Number(num.value))),
+            Expression::Str(s) => Ok(Rc::new(Object::Str(s.value))),
+            Expression::Bool(num) => Ok(Rc::new(Object::Bool(num.value))),
             Expression::Unary(unary) => {
                 let right = self.eval_expression(env, *unary.right)?;
-                self.eval_prefix_expr(&unary.operator, right, unary.token.line)
+                self.eval_prefix_expr(&unary.operator, &right, unary.token.line)
             }
             Expression::Binary(binary) => {
                 let left = self.eval_expression(env, *binary.left)?;
                 let right = self.eval_expression(env, *binary.right)?;
-                self.eval_infix_expr(&binary.operator, left, right, binary.token.line)
+                self.eval_infix_expr(&binary.operator, &left, &right, binary.token.line)
             }
             Expression::If(expr) => {
                 let condition = self.eval_expression(env, *expr.condition)?;
                 #[allow(clippy::collapsible_else_if)]
-                if Self::is_truthy(condition) {
+                if Self::is_truthy(&condition) {
                     return self.eval_block_statement(env, expr.then_stmt);
                 } else {
                     if let Some(else_stmt) = expr.else_stmt {
@@ -110,17 +110,17 @@ impl Evaluator {
                 }
                 // if the condition is false, the expressions that do not have
                 // an else evaluates to a nil object
-                Ok(Object::Nil)
+                Ok(Rc::new(Object::Nil))
             }
             Expression::Function(expr) => Ok(self.eval_function_expr(env, expr)),
             Expression::Ident(expr) => self.eval_identifier_expr(env, &expr.token),
             Expression::Call(expr) => Ok(self.eval_call_expr(env, expr)?),
-            Expression::Array(arr) => Ok(Object::Arr(Array {
+            Expression::Array(arr) => Ok(Rc::new(Object::Arr(Array {
                 elements: self.eval_expressions(env, (*arr.elements).to_vec())?,
-            })),
+            }))),
             Expression::Hash(expr) => Ok(self.eval_hash_literal(env, expr)?),
             Expression::Index(expr) => Ok(self.eval_index_expr(env, expr)?),
-            _ => Ok(Object::Nil),
+            _ => Ok(Rc::new(Object::Nil)),
         }
     }
 
@@ -130,11 +130,11 @@ impl Evaluator {
         &mut self,
         env: &Rc<RefCell<Environment>>,
         exprs: Vec<Expression>,
-    ) -> Result<Vec<Object>, RTError> {
+    ) -> Result<Vec<Rc<Object>>, RTError> {
         let mut result = Vec::new();
         for expr in exprs {
             let obj = self.eval_expression(env, expr)?;
-            result.push(obj);
+            result.push(Rc::clone(&obj));
         }
         Ok(result)
     }
@@ -144,31 +144,31 @@ impl Evaluator {
         env: &Rc<RefCell<Environment>>,
         name: &Identifier,
         expr: Expression,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         let value = self.eval_expression(env, expr)?;
         let name = name.token.clone();
         env.borrow_mut().set(&name, value);
-        Ok(Object::Nil)
+        Ok(Rc::new(Object::Nil))
     }
 
     fn eval_statement(
         &mut self,
         env: &Rc<RefCell<Environment>>,
         stmt: Statement,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         match stmt {
             Statement::Expr(stmt) => self.eval_expression(env, stmt.value),
             Statement::Return(stmt) => self.eval_return_stmt(env, stmt.value),
             Statement::Let(stmt) => self.eval_let_stmt(env, &stmt.name, stmt.value),
-            _ => Ok(Object::Nil),
+            _ => Ok(Rc::new(Object::Nil)),
         }
     }
 
-    fn is_truthy(obj: Object) -> bool {
+    fn is_truthy(obj: &Object) -> bool {
         match obj {
             Object::Nil => false,
-            Object::Bool(b) => b,
-            Object::Number(n) => n != 0.,
+            Object::Bool(b) => *b,
+            Object::Number(n) => *n != 0.,
             _ => true,
         }
     }
@@ -176,9 +176,9 @@ impl Evaluator {
     fn eval_prefix_expr(
         &self,
         operator: &str,
-        right: Object,
+        right: &Object,
         line: usize,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         match operator {
             "!" => Ok(self.eval_bang_operator_expr(right)),
             "-" => self.eval_minus_operator_expr(right, line),
@@ -187,13 +187,13 @@ impl Evaluator {
     }
 
     // Does not return runtime error
-    fn eval_bang_operator_expr(&self, right: Object) -> Object {
-        Object::Bool(right.is_falsey())
+    fn eval_bang_operator_expr(&self, right: &Object) -> Rc<Object> {
+        Rc::new(Object::Bool(right.is_falsey()))
     }
 
-    fn eval_minus_operator_expr(&self, right: Object, line: usize) -> Result<Object, RTError> {
+    fn eval_minus_operator_expr(&self, right: &Object, line: usize) -> Result<Rc<Object>, RTError> {
         match right {
-            Object::Number(num) => Ok(Object::Number(-num)),
+            Object::Number(num) => Ok(Rc::new(Object::Number(-num))),
             _ => Err(RTError::new("invalid unary operation", line)),
         }
     }
@@ -201,37 +201,37 @@ impl Evaluator {
     fn eval_infix_expr(
         &self,
         operator: &str,
-        left: Object,
-        right: Object,
+        left: &Object,
+        right: &Object,
         line: usize,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         match (left, right) {
             (Object::Number(left), Object::Number(right)) => match operator {
-                "+" => Ok(Object::Number(left + right)),
-                "-" => Ok(Object::Number(left - right)),
-                "*" => Ok(Object::Number(left * right)),
-                "/" => Ok(Object::Number(left / right)),
-                "<" => Ok(Object::Bool(left < right)),
-                ">" => Ok(Object::Bool(left > right)),
-                "==" => Ok(Object::Bool(left == right)),
-                "!=" => Ok(Object::Bool(left != right)),
+                "+" => Ok(Rc::new(Object::Number(left + right))),
+                "-" => Ok(Rc::new(Object::Number(left - right))),
+                "*" => Ok(Rc::new(Object::Number(left * right))),
+                "/" => Ok(Rc::new(Object::Number(left / right))),
+                "<" => Ok(Rc::new(Object::Bool(left < right))),
+                ">" => Ok(Rc::new(Object::Bool(left > right))),
+                "==" => Ok(Rc::new(Object::Bool(left == right))),
+                "!=" => Ok(Rc::new(Object::Bool(left != right))),
                 _ => Err(RTError::new("invalid binary operator", line)),
             },
             (Object::Str(left), Object::Str(right)) => match operator {
-                "+" => Ok(Object::Str(format!("{}{}", left, right))),
-                "==" => Ok(Object::Bool(left == right)),
-                "!=" => Ok(Object::Bool(left != right)),
+                "+" => Ok(Rc::new(Object::Str(format!("{}{}", left, right)))),
+                "==" => Ok(Rc::new(Object::Bool(left == right))),
+                "!=" => Ok(Rc::new(Object::Bool(left != right))),
                 _ => Err(RTError::new("invalid binary operator", line)),
             },
             (Object::Str(s), Object::Number(n)) | (Object::Number(n), Object::Str(s)) => {
                 match operator {
-                    "*" => Ok(Object::Str(s.repeat(n as usize))),
+                    "*" => Ok(Rc::new(Object::Str(s.repeat(*n as usize)))),
                     _ => Err(RTError::new("invalid binary operator", line)),
                 }
             }
             (Object::Bool(left), Object::Bool(right)) => match operator {
-                "==" => Ok(Object::Bool(left == right)),
-                "!=" => Ok(Object::Bool(left != right)),
+                "==" => Ok(Rc::new(Object::Bool(left == right))),
+                "!=" => Ok(Rc::new(Object::Bool(left != right))),
                 _ => Err(RTError::new("invalid binary operation", line)),
             },
             _ => Err(RTError::new("invalid binary operation", line)),
@@ -242,11 +242,11 @@ impl Evaluator {
         &self,
         environment: &Rc<RefCell<Environment>>,
         token: &Token,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         if let Some(obj) = environment.borrow().get(&token.literal.clone()) {
             Ok(obj)
         } else if let Some(obj) = BUILTINS.get(&token.literal.clone()) {
-            Ok(Object::Builtin(obj.clone()))
+            Ok(Rc::new(Object::Builtin(obj.clone())))
         } else {
             Err(RTError::new(
                 &format!("Undefined identifier: '{}'", token.literal),
@@ -260,12 +260,12 @@ impl Evaluator {
         &self,
         environment: &Rc<RefCell<Environment>>,
         func: FunctionLiteral,
-    ) -> Object {
-        Object::Func(Function {
+    ) -> Rc<Object> {
+        Rc::new(Object::Func(Function {
             params: func.params,
             body: func.body,
             env: environment.clone(),
-        })
+        }))
     }
 
     // Evaluate call expression (e.g. function calls)
@@ -277,11 +277,11 @@ impl Evaluator {
         &mut self,
         env: &Rc<RefCell<Environment>>,
         call: CallExpr,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         let function = self.eval_expression(env, *call.func)?;
         let args = self.eval_expressions(env, (*call.args).to_vec())?;
-        match function {
-            Object::Func(func) => self.invoke_function_call(&func, args),
+        match &*function {
+            Object::Func(func) => self.invoke_function_call(func, args),
             Object::Builtin(func) => self.invoke_builtin_function(func, args, call.token.line),
             _ => Err(RTError::new(
                 &format!("Not a function: '{}'", call.token.literal),
@@ -296,8 +296,8 @@ impl Evaluator {
     fn invoke_function_call(
         &mut self,
         function: &Function,
-        args: Vec<Object>,
-    ) -> Result<Object, RTError> {
+        args: Vec<Rc<Object>>,
+    ) -> Result<Rc<Object>, RTError> {
         // Create extended env.
         // Do not use the current environment as the enclosing env. Instead use the
         // environment that 'function' object carries around. That is the environment
@@ -315,10 +315,10 @@ impl Evaluator {
     }
     fn invoke_builtin_function(
         &mut self,
-        func: BuiltinFunction,
-        args: Vec<Object>,
+        func: &BuiltinFunction,
+        args: Vec<Rc<Object>>,
         line: usize,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         let builtin_func = func.func;
         // Validate arity for non variadic functions
         if let Some(arity) = func.arity {
@@ -344,14 +344,14 @@ impl Evaluator {
         &mut self,
         env: &Rc<RefCell<Environment>>,
         expr: IndexExpr,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         let obj = self.eval_expression(env, (*expr.left).clone())?;
-        if let Object::Arr(arr) = obj {
+        if let Object::Arr(arr) = &*obj {
             let index = self.eval_expression(env, *expr.index)?;
-            self.eval_array_index_expr(arr, index, expr.token.line)
-        } else if let Object::Map(map) = obj {
+            self.eval_array_index_expr(arr, Rc::clone(&index), expr.token.line)
+        } else if let Object::Map(map) = &*obj {
             let index = self.eval_expression(env, *expr.index)?;
-            self.eval_hash_index_expr(map, index, expr.token.line)
+            self.eval_hash_index_expr(map, Rc::clone(&index), expr.token.line)
         } else {
             Err(RTError::new(
                 "index operator not supported",
@@ -362,15 +362,15 @@ impl Evaluator {
 
     fn eval_array_index_expr(
         &mut self,
-        arr: Array,
-        index: Object,
+        arr: &Array,
+        index: Rc<Object>,
         line: usize,
-    ) -> Result<Object, RTError> {
-        if let Object::Number(idx) = index {
+    ) -> Result<Rc<Object>, RTError> {
+        if let Object::Number(idx) = *index {
             let idx = idx;
             if idx < 0. || idx >= arr.elements.len() as f64 {
                 // Out of bounds
-                Ok(Object::Nil)
+                Ok(Rc::new(Object::Nil))
             } else {
                 Ok(arr.elements[idx as usize].clone())
             }
@@ -383,8 +383,8 @@ impl Evaluator {
         &mut self,
         env: &Rc<RefCell<Environment>>,
         expr: HashLiteral,
-    ) -> Result<Object, RTError> {
-        let pairs: Result<HashMap<Object, Object>, RTError> = expr
+    ) -> Result<Rc<Object>, RTError> {
+        let pairs: Result<HashMap<Rc<Object>, Rc<Object>>, RTError> = expr
             .pairs
             .into_iter()
             .map(|(key, value)| {
@@ -401,17 +401,17 @@ impl Evaluator {
             .collect();
 
         match pairs {
-            Ok(pairs) => Ok(Object::Map(HMap { pairs })),
+            Ok(pairs) => Ok(Rc::new(Object::Map(HMap { pairs }))),
             Err(e) => Err(e),
         }
     }
 
     fn eval_hash_index_expr(
         &mut self,
-        map: HMap,
-        index: Object,
+        map: &HMap,
+        index: Rc<Object>,
         line: usize,
-    ) -> Result<Object, RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         if !index.is_a_valid_key() {
             return Err(RTError::new(
                 "hash key should be a numeric, a string or a boolean",
@@ -419,9 +419,9 @@ impl Evaluator {
             ));
         }
         if let Some(val) = map.pairs.get(&index) {
-            Ok(val.clone())
+            Ok(Rc::clone(val))
         } else {
-            Ok(Object::Nil)
+            Ok(Rc::new(Object::Nil))
         }
     }
 }

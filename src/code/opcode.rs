@@ -19,6 +19,7 @@ pub enum Opcode {
     Nil,
     GetGlobal,
     SetGlobal,
+    Array,
     #[default]
     Invalid,
 }
@@ -44,6 +45,7 @@ impl From<u8> for Opcode {
             15 => Opcode::Nil,
             16 => Opcode::GetGlobal,
             17 => Opcode::SetGlobal,
+            18 => Opcode::Array,
             _ => Opcode::Invalid,
         }
     }

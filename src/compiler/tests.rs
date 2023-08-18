@@ -471,3 +471,62 @@ fn test_array_literals() {
 
     run_compiler_tests(&tests);
 }
+
+#[test]
+fn test_hash_literals() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "{}",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::Map, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "{1: 2, 3: 4, 5: 6}",
+            expected_constants: vec![
+                Object::Number(1.),
+                Object::Number(2.),
+                Object::Number(3.),
+                Object::Number(4.),
+                Object::Number(5.),
+                Object::Number(6.),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Constant, &[3], 1),
+                definitions::make(Opcode::Constant, &[4], 1),
+                definitions::make(Opcode::Constant, &[5], 1),
+                definitions::make(Opcode::Map, &[6], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "{1: 2 + 3, 4: 5 * 6}",
+            expected_constants: vec![
+                Object::Number(1.),
+                Object::Number(2.),
+                Object::Number(3.),
+                Object::Number(4.),
+                Object::Number(5.),
+                Object::Number(6.),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Add, &[0], 1),
+                definitions::make(Opcode::Constant, &[3], 1),
+                definitions::make(Opcode::Constant, &[4], 1),
+                definitions::make(Opcode::Constant, &[5], 1),
+                definitions::make(Opcode::Mul, &[0], 1),
+                definitions::make(Opcode::Map, &[4], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
+}

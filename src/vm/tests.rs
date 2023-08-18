@@ -44,13 +44,23 @@ fn test_expected_object(evaluated: Rc<Object>, expected: &Object) {
             assert_eq!(
                 eval.elements.len(),
                 exp.elements.len(),
-                "object has wrong array length. got={}, want={}",
+                "array object has wrong length. got={}, want={}",
                 eval.elements.len(),
                 exp.elements.len()
             );
             for (ex, ev) in exp.elements.iter().zip(eval.elements.iter()) {
                 assert_eq!(ex, ev);
             }
+        }
+        (Object::Map(eval), Object::Map(exp)) => {
+            assert_eq!(
+                eval.pairs.len(),
+                exp.pairs.len(),
+                "map object has wrong length. got={}, want={}",
+                eval.pairs.len(),
+                exp.pairs.len()
+            );
+            assert_eq!(eval, exp);
         }
         (_, Object::Nil) => {
             assert_eq!(
@@ -407,6 +417,47 @@ fn test_array_literals() {
                     Rc::new(Object::Number(12.0)),
                     Rc::new(Object::Number(11.0)),
                 ],
+            }),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_hash_literals() {
+    let tests = vec![
+        VmTestCase {
+            input: "{}",
+            expected: Object::Map(HMap::default()),
+        },
+        VmTestCase {
+            input: "{1: 2, 2: 3}",
+            expected: Object::Map({
+                let mut map = HMap::default();
+                map.pairs.insert(
+                    Rc::new(Object::Number(1.into())),
+                    Rc::new(Object::Number(2.into())),
+                );
+                map.pairs.insert(
+                    Rc::new(Object::Number(2.into())),
+                    Rc::new(Object::Number(3.into())),
+                );
+                map
+            }),
+        },
+        VmTestCase {
+            input: "{1 + 1: 2 * 2, 3 + 3: 4 * 4}",
+            expected: Object::Map({
+                let mut map = HMap::default();
+                map.pairs.insert(
+                    Rc::new(Object::Number(2.into())),
+                    Rc::new(Object::Number(4.into())),
+                );
+                map.pairs.insert(
+                    Rc::new(Object::Number(6.into())),
+                    Rc::new(Object::Number(16.into())),
+                );
+                map
             }),
         },
     ];

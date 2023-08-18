@@ -210,7 +210,7 @@ pub struct Array {
     pub elements: Vec<Rc<Object>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct HMap {
     pub pairs: HashMap<Rc<Object>, Rc<Object>>,
 }
@@ -238,3 +238,24 @@ impl fmt::Display for HMap {
         write!(f, "{{ {} }}", pairs_str)
     }
 }
+
+// compare HMap objects without considering the order of key-value pairs
+impl PartialEq for HMap {
+    fn eq(&self, other: &Self) -> bool {
+        if self.pairs.len() != other.pairs.len() {
+            return false;
+        }
+        for (key, value) in &self.pairs {
+            if let Some(other_value) = other.pairs.get(key) {
+                if value != other_value {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl Eq for HMap {}

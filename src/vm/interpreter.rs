@@ -1,11 +1,13 @@
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::code::definitions::*;
 use crate::code::opcode::Opcode;
 use crate::common::error::RTError;
 use crate::common::object::Array;
+use crate::common::object::HMap;
 use crate::common::object::Object;
 
 const STACK_SIZE: usize = 4096;
@@ -192,6 +194,18 @@ impl VM {
                     // skip over the two bytes of the operand in the next cycle
                     ip += 2;
                 }
+                Opcode::Map => {
+                    // Read the first operand i.e. the number of pairs
+                    let num_elements =
+                        BigEndian::read_u16(&instructions.code[ip + 1..ip + 3]) as usize;
+                    let pairs = self.build_map(self.sp - num_elements, self.sp);
+                    // pop 'num_elements' off the stack
+                    self.sp -= num_elements;
+                    // Push the array back onto the stack as an object
+                    self.push(Rc::new(Object::Map(HMap { pairs })));
+                    // skip over the two bytes of the operand in the next cycle
+                    ip += 2;
+                }
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),
@@ -245,6 +259,17 @@ impl VM {
         let mut elements = Vec::with_capacity(end_index - start_index);
         for i in start_index..end_index {
             elements.push(self.stack[i].clone());
+        }
+        elements
+    }
+
+    // Build map from objects on stack
+    fn build_map(&self, start_index: usize, end_index: usize) -> HashMap<Rc<Object>, Rc<Object>> {
+        let mut elements = HashMap::with_capacity(end_index - start_index);
+        for i in (start_index..end_index).step_by(2) {
+            let key = self.stack[i].clone();
+            let val = self.stack[i + 1].clone();
+            elements.insert(key, val);
         }
         elements
     }

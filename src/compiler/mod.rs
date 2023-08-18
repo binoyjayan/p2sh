@@ -192,6 +192,14 @@ impl Compiler {
                 }
                 self.emit(Opcode::Array, &[len], arr.token.line);
             }
+            Expression::Hash(map) => {
+                let len = map.pairs.len() * 2;
+                for (key, value) in map.pairs {
+                    self.compile_expression(key)?;
+                    self.compile_expression(value)?;
+                }
+                self.emit(Opcode::Map, &[len], map.token.line);
+            }
             Expression::Binary(binary) => {
                 // In case of '<', re order the operands to reuse the '>' operator
                 match binary.operator.as_ref() {

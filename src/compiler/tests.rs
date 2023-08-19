@@ -46,10 +46,25 @@ pub fn test_constants(expected: &Vec<Object>, actual: &Vec<Object>) {
             i, exp, got
         );
         match exp {
+            Object::Bool(e) => test_boolean_object(got.clone(), e.clone()),
             Object::Number(e) => test_numeric_object(got.clone(), e.clone()),
             Object::Str(s) => test_string_object(&got.clone(), &s.clone()),
+            Object::CompiledFunc(func) => test_function_object(&got.clone(), &func),
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+fn test_boolean_object(actual: Object, exp: bool) {
+    if let Object::Bool(act) = actual.clone() {
+        assert_eq!(
+            act, exp,
+            "object has wrong value. got={}, want={}",
+            act, exp
+        );
+    } else {
+        panic!("object is not boolean. got={}", actual);
     }
 }
 
@@ -79,6 +94,15 @@ fn test_string_object(actual: &Object, expected: &str) {
     }
 }
 
+#[cfg(test)]
+fn test_function_object(actual_obj: &Object, expected: &CompiledFunction) {
+    if let Object::CompiledFunc(actual) = actual_obj {
+        test_instructions(&vec![expected.instructions.clone()], &actual.instructions);
+    } else {
+        panic!("object is not a compiled function. got={:?}", actual_obj);
+    }
+}
+
 /*
  * concat_instructions is needed because the expected_instructions field in
  * CompilerTestCase is not just a slice of bytes, but a slice of slices of
@@ -92,6 +116,7 @@ fn concat_instructions(s: &[Instructions]) -> Instructions {
     let mut out = Instructions::default();
     for ins in s {
         out.code.extend_from_slice(&ins.code);
+        out.lines.extend_from_slice(&ins.lines);
     }
     out
 }
@@ -103,7 +128,7 @@ fn test_instructions(expected: &[Instructions], actual: &Instructions) {
     assert_eq!(
         concatted.code.len(),
         actual.code.len(),
-        "Wrong nmber of instructions. want={}, got={}",
+        "Wrong number of instructions. want={}, got={}",
         concatted,
         actual,
     );
@@ -577,4 +602,54 @@ fn test_index_expressions() {
     ];
 
     run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_functions() {
+    let tests = vec![CompilerTestCase {
+        input: "fn() { return 5 + 10 }",
+        expected_constants: vec![
+            Object::Number(5.),
+            Object::Number(10.),
+            Object::CompiledFunc(CompiledFunction {
+                instructions: concat_instructions(&[
+                    definitions::make(Opcode::Constant, &[0], 1),
+                    definitions::make(Opcode::Constant, &[1], 1),
+                    definitions::make(Opcode::Add, &[0], 1),
+                    definitions::make(Opcode::ReturnValue, &[0], 1),
+                ]),
+            }),
+        ],
+        expected_instructions: vec![
+            definitions::make(Opcode::Constant, &[2], 1),
+            definitions::make(Opcode::Pop, &[0], 1),
+        ],
+    }];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_compiler_scopes() {
+    let mut compiler = Compiler::new();
+    assert_eq!(compiler.scope_index, 0);
+    compiler.emit(Opcode::Mul, &[0], 1);
+
+    compiler.enter_scope();
+    assert_eq!(compiler.scope_index, 1);
+    compiler.emit(Opcode::Sub, &[0], 1);
+    let scope_instructions_len = compiler.scopes[compiler.scope_index].instructions.len();
+    assert_eq!(scope_instructions_len, 1);
+
+    let last_instruction = compiler.scopes[compiler.scope_index].last_ins.clone();
+    assert_eq!(last_instruction.opcode, Opcode::Sub);
+
+    compiler.leave_scope();
+    assert_eq!(compiler.scope_index, 0);
+
+    compiler.emit(Opcode::Add, &[0], 1);
+    let scope_instructions_len = compiler.scopes[compiler.scope_index].instructions.len();
+    assert_eq!(scope_instructions_len, 2);
+
+    let last_instruction = compiler.scopes[compiler.scope_index].last_ins.clone();
+    assert_eq!(last_instruction.opcode, Opcode::Add);
 }

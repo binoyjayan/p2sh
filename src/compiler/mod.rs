@@ -1,6 +1,7 @@
 use crate::code::definitions::{self, *};
 use crate::code::opcode::Opcode;
 use crate::common::error::CompileError;
+use crate::common::object::CompiledFunction;
 use crate::common::object::Object;
 use crate::compiler::symtab::SymbolTable;
 use crate::parser::ast::expr::*;
@@ -29,22 +30,34 @@ impl EmittedInstruction {
     }
 }
 
-pub struct Compiler {
+// Before compiling a function body (i.e. enter a new scope),
+// push a new object of type CompilationScope onto the scopes stack
+#[derive(Default, Clone)]
+struct CompilationScope {
     instructions: Instructions,
-    pub constants: Vec<Object>,
     last_ins: EmittedInstruction, // instruction before the current
     prev_ins: EmittedInstruction, // instruction before the last
+}
+
+pub struct Compiler {
+    pub constants: Vec<Object>,
     pub symtab: SymbolTable,
+    scopes: Vec<CompilationScope>,
+    scope_index: usize,
 }
 
 impl Compiler {
     pub fn new() -> Compiler {
-        Compiler {
+        let main_scope = CompilationScope {
             instructions: Instructions::default(),
-            constants: Vec::new(),
             last_ins: EmittedInstruction::default(),
             prev_ins: EmittedInstruction::default(),
+        };
+        Compiler {
+            constants: Vec::new(),
             symtab: SymbolTable::default(),
+            scopes: vec![main_scope],
+            scope_index: 0,
         }
     }
 
@@ -55,9 +68,30 @@ impl Compiler {
         compiler
     }
 
+    pub fn enter_scope(&mut self) {
+        let scope = CompilationScope {
+            instructions: Instructions::default(),
+            last_ins: EmittedInstruction::default(),
+            prev_ins: EmittedInstruction::default(),
+        };
+        self.scopes.push(scope);
+        self.scope_index += 1;
+    }
+
+    pub fn leave_scope(&mut self) -> Instructions {
+        let instructions = self.get_curr_instructions();
+        self.scopes.truncate(self.scopes.len() - 1);
+        self.scope_index -= 1;
+        instructions
+    }
+
+    pub fn get_curr_instructions(&self) -> Instructions {
+        self.scopes[self.scope_index].instructions.clone()
+    }
+
     pub fn bytecode(&self) -> Bytecode {
         Bytecode {
-            instructions: self.instructions.clone(),
+            instructions: self.get_curr_instructions(),
             constants: self.constants.clone(),
         }
     }
@@ -68,11 +102,13 @@ impl Compiler {
         self.constants.len() - 1
     }
 
-    // Helper to add a instructions
+    // Helper to add instructions
     pub fn add_instruction(&mut self, ins: Instructions) -> usize {
-        let new_pos = self.instructions.len();
-        self.instructions.code.extend_from_slice(&ins.code);
-        self.instructions.lines.extend_from_slice(&ins.lines);
+        let mut curr_ins = self.get_curr_instructions();
+        let new_pos = curr_ins.len();
+        curr_ins.code.extend_from_slice(&ins.code);
+        curr_ins.lines.extend_from_slice(&ins.lines);
+        self.scopes[self.scope_index].instructions = curr_ins;
         new_pos
     }
 
@@ -86,28 +122,40 @@ impl Compiler {
 
     // Save the last and the previous instructions
     fn set_last_instruction(&mut self, op: Opcode, pos: usize) {
-        let prev_ins = self.last_ins.clone();
+        let prev_ins = self.scopes[self.scope_index].last_ins.clone();
         let last_ins = EmittedInstruction::new(op, pos);
-        self.prev_ins = prev_ins;
-        self.last_ins = last_ins;
+        self.scopes[self.scope_index].prev_ins = prev_ins;
+        self.scopes[self.scope_index].last_ins = last_ins;
     }
 
     fn is_last_instruction_pop(&self) -> bool {
-        self.last_ins.opcode == Opcode::Pop
+        self.scopes[self.scope_index].last_ins.opcode == Opcode::Pop
     }
 
     // shortens 'instructions' to cut off the last instruction
     fn remove_last_pop(&mut self) {
-        self.instructions.code.truncate(self.last_ins.position);
-        self.instructions.lines.truncate(self.last_ins.position);
-        self.last_ins = self.prev_ins.clone();
+        let last_ins = self.scopes[self.scope_index].last_ins.clone();
+        let prev_ins = self.scopes[self.scope_index].prev_ins.clone();
+
+        let old_ins = self.get_curr_instructions();
+        let new_ins = Instructions {
+            code: old_ins.code[..last_ins.position].to_vec(),
+            lines: old_ins.lines[..last_ins.position].to_vec(),
+        };
+
+        self.scopes[self.scope_index].instructions = new_ins;
+        self.scopes[self.scope_index].last_ins = prev_ins;
     }
 
     // Helper to replace an instruction at an arbitrary offset
     fn replace_instruction(&mut self, pos: usize, new_instruction: &[u8]) {
+        let mut curr_ins = self.get_curr_instructions();
+
         for (i, &byte) in new_instruction.iter().enumerate() {
-            self.instructions.code[pos + i] = byte;
+            // lines remain the same
+            curr_ins.code[pos + i] = byte;
         }
+        self.scopes[self.scope_index].instructions = curr_ins;
     }
 
     // Recreate instruction with new operand and use 'replace_instruction()'
@@ -115,9 +163,10 @@ impl Compiler {
     // The underlying assumption is that only instructions that are of
     // the same type and length are replaced
     fn change_operand(&mut self, op_pos: usize, operand: usize) {
-        let op = Opcode::from(self.instructions.code[op_pos]);
-        let line = self.instructions.lines[op_pos];
+        let op = Opcode::from(self.get_curr_instructions().code[op_pos]);
+        let line = self.get_curr_instructions().lines[op_pos];
         let new_instruction = definitions::make(op, &[operand], line);
+        // lines remain the same
         self.replace_instruction(op_pos, &new_instruction.code);
     }
 
@@ -167,6 +216,10 @@ impl Compiler {
                 self.compile_let_stmt(stmt.value)?;
                 let symbol = self.symtab.define(&stmt.name.value);
                 self.emit(Opcode::SetGlobal, &[symbol.index], stmt.token.line);
+            }
+            Statement::Return(stmt) => {
+                self.compile_expression(stmt.value)?;
+                self.emit(Opcode::ReturnValue, &[0], stmt.token.line);
             }
             _ => {}
         }
@@ -248,7 +301,7 @@ impl Compiler {
                 let jump_pos = self.emit(Opcode::Jump, &[0xFFFF], expr.token.line);
 
                 // offset of the next-to-be-emitted instruction
-                let after_then_pos = self.instructions.len();
+                let after_then_pos = self.get_curr_instructions().len();
                 // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
                 // position of the instruction that comes after the 'then' statement
                 self.change_operand(jump_if_false_pos, after_then_pos);
@@ -268,7 +321,7 @@ impl Compiler {
                     }
                 }
                 // offset of the next-to-be-emitted instruction
-                let after_else_pos = self.instructions.len();
+                let after_else_pos = self.get_curr_instructions().len();
                 // change the operand of the Jump instruction to jump over the
                 // else branch – it could be Nil or a real 'else_stmt'
                 self.change_operand(jump_pos, after_else_pos);
@@ -290,6 +343,14 @@ impl Compiler {
                 self.compile_expression(*expr.index)?;
                 // Emit the index operator
                 self.emit(Opcode::Index, &[0], expr.token.line);
+            }
+            Expression::Function(func) => {
+                self.enter_scope();
+                self.compile_block_statement(func.body)?;
+                let instructions = self.leave_scope();
+                let compiled_fn = Object::CompiledFunc(CompiledFunction { instructions });
+                let idx = self.add_constant(compiled_fn);
+                self.emit(Opcode::Constant, &[idx], func.token.line);
             }
             _ => {}
         }

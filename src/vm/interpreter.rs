@@ -206,6 +206,9 @@ impl VM {
                     // skip over the two bytes of the operand in the next cycle
                     ip += 2;
                 }
+                Opcode::Call => {}
+                Opcode::ReturnValue => {}
+                Opcode::Return => {}
                 Opcode::Index => {
                     // Top most element is the index, the expression being indexed is below
                     let index = self.pop(line)?;

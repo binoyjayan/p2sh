@@ -22,6 +22,9 @@ pub enum Opcode {
     Array,
     Map,
     Index,
+    Call,
+    ReturnValue,
+    Return,
     #[default]
     Invalid,
 }
@@ -50,6 +53,9 @@ impl From<u8> for Opcode {
             18 => Opcode::Array,
             19 => Opcode::Map,
             20 => Opcode::Index,
+            21 => Opcode::Call,
+            22 => Opcode::ReturnValue,
+            23 => Opcode::Return,
             _ => Opcode::Invalid,
         }
     }

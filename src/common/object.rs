@@ -6,10 +6,12 @@ use std::hash::{Hash, Hasher};
 use std::ops;
 use std::rc::Rc;
 
+use crate::code::definitions::Instructions;
 use crate::common::environment::Environment;
 use crate::parser::ast::expr::*;
 use crate::parser::ast::stmt::*;
 
+// TODO: Check if Rc is needed for individual objects for performance
 #[derive(Debug)]
 pub enum Object {
     Nil,
@@ -19,6 +21,7 @@ pub enum Object {
     Return(Rc<Object>),
     Func(Function),
     Builtin(BuiltinFunction),
+    CompiledFunc(CompiledFunction),
     Arr(Array),
     Map(HMap),
 }
@@ -32,6 +35,8 @@ impl PartialEq for Object {
             (Object::Bool(a), Object::Bool(b)) => a.eq(b),
             (Object::Arr(a), Object::Arr(b)) => a.eq(b),
             (Object::Map(a), Object::Map(b)) => a.eq(b),
+            (Object::Builtin(a), Object::Builtin(b)) => a.eq(b),
+            (Object::CompiledFunc(a), Object::CompiledFunc(b)) => a.eq(b),
             _ => false,
         }
     }
@@ -63,6 +68,7 @@ impl Clone for Object {
             Object::Builtin(f) => Object::Builtin(f.clone()),
             Object::Arr(a) => Object::Arr(a.clone()),
             Object::Map(m) => Object::Map(m.clone()),
+            Object::CompiledFunc(f) => Object::CompiledFunc(f.clone()),
         }
     }
 }
@@ -95,6 +101,7 @@ impl fmt::Display for Object {
             Self::Return(val) => write!(f, "{}", val),
             Self::Func(val) => write!(f, "{}", val),
             Self::Builtin(val) => write!(f, "{}", val),
+            Self::CompiledFunc(val) => write!(f, "{}", val),
             Self::Arr(val) => write!(f, "{}", val),
             Self::Map(val) => write!(f, "{}", val),
         }
@@ -197,13 +204,19 @@ pub struct BuiltinFunction {
 
 impl fmt::Display for BuiltinFunction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "builtin function")
+        write!(f, "<built-in function {}>", self.name)
     }
 }
 
 impl BuiltinFunction {
     pub fn new(name: String, arity: Option<usize>, func: BuiltinFunctionProto) -> BuiltinFunction {
         BuiltinFunction { name, arity, func }
+    }
+}
+
+impl PartialEq for BuiltinFunction {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
     }
 }
 
@@ -277,3 +290,29 @@ impl PartialEq for HMap {
 }
 
 impl Eq for HMap {}
+
+// Hold the instructions of a compiled function and to pass them
+// from the compiler to the VM as part of the bytecode, as a constant
+// OpCall tells the VM to start executing an object of type CompiledFunction
+// sitting on top of the stack.
+// OpReturnValue tells the VM to return the value on top of the stack
+// to the calling context.
+// OpReturn is similar to OpReturnValue except that it returns Nil.
+#[derive(Debug, Clone)]
+pub struct CompiledFunction {
+    pub instructions: Instructions,
+}
+
+impl fmt::Display for CompiledFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<compiled function>")
+    }
+}
+
+impl PartialEq for CompiledFunction {
+    fn eq(&self, other: &Self) -> bool {
+        self.instructions == other.instructions
+    }
+}
+
+impl Eq for CompiledFunction {}

@@ -30,6 +30,8 @@ impl PartialEq for Object {
             (Object::Str(a), Object::Str(b)) => a.eq(b),
             (Object::Number(a), Object::Number(b)) => a.eq(b),
             (Object::Bool(a), Object::Bool(b)) => a.eq(b),
+            (Object::Arr(a), Object::Arr(b)) => a.eq(b),
+            (Object::Map(a), Object::Map(b)) => a.eq(b),
             _ => false,
         }
     }
@@ -226,6 +228,22 @@ impl fmt::Display for Array {
         write!(f, "[{}]", elements_str)
     }
 }
+
+impl PartialEq for Array {
+    fn eq(&self, other: &Self) -> bool {
+        if self.elements.len() != other.elements.len() {
+            return false;
+        }
+        for (a, b) in self.elements.iter().zip(&other.elements) {
+            if *a != *b {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl Eq for Array {}
 
 impl fmt::Display for HMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

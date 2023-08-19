@@ -128,7 +128,7 @@ impl VM {
                 Opcode::Equal => {
                     let b = self.pop(line)?;
                     let a = self.pop(line)?;
-                    self.push(Rc::new(Object::Bool(a == b)));
+                    self.push(Rc::new(Object::Bool(a.as_ref() == b.as_ref())));
                 }
                 Opcode::NotEqual => {
                     let b = self.pop(line)?;

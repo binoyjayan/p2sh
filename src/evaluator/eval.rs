@@ -234,6 +234,16 @@ impl Evaluator {
                 "!=" => Ok(Rc::new(Object::Bool(left != right))),
                 _ => Err(RTError::new("invalid binary operation", line)),
             },
+            (Object::Arr(left), Object::Arr(right)) => match operator {
+                "==" => Ok(Rc::new(Object::Bool(left == right))),
+                "!=" => Ok(Rc::new(Object::Bool(left != right))),
+                _ => Err(RTError::new("invalid binary operation", line)),
+            },
+            (Object::Map(left), Object::Map(right)) => match operator {
+                "==" => Ok(Rc::new(Object::Bool(left == right))),
+                "!=" => Ok(Rc::new(Object::Bool(left != right))),
+                _ => Err(RTError::new("invalid binary operation", line)),
+            },
             _ => Err(RTError::new("invalid binary operation", line)),
         }
     }

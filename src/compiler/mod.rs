@@ -283,6 +283,14 @@ impl Compiler {
                     ));
                 }
             }
+            Expression::Index(expr) => {
+                // Compile the expression being indexed
+                self.compile_expression(*expr.left)?;
+                // Compile the index expression
+                self.compile_expression(*expr.index)?;
+                // Emit the index operator
+                self.emit(Opcode::Index, &[0], expr.token.line);
+            }
             _ => {}
         }
         Ok(())

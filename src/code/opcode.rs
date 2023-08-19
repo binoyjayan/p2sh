@@ -21,6 +21,7 @@ pub enum Opcode {
     SetGlobal,
     Array,
     Map,
+    Index,
     #[default]
     Invalid,
 }
@@ -48,6 +49,7 @@ impl From<u8> for Opcode {
             17 => Opcode::SetGlobal,
             18 => Opcode::Array,
             19 => Opcode::Map,
+            20 => Opcode::Index,
             _ => Opcode::Invalid,
         }
     }

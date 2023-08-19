@@ -206,6 +206,12 @@ impl VM {
                     // skip over the two bytes of the operand in the next cycle
                     ip += 2;
                 }
+                Opcode::Index => {
+                    // Top most element is the index, the expression being indexed is below
+                    let index = self.pop(line)?;
+                    let left = self.pop(line)?;
+                    self.exec_index_expr(left, index, line)?;
+                }
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),
@@ -272,5 +278,38 @@ impl VM {
             elements.insert(key, val);
         }
         elements
+    }
+
+    fn exec_index_expr(
+        &mut self,
+        left: Rc<Object>,
+        index: Rc<Object>,
+        line: usize,
+    ) -> Result<(), RTError> {
+        match (&*left, &*index) {
+            (Object::Arr(arr), Object::Number(idx)) => self.exec_array_index(arr, *idx),
+            (Object::Map(map), _) => self.exec_hash_index(map, &index),
+            _ => Err(RTError::new("index operator not supported.", line)),
+        }
+    }
+
+    fn exec_array_index(&mut self, arr: &Array, idx: f64) -> Result<(), RTError> {
+        if idx < 0. || idx >= arr.elements.len() as f64 {
+            // Out of bounds
+            self.push(Rc::new(Object::Nil));
+        } else {
+            self.push(arr.elements[idx as usize].clone());
+        }
+        Ok(())
+    }
+
+    fn exec_hash_index(&mut self, map: &HMap, key: &Rc<Object>) -> Result<(), RTError> {
+        if let Some(obj) = map.pairs.get(key) {
+            self.push(obj.clone());
+        } else {
+            // Not found
+            self.push(Rc::new(Object::Nil));
+        }
+        Ok(())
     }
 }

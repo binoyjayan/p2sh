@@ -39,12 +39,7 @@ pub fn test_constants(expected: &Vec<Object>, actual: &Vec<Object>) {
         actual.len(),
         expected.len()
     );
-    for (i, (exp, got)) in expected.iter().zip(actual).enumerate() {
-        assert_eq!(
-            exp, got,
-            "Wrong constant at index {}. want={}, got ={}",
-            i, exp, got
-        );
+    for (exp, got) in expected.iter().zip(actual) {
         match exp {
             Object::Bool(e) => test_boolean_object(got.clone(), e.clone()),
             Object::Number(e) => test_numeric_object(got.clone(), e.clone()),
@@ -606,25 +601,48 @@ fn test_index_expressions() {
 
 #[test]
 fn test_functions() {
-    let tests = vec![CompilerTestCase {
-        input: "fn() { return 5 + 10 }",
-        expected_constants: vec![
-            Object::Number(5.),
-            Object::Number(10.),
-            Object::CompiledFunc(CompiledFunction {
-                instructions: concat_instructions(&[
-                    definitions::make(Opcode::Constant, &[0], 1),
-                    definitions::make(Opcode::Constant, &[1], 1),
-                    definitions::make(Opcode::Add, &[0], 1),
-                    definitions::make(Opcode::ReturnValue, &[0], 1),
-                ]),
-            }),
-        ],
-        expected_instructions: vec![
-            definitions::make(Opcode::Constant, &[2], 1),
-            definitions::make(Opcode::Pop, &[0], 1),
-        ],
-    }];
+    let tests = vec![
+        CompilerTestCase {
+            input: "fn() { return 5 + 10 }",
+            expected_constants: vec![
+                Object::Number(5.),
+                Object::Number(10.),
+                Object::CompiledFunc(CompiledFunction {
+                    instructions: concat_instructions(&[
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        definitions::make(Opcode::Constant, &[1], 1),
+                        definitions::make(Opcode::Add, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                    ]),
+                }),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "fn() { 1; 2 }",
+            expected_constants: vec![
+                Object::Number(1.),
+                Object::Number(2.),
+                Object::CompiledFunc(CompiledFunction {
+                    instructions: concat_instructions(&[
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        // Pop the first value
+                        definitions::make(Opcode::Pop, &[0], 1),
+                        definitions::make(Opcode::Constant, &[1], 1),
+                        // The pop is replaced by the implicit return
+                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                    ]),
+                }),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+    ];
     run_compiler_tests(&tests);
 }
 

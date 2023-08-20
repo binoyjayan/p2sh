@@ -128,8 +128,11 @@ impl Compiler {
         self.scopes[self.scope_index].last_ins = last_ins;
     }
 
-    fn is_last_instruction_pop(&self) -> bool {
-        self.scopes[self.scope_index].last_ins.opcode == Opcode::Pop
+    fn is_last_instruction(&self, opcode: Opcode) -> bool {
+        if self.scopes[self.scope_index].instructions.code.is_empty() {
+            return false;
+        }
+        self.scopes[self.scope_index].last_ins.opcode == opcode
     }
 
     // shortens 'instructions' to cut off the last instruction
@@ -156,6 +159,14 @@ impl Compiler {
             curr_ins.code[pos + i] = byte;
         }
         self.scopes[self.scope_index].instructions = curr_ins;
+    }
+
+    // Helper to replace the last Opcode::Pop with 'Opcode::ReturnValue'
+    fn replace_last_pop_with_return(&mut self) {
+        let last_pos = self.scopes[self.scope_index].last_ins.position;
+        let new_instruction = definitions::make(Opcode::ReturnValue, &[0], 1);
+        self.replace_instruction(last_pos, &new_instruction.code);
+        self.scopes[self.scope_index].last_ins.opcode = Opcode::ReturnValue;
     }
 
     // Recreate instruction with new operand and use 'replace_instruction()'
@@ -293,7 +304,7 @@ impl Compiler {
                 self.compile_block_statement(expr.then_stmt)?;
                 // Get rid of the extra Pop that comes with the result of compiling 'then_stmt'
                 // This is so that we don't loose the result of the 'if' expression
-                if self.is_last_instruction_pop() {
+                if self.is_last_instruction(Opcode::Pop) {
                     self.remove_last_pop();
                 }
 
@@ -315,7 +326,7 @@ impl Compiler {
                     Some(else_stmt) => {
                         // TODO: Find line number of 'else_stmt'
                         self.compile_block_statement(else_stmt)?;
-                        if self.is_last_instruction_pop() {
+                        if self.is_last_instruction(Opcode::Pop) {
                             self.remove_last_pop();
                         }
                     }
@@ -345,8 +356,17 @@ impl Compiler {
                 self.emit(Opcode::Index, &[0], expr.token.line);
             }
             Expression::Function(func) => {
+                // enter scope of a function
                 self.enter_scope();
                 self.compile_block_statement(func.body)?;
+                // Leave function scope. If the last expression statement in a
+                // function is not turned into an implicit return value, but
+                // is still followed by an OpPop instruction, the fix the
+                // instruction after compiling the function’s body but before
+                // leaving the scope.
+                if self.is_last_instruction(Opcode::Pop) {
+                    self.replace_last_pop_with_return();
+                }
                 let instructions = self.leave_scope();
                 let compiled_fn = Object::CompiledFunc(CompiledFunction { instructions });
                 let idx = self.add_constant(compiled_fn);

@@ -121,8 +121,8 @@ fn test_instructions(expected: &[Instructions], actual: &Instructions) {
     let concatted = concat_instructions(expected);
 
     assert_eq!(
-        concatted.code.len(),
-        actual.code.len(),
+        concatted.len(),
+        actual.len(),
         "Wrong number of instructions. want={}, got={}",
         concatted,
         actual,
@@ -607,14 +607,14 @@ fn test_functions() {
             expected_constants: vec![
                 Object::Number(5.),
                 Object::Number(10.),
-                Object::CompiledFunc(CompiledFunction {
+                Object::CompiledFunc(Rc::new(CompiledFunction {
                     instructions: concat_instructions(&[
                         definitions::make(Opcode::Constant, &[0], 1),
                         definitions::make(Opcode::Constant, &[1], 1),
                         definitions::make(Opcode::Add, &[0], 1),
                         definitions::make(Opcode::ReturnValue, &[0], 1),
                     ]),
-                }),
+                })),
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[2], 1),
@@ -626,7 +626,7 @@ fn test_functions() {
             expected_constants: vec![
                 Object::Number(1.),
                 Object::Number(2.),
-                Object::CompiledFunc(CompiledFunction {
+                Object::CompiledFunc(Rc::new(CompiledFunction {
                     instructions: concat_instructions(&[
                         definitions::make(Opcode::Constant, &[0], 1),
                         // Pop the first value
@@ -635,7 +635,7 @@ fn test_functions() {
                         // The pop is replaced by the implicit return
                         definitions::make(Opcode::ReturnValue, &[0], 1),
                     ]),
-                }),
+                })),
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[2], 1),
@@ -650,9 +650,9 @@ fn test_functions() {
 fn test_functions_without_return_value() {
     let tests = vec![CompilerTestCase {
         input: "fn() { }",
-        expected_constants: vec![Object::CompiledFunc(CompiledFunction {
+        expected_constants: vec![Object::CompiledFunc(Rc::new(CompiledFunction {
             instructions: definitions::make(Opcode::Return, &[0], 1),
-        })],
+        }))],
         expected_instructions: vec![
             definitions::make(Opcode::Constant, &[0], 1),
             definitions::make(Opcode::Pop, &[0], 1),
@@ -685,4 +685,52 @@ fn test_compiler_scopes() {
 
     let last_instruction = compiler.scopes[compiler.scope_index].last_ins.clone();
     assert_eq!(last_instruction.opcode, Opcode::Add);
+}
+
+#[test]
+fn test_function_calls() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "fn() { 24 }()",
+            expected_constants: vec![
+                Object::Number(24.),
+                Object::CompiledFunc(Rc::new(CompiledFunction {
+                    instructions: concat_instructions(&[
+                        // The literal '24'
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                    ]),
+                })),
+            ],
+            expected_instructions: vec![
+                // The compiled function
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Call, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            // Function is bound to a name here
+            input: "let noArg = fn() { 24 }; noArg();",
+            expected_constants: vec![
+                Object::Number(24.),
+                Object::CompiledFunc(Rc::new(CompiledFunction {
+                    instructions: concat_instructions(&[
+                        // The literal '24'
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                    ]),
+                })),
+            ],
+            expected_instructions: vec![
+                // The compiled function
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::Call, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
 }

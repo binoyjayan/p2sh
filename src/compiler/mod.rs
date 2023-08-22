@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::code::definitions::{self, *};
 use crate::code::opcode::Opcode;
 use crate::common::error::CompileError;
@@ -129,6 +131,7 @@ impl Compiler {
     }
 
     fn is_last_instruction(&self, opcode: Opcode) -> bool {
+        // Check for and empty scope (e.g. functions that doesn't have a body)
         if self.scopes[self.scope_index].instructions.code.is_empty() {
             return false;
         }
@@ -371,9 +374,13 @@ impl Compiler {
                     self.emit(Opcode::Return, &[0], func.token.line);
                 }
                 let instructions = self.leave_scope();
-                let compiled_fn = Object::CompiledFunc(CompiledFunction { instructions });
+                let compiled_fn = Object::CompiledFunc(Rc::new(CompiledFunction { instructions }));
                 let idx = self.add_constant(compiled_fn);
                 self.emit(Opcode::Constant, &[idx], func.token.line);
+            }
+            Expression::Call(call) => {
+                self.compile_expression(*call.func)?;
+                self.emit(Opcode::Call, &[0], call.token.line);
             }
             _ => {}
         }

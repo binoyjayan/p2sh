@@ -3,14 +3,17 @@ use byteorder::ByteOrder;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::code::definitions::*;
 use crate::code::opcode::Opcode;
 use crate::common::error::RTError;
 use crate::common::object::Array;
+use crate::common::object::CompiledFunction;
 use crate::common::object::HMap;
 use crate::common::object::Object;
+use crate::compiler::Bytecode;
+use crate::vm::frame::Frame;
 
 const STACK_SIZE: usize = 4096;
+const MAX_FRAMES: usize = 4096;
 pub const GLOBALS_SIZE: usize = 65536;
 
 /*
@@ -24,6 +27,8 @@ pub struct VM {
     stack: Vec<Rc<Object>>,
     sp: usize,
     pub globals: Vec<Rc<Object>>,
+    frames: Vec<Frame>,
+    frames_index: usize,
 }
 
 enum BinaryOperation {
@@ -35,18 +40,25 @@ enum BinaryOperation {
 }
 
 impl VM {
-    pub fn new(constants: Vec<Object>) -> VM {
+    pub fn new(bytecode: Bytecode) -> VM {
         let data = Rc::new(Object::Nil);
+        let frame_e = Frame::new(Rc::new(CompiledFunction::default()));
+        let frame_m = Frame::new(Rc::new(CompiledFunction::new(bytecode.instructions)));
+        let mut frames = vec![frame_e; MAX_FRAMES];
+        frames[0] = frame_m;
+
         VM {
-            constants,
+            constants: bytecode.constants,
             stack: Vec::with_capacity(STACK_SIZE),
             sp: 0,
             globals: vec![data; GLOBALS_SIZE],
+            frames,
+            frames_index: 1,
         }
     }
 
-    pub fn new_with_global_store(constants: Vec<Object>, globals: Vec<Rc<Object>>) -> VM {
-        let mut vm = VM::new(constants);
+    pub fn new_with_global_store(bytecode: Bytecode, globals: Vec<Rc<Object>>) -> VM {
+        let mut vm = VM::new(bytecode);
         vm.globals = globals;
         vm
     }
@@ -86,27 +98,43 @@ impl VM {
         self.stack[self.sp].clone()
     }
 
+    pub fn current_frame(&mut self) -> &mut Frame {
+        &mut self.frames[self.frames_index - 1]
+    }
+
+    pub fn push_frame(&mut self, f: Frame) {
+        self.frames[self.frames_index] = f;
+        self.frames_index += 1;
+    }
+
+    pub fn pop_frame(&mut self) -> Frame {
+        self.frames_index -= 1;
+        self.frames[self.frames_index].clone()
+    }
+
     /*
      * The main run loop for the interpreter. Since this is the hot path,
      * do not use functions such as lookup() or read_operands() for decoding
      * instructions and operands.
      */
-    pub fn run(&mut self, instructions: &Instructions) -> Result<(), RTError> {
-        let mut ip = 0;
-        while ip < instructions.len() {
+    pub fn run(&mut self) -> Result<(), RTError> {
+        while self.current_frame().ip < self.current_frame().instructions().len() {
+            // Helpers
+            let ip = self.current_frame().ip;
+            let instructions = self.current_frame().instructions().clone();
+
             let op = Opcode::from(instructions.code[ip]);
             let line = instructions.lines[ip];
             match op {
                 Opcode::Constant => {
                     let const_index =
                         BigEndian::read_u16(&instructions.code[ip + 1..ip + 3]) as usize;
-                    let constant = self
-                        .constants
-                        .get(const_index)
-                        .ok_or_else(|| RTError::new("constant not found", line))?;
+                    let constant = self.constants.get(const_index).ok_or_else(|| {
+                        RTError::new(&format!("constant not found [idx: {}]", const_index), line)
+                    })?;
                     self.push(Rc::new(constant.clone()));
                     // skip over the two bytes of the operand in the next cycle
-                    ip += 2;
+                    self.current_frame().ip += 2;
                 }
                 Opcode::Pop => {
                     self.pop(line)?;
@@ -153,17 +181,17 @@ impl VM {
                 Opcode::Jump => {
                     let bytes = &instructions.code[ip + 1..ip + 3];
                     // decode the operand (jump address) right after the opcode
-                    ip = u16::from_be_bytes([bytes[0], bytes[1]]) as usize - 1;
+                    self.current_frame().ip = u16::from_be_bytes([bytes[0], bytes[1]]) as usize - 1;
                 }
                 Opcode::JumpIfFalse => {
                     let bytes = &instructions.code[ip + 1..ip + 3];
                     // decode the operand (jump address) right after the opcode
                     let pos: usize = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
                     // skip over the two bytes of the operand in the next cycle
-                    ip += 2;
+                    self.current_frame().ip += 2;
                     let condition = self.pop(line)?;
                     if condition.is_falsey() {
-                        ip = pos - 1;
+                        self.current_frame().ip = pos - 1;
                     }
                 }
                 Opcode::Nil => {
@@ -173,14 +201,14 @@ impl VM {
                     let bytes = &instructions.code[ip + 1..ip + 3];
                     // decode the operand (index to globals)
                     let globals_index: usize = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
-                    ip += 2;
+                    self.current_frame().ip += 2;
                     self.push(self.globals[globals_index].clone());
                 }
                 Opcode::SetGlobal => {
                     let bytes = &instructions.code[ip + 1..ip + 3];
                     // decode the operand (index to globals)
                     let globals_index: usize = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
-                    ip += 2;
+                    self.current_frame().ip += 2;
                     self.globals[globals_index] = self.pop(line)?;
                 }
                 Opcode::Array => {
@@ -192,7 +220,7 @@ impl VM {
                     // Push the array back onto the stack as an object
                     self.push(Rc::new(Object::Arr(Array { elements })));
                     // skip over the two bytes of the operand in the next cycle
-                    ip += 2;
+                    self.current_frame().ip += 2;
                 }
                 Opcode::Map => {
                     // Read the first operand i.e. the number of pairs
@@ -204,11 +232,32 @@ impl VM {
                     // Push the array back onto the stack as an object
                     self.push(Rc::new(Object::Map(HMap { pairs })));
                     // skip over the two bytes of the operand in the next cycle
-                    ip += 2;
+                    self.current_frame().ip += 2;
                 }
-                Opcode::Call => {}
-                Opcode::ReturnValue => {}
-                Opcode::Return => {}
+                Opcode::Call => {
+                    let obj = &*self.stack[self.sp - 1];
+                    if let Object::CompiledFunc(comp_func) = obj {
+                        let frame = Frame::new(comp_func.clone());
+                        self.push_frame(frame);
+                    } else {
+                        return Err(RTError::new("calling non-function", line));
+                    }
+                    // Do not increment ip here since the vm is using a new frame
+                    // and 'ip' should point to the first instruction in that frame
+                    continue;
+                }
+                Opcode::ReturnValue => {
+                    let ret_val = self.pop(line)?;
+                    self.pop_frame();
+                    // pop the executed function
+                    self.pop(line)?;
+                    self.push(ret_val);
+                }
+                Opcode::Return => {
+                    self.pop_frame();
+                    self.pop(line)?;
+                    self.push(Rc::new(Object::Nil))
+                }
                 Opcode::Index => {
                     // Top most element is the index, the expression being indexed is below
                     let index = self.pop(line)?;
@@ -222,7 +271,7 @@ impl VM {
                     ))
                 }
             }
-            ip += 1;
+            self.current_frame().ip += 1;
         }
 
         Ok(())

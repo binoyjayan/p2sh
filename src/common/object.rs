@@ -21,7 +21,7 @@ pub enum Object {
     Return(Rc<Object>),
     Func(Function),
     Builtin(BuiltinFunction),
-    CompiledFunc(CompiledFunction),
+    CompiledFunc(Rc<CompiledFunction>),
     Arr(Array),
     Map(HMap),
 }
@@ -298,9 +298,15 @@ impl Eq for HMap {}
 // OpReturnValue tells the VM to return the value on top of the stack
 // to the calling context.
 // OpReturn is similar to OpReturnValue except that it returns Nil.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct CompiledFunction {
     pub instructions: Instructions,
+}
+
+impl CompiledFunction {
+    pub fn new(instructions: Instructions) -> Self {
+        Self { instructions }
+    }
 }
 
 impl fmt::Display for CompiledFunction {

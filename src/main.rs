@@ -86,8 +86,8 @@ pub fn run_prompt() {
                         return;
                     }
                     let bytecode = compiler.bytecode();
-                    let mut vm = VM::new_with_global_store(bytecode.constants, globals);
-                    let err = vm.run(&bytecode.instructions);
+                    let mut vm = VM::new_with_global_store(bytecode, globals);
+                    let err = vm.run();
                     if let Err(err) = err {
                         eprintln!("vm error: {}", err);
                         return;

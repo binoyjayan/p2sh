@@ -104,8 +104,8 @@ fn test_compile(input: &str) -> Bytecode {
 fn run_vm_tests(tests: &[VmTestCase]) {
     for t in tests {
         let bytecode = test_compile(t.input);
-        let mut vm = VM::new(bytecode.constants.clone());
-        let err = vm.run(&bytecode.instructions.clone());
+        let mut vm = VM::new(bytecode);
+        let err = vm.run();
         if let Err(err) = err {
             panic!("vm error: {}", err);
         }
@@ -512,5 +512,93 @@ fn test_index_expressions() {
             expected: Object::Number(1.),
         },
     ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_calling_functions_without_args() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+            let fivePlusTen = fn() { 5 + 10; };
+            fivePlusTen();
+            "#,
+            expected: Object::Number(15.),
+        },
+        VmTestCase {
+            input: r#"
+            let f1 = fn() { 1 };
+            let f2 = fn() { 2 };
+            f1() + f2()
+            "#,
+            expected: Object::Number(3.),
+        },
+        VmTestCase {
+            input: r#"
+            let f1 = fn() { 1 };
+            let f2 = fn() { f1() + 1 };
+            let f3 = fn() { f2() + 1 };
+            f3()
+            "#,
+            expected: Object::Number(3.),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_calling_functions_with_return() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+            let earlyExit = fn() { return 99; 100; };
+            earlyExit();
+            "#,
+            expected: Object::Number(99.),
+        },
+        VmTestCase {
+            input: r#"
+            let earlyExit = fn() { return 99; return 100; };
+            earlyExit();
+            "#,
+            expected: Object::Number(99.),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_calling_functions_without_return() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+            let noReturn = fn() { };
+            noReturn();
+            "#,
+            expected: Object::Nil,
+        },
+        VmTestCase {
+            input: r#"
+            let noReturn1 = fn() { };
+            let noReturn2 = fn() { noReturn1(); };
+            noReturn1();
+            noReturn2();
+            "#,
+            expected: Object::Nil,
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_first_class_functions_() {
+    let tests = vec![VmTestCase {
+        input: r#"
+            let returnsOne = fn() { 1; };
+            let returnsOneReturner = fn() { returnsOne; };
+            returnsOneReturner()();
+            "#,
+        expected: Object::Number(1.),
+    }];
     run_vm_tests(&tests);
 }

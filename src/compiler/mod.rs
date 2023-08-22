@@ -367,6 +367,9 @@ impl Compiler {
                 if self.is_last_instruction(Opcode::Pop) {
                     self.replace_last_pop_with_return();
                 }
+                if !self.is_last_instruction(Opcode::ReturnValue) {
+                    self.emit(Opcode::Return, &[0], func.token.line);
+                }
                 let instructions = self.leave_scope();
                 let compiled_fn = Object::CompiledFunc(CompiledFunction { instructions });
                 let idx = self.add_constant(compiled_fn);

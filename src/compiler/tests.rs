@@ -647,6 +647,21 @@ fn test_functions() {
 }
 
 #[test]
+fn test_functions_without_return_value() {
+    let tests = vec![CompilerTestCase {
+        input: "fn() { }",
+        expected_constants: vec![Object::CompiledFunc(CompiledFunction {
+            instructions: definitions::make(Opcode::Return, &[0], 1),
+        })],
+        expected_instructions: vec![
+            definitions::make(Opcode::Constant, &[0], 1),
+            definitions::make(Opcode::Pop, &[0], 1),
+        ],
+    }];
+    run_compiler_tests(&tests);
+}
+
+#[test]
 fn test_compiler_scopes() {
     let mut compiler = Compiler::new();
     assert_eq!(compiler.scope_index, 0);

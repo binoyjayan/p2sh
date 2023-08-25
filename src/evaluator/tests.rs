@@ -78,7 +78,7 @@ fn test_eval(input: &str) -> Result<Rc<Object>, RTError> {
 
 #[test]
 fn test_string_literal() {
-    let input = "\"Hello, World\"";
+    let input = r#""Hello, World""#;
     let expected = "Hello, World";
     let evaluated = test_eval(input);
     match evaluated {
@@ -172,19 +172,19 @@ fn test_eval_string_expr() {
     }
     let numeric_tests = vec![
         StringObj {
-            input: "\"Hello, World\"",
+            input: r#""Hello, World""#,
             expected: "Hello, World",
         },
         StringObj {
-            input: "\"Hello, \" + \"World!!\"",
+            input: r#""Hello, " + "World!!""#,
             expected: "Hello, World!!",
         },
         StringObj {
-            input: "\"*\" * 30",
+            input: r#""*" * 30"#,
             expected: "******************************",
         },
         StringObj {
-            input: "30 * \"*\" ",
+            input: r#"30 * "*" "#,
             expected: "******************************",
         },
     ];
@@ -456,7 +456,7 @@ fn test_error_handling() {
             expected: RTError::new("Undefined identifier: 'foobar'", 1),
         },
         ErrorTest {
-            input: "\"foo\" - \"bar\"",
+            input: r#""foo" - "bar""#,
             expected: RTError::new("invalid binary operator", 1),
         },
         ErrorTest {
@@ -468,7 +468,7 @@ fn test_error_handling() {
             expected: RTError::new("index operator not supported", 1),
         },
         ErrorTest {
-            input: "\"not_array\"[1]",
+            input: r#""not_array"[1]"#,
             expected: RTError::new("index operator not supported", 1),
         },
         ErrorTest {
@@ -480,7 +480,7 @@ fn test_error_handling() {
             expected: RTError::new("invalid index to array object", 1),
         },
         ErrorTest {
-            input: "{\"name\": \"p2sh\"} [fn(x) {x}]",
+            input: r#"{"name": "p2sh"} [fn(x) {x}]"#,
             expected: RTError::new("hash key should be a numeric, a string or a boolean", 1),
         },
     ];
@@ -647,15 +647,15 @@ fn test_builtin_functions() {
     }
     let builtin_tests = vec![
         BuiltinTest {
-            input: "len(\"\")",
+            input: r#"len("")"#,
             expected: Object::Number(0.),
         },
         BuiltinTest {
-            input: "len(\"four\")",
+            input: r#"len("four")"#,
             expected: Object::Number(4.),
         },
         BuiltinTest {
-            input: "len(\"hello world\")",
+            input: r#"len("hello world")"#,
             expected: Object::Number(11.),
         },
         BuiltinTest {
@@ -699,7 +699,7 @@ fn test_builtin_functions() {
             }),
         },
         BuiltinTest {
-            input: "puts(\"Hello\")",
+            input: r#"puts("Hello")"#,
             expected: Object::Nil,
         },
     ];
@@ -745,7 +745,7 @@ fn test_builtin_functions() {
             expected: RTError::new("argument to 'len' not supported", 1),
         },
         ErrorTest {
-            input: "len(\"one\", \"two\")",
+            input: r#"len("one", "two")"#,
             expected: RTError::new("wrong number of arguments. got=2 needs=1", 1),
         },
     ];
@@ -894,15 +894,15 @@ fn test_hash_key() {
 
 #[test]
 fn test_hash_literals() {
-    let input = "let two = \"two\";
+    let input = r#"let two = "two";
     {
-        \"one\": 10 - 9,
+        "one": 10 - 9,
         two: 1 + 1,
-        \"three\": 6 / 2,
+        "three": 6 / 2,
         4: 4,
         true: 5,
         false: 6
-    }";
+    }"#;
     let evaluated = test_eval(input);
     if let Ok(obj) = evaluated {
         match &*obj {
@@ -929,15 +929,15 @@ fn test_hash_index_expressions() {
     }
     let index_exprs = vec![
         IndexExpression {
-            input: "{\"foo\": 5}[\"foo\"]",
+            input: r#"{"foo": 5}["foo"]"#,
             expected: Object::Number(5.),
         },
         IndexExpression {
-            input: "{\"foo\": 5}[\"bar\"]",
+            input: r#"{"foo": 5}["bar"]"#,
             expected: Object::Nil,
         },
         IndexExpression {
-            input: "{}[\"foo\"]",
+            input: r#"{}["foo"]"#,
             expected: Object::Nil,
         },
         IndexExpression {
@@ -953,15 +953,15 @@ fn test_hash_index_expressions() {
             expected: Object::Number(0.),
         },
         IndexExpression {
-            input: "{true: \"true\"}[true]",
+            input: r#"{true: "true"}[true]"#,
             expected: Object::Str("true".to_string()),
         },
         IndexExpression {
-            input: "[{\"name\": \"Alice\", \"age\": 24}, {\"name\": \"Anna\", \"age\": 28}][0][\"name\"]",
+            input: r#"[{"name": "Alice", "age": 24}, {"name": "Anna", "age": 28}][0]["name"]"#,
             expected: Object::Str("Alice".to_string()),
         },
         IndexExpression {
-            input: "[{\"name\": \"Alice\", \"age\": 24}, {\"name\": \"Anna\", \"age\": 28}][1][\"name\"]",
+            input: r#"[{"name": "Alice", "age": 24}, {"name": "Anna", "age": 28}][1]["name"]"#,
             expected: Object::Str("Anna".to_string()),
         },
     ];

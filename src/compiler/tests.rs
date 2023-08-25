@@ -414,7 +414,7 @@ fn test_global_let_statements() {
 fn test_string_expressions() {
     let tests = vec![
         CompilerTestCase {
-            input: "\"p2sh\"",
+            input: r#""p2sh""#,
             expected_constants: vec![Object::Str(String::from("p2sh"))],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
@@ -422,7 +422,7 @@ fn test_string_expressions() {
             ],
         },
         CompilerTestCase {
-            input: "\"p2\" + \"sh\"",
+            input: r#""p2" + "sh""#,
             expected_constants: vec![
                 Object::Str(String::from("p2")),
                 Object::Str(String::from("sh")),

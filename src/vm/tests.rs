@@ -375,15 +375,15 @@ fn test_global_let_statements() {
 fn test_string_expressions() {
     let tests = vec![
         VmTestCase {
-            input: "\"p2sh\"",
+            input: r#""p2sh""#,
             expected: Object::Str("p2sh".to_string()),
         },
         VmTestCase {
-            input: "\"p2\" + \"sh\"",
+            input: r#""p2" + "sh""#,
             expected: Object::Str("p2sh".to_string()),
         },
         VmTestCase {
-            input: "\"p2\" + \"sh\" + \"banana\"",
+            input: r#""p2" + "sh" + "banana""#,
             expected: Object::Str("p2shbanana".to_string()),
         },
     ];
@@ -508,7 +508,7 @@ fn test_index_expressions() {
             expected: Object::Nil,
         },
         VmTestCase {
-            input: "{\"one\": 1, \"two\": 2, \"three\": 3}[\"o\" + \"ne\"]",
+            input: r#"{"one": 1, "two": 2, "three": 3}["o" + "ne"]"#,
             expected: Object::Number(1.),
         },
     ];

@@ -5,7 +5,7 @@ use super::*;
 fn test_next_token() {
     // expected-type, expected-literal
     struct ExpectedToken<'a>(TokenType, &'a str);
-    let input = "
+    let input = r#"
             let five = 5;
             let ten = 10;
             let add = fn(x, y) {
@@ -24,11 +24,11 @@ fn test_next_token() {
 
             10 == 10;
             10 != 9;
-            \"foobar\"
-            \"foo bar\"
+            "foobar"
+            "foo bar"
             [1, 2];
-            {\"foo\": \"bar\"}
-        ";
+            {"foo": "bar"}
+        "#;
 
     let tests = vec![
         ExpectedToken(TokenType::Let, "let"),

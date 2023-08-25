@@ -19,11 +19,12 @@ fn test_make() {
             &[65534],
             vec![Opcode::Constant as u8, 255, 254],
         ),
+        (Opcode::GetLocal, &[255], vec![Opcode::GetLocal as u8, 255]),
         (Opcode::Add, &[0], vec![Opcode::Add as u8]),
     ];
 
     for (op, operands, expected) in tests {
-        let instruction = definitions::make(op, operands, 1).code;
+        let instruction = definitions::make(op, operands, 1);
         assert_eq!(
             instruction.len(),
             expected.len(),
@@ -34,9 +35,9 @@ fn test_make() {
 
         for (i, &b) in expected.iter().enumerate() {
             assert_eq!(
-                instruction[i], b,
+                instruction.code[i], b,
                 "wrong byte at pos {}. want={}, got={}",
-                i, b, instruction[i]
+                i, b, instruction.code[i]
             );
         }
     }
@@ -55,14 +56,16 @@ fn concat_instructions(s: &[Instructions]) -> Instructions {
 fn test_instructions_string() {
     let instructions = vec![
         definitions::make(Opcode::Add, &[0], 1),
+        definitions::make(Opcode::GetLocal, &[1], 1),
         definitions::make(Opcode::Constant, &[2], 1),
         definitions::make(Opcode::Constant, &[65535], 1),
     ];
     // The '\' at the end of the lines escapes indentation in the next line
     let expected = "\
         0000 OpAdd\n\
-        0001 OpConstant 2\n\
-        0004 OpConstant 65535\n";
+        0001 OpGetLocal 1\n\
+        0003 OpConstant 2\n\
+        0006 OpConstant 65535\n";
     let concatted = concat_instructions(&instructions);
 
     assert_eq!(concatted.to_string(), expected);
@@ -70,7 +73,10 @@ fn test_instructions_string() {
 
 #[test]
 fn test_read_operands() {
-    let tests = vec![(Opcode::Constant, vec![65535], 2)];
+    let tests = vec![
+        (Opcode::GetLocal, vec![255], 1),
+        (Opcode::Constant, vec![65535], 2),
+    ];
 
     for (op, operands, bytes_read) in tests {
         let instruction = definitions::make(op, &operands, 1);

@@ -264,6 +264,8 @@ impl VM {
                     let left = self.pop(line)?;
                     self.exec_index_expr(left, index, line)?;
                 }
+                Opcode::GetLocal => {}
+                Opcode::SetLocal => {}
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),

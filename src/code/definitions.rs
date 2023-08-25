@@ -47,6 +47,8 @@ lazy_static! {
         map.insert(Opcode::Call, Definition::new("OpCall", &[]));
         map.insert(Opcode::ReturnValue, Definition::new("OpReturnValue", &[]));
         map.insert(Opcode::Return, Definition::new("OpReturn", &[]));
+        map.insert(Opcode::GetLocal, Definition::new("OpGetLocal", &[1]));
+        map.insert(Opcode::SetLocal, Definition::new("OpSetLocal", &[1]));
         map
     };
 }
@@ -106,15 +108,11 @@ pub fn read_operands(def: &Definition, ins: &[u8]) -> (Vec<usize>, usize) {
     let mut offset = 0;
 
     for (i, &width) in def.operand_widths.iter().enumerate() {
-        match width {
-            2 => {
-                let bytes: &[u8; 2] = ins[offset..offset + width]
-                    .try_into()
-                    .expect("Invalid slice size");
-                operands[i] = u16::from_be_bytes(*bytes) as usize;
-            }
+        operands[i] = match width {
+            2 => u16::from_be_bytes([ins[offset], ins[offset + 1]]) as usize,
+            1 => ins[offset] as usize,
             _ => panic!("Unsupported operand width: {}", width),
-        }
+        };
         offset += width;
     }
 

@@ -386,8 +386,13 @@ impl Compiler {
                 if !self.is_last_instruction(Opcode::ReturnValue) {
                     self.emit(Opcode::Return, &[0], func.token.line);
                 }
+                // Take the current symbol table's num_definitions, save it to
+                // Object::CompiledFunction. That gives the info on the number
+                // of local bindings a function is going to create and use in the VM
+                let num_locals = self.symtab.num_definitions;
                 let instructions = self.leave_scope();
-                let compiled_fn = Object::CompiledFunc(Rc::new(CompiledFunction { instructions }));
+                let compiled_fn =
+                    Object::CompiledFunc(Rc::new(CompiledFunction::new(instructions, num_locals)));
                 let idx = self.add_constant(compiled_fn);
                 self.emit(Opcode::Constant, &[idx], func.token.line);
             }

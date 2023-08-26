@@ -153,6 +153,17 @@ impl Instructions {
             _ => format!("ERROR: unhandled operandCount for {}", def.name),
         }
     }
+
+    #[allow(dead_code)]
+    pub fn print(&self, ip: usize) {
+        println!(
+            "--------- Instructions [len: {:<4}, ip: {:<4}] ---------",
+            self.len(),
+            ip
+        );
+        print!("{}", self);
+        println!("------------------------------------------------------");
+    }
 }
 
 impl fmt::Display for Instructions {

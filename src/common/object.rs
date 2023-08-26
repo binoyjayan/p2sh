@@ -301,11 +301,15 @@ impl Eq for HMap {}
 #[derive(Debug, Clone, Default)]
 pub struct CompiledFunction {
     pub instructions: Instructions,
+    pub num_locals: usize,
 }
 
 impl CompiledFunction {
-    pub fn new(instructions: Instructions) -> Self {
-        Self { instructions }
+    pub fn new(instructions: Instructions, num_locals: usize) -> Self {
+        Self {
+            instructions,
+            num_locals,
+        }
     }
 }
 

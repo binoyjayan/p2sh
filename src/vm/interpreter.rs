@@ -42,14 +42,14 @@ enum BinaryOperation {
 impl VM {
     pub fn new(bytecode: Bytecode) -> VM {
         let data = Rc::new(Object::Nil);
-        let frame_e = Frame::new(Rc::new(CompiledFunction::default()));
-        let frame_m = Frame::new(Rc::new(CompiledFunction::new(bytecode.instructions)));
+        let frame_e = Frame::default();
+        let frame_m = Frame::new(Rc::new(CompiledFunction::new(bytecode.instructions, 0)), 0);
         let mut frames = vec![frame_e; MAX_FRAMES];
         frames[0] = frame_m;
 
         VM {
             constants: bytecode.constants,
-            stack: Vec::with_capacity(STACK_SIZE),
+            stack: vec![data.clone(); STACK_SIZE],
             sp: 0,
             globals: vec![data; GLOBALS_SIZE],
             frames,
@@ -76,13 +76,14 @@ impl VM {
      * Otherwise, set the element on stack based on the stack pointer (sp).
      * In either case, increment 'sp' to point to the newly available slot.
      */
-    pub fn push(&mut self, obj: Rc<Object>) {
+    pub fn push(&mut self, obj: Rc<Object>, line: usize) -> Result<(), RTError> {
         if self.sp >= self.stack.len() {
-            self.stack.push(obj);
+            return Err(RTError::new("Stack overflow!", line));
         } else {
             self.stack[self.sp] = obj;
         }
         self.sp += 1;
+        Ok(())
     }
 
     pub fn pop(&mut self, line: usize) -> Result<Rc<Object>, RTError> {
@@ -112,6 +113,25 @@ impl VM {
         self.frames[self.frames_index].clone()
     }
 
+    #[allow(dead_code)]
+    pub fn print_stack(&self) {
+        println!(
+            "------------ Stack [sp: {:<4}, bp:{:<4}] ---------------",
+            self.sp,
+            self.frames[self.frames_index - 1].bp,
+        );
+        if self.sp == 0 {
+            println!("[<empty>]");
+            return;
+        }
+        for i in 0..self.sp {
+            print!("[ ");
+            print!("{}", self.stack[i]);
+            print!(" ]");
+        }
+        println!();
+    }
+
     /*
      * The main run loop for the interpreter. Since this is the hot path,
      * do not use functions such as lookup() or read_operands() for decoding
@@ -123,6 +143,12 @@ impl VM {
             let ip = self.current_frame().ip;
             let instructions = self.current_frame().instructions().clone();
 
+            #[cfg(feature = "debug_trace_execution")]
+            {
+                self.print_stack();
+                instructions.print(ip);
+            }
+
             let op = Opcode::from(instructions.code[ip]);
             let line = instructions.lines[ip];
             match op {
@@ -132,7 +158,7 @@ impl VM {
                     let constant = self.constants.get(const_index).ok_or_else(|| {
                         RTError::new(&format!("constant not found [idx: {}]", const_index), line)
                     })?;
-                    self.push(Rc::new(constant.clone()));
+                    self.push(Rc::new(constant.clone()), line)?;
                     // skip over the two bytes of the operand in the next cycle
                     self.current_frame().ip += 2;
                 }
@@ -151,17 +177,17 @@ impl VM {
                 Opcode::Div => {
                     self.binary_op(BinaryOperation::Div, |a, b| a / b, line)?;
                 }
-                Opcode::True => self.push(Rc::new(Object::Bool(true))),
-                Opcode::False => self.push(Rc::new(Object::Bool(false))),
+                Opcode::True => self.push(Rc::new(Object::Bool(true)), line)?,
+                Opcode::False => self.push(Rc::new(Object::Bool(false)), line)?,
                 Opcode::Equal => {
                     let b = self.pop(line)?;
                     let a = self.pop(line)?;
-                    self.push(Rc::new(Object::Bool(a.as_ref() == b.as_ref())));
+                    self.push(Rc::new(Object::Bool(a.as_ref() == b.as_ref())), line)?;
                 }
                 Opcode::NotEqual => {
                     let b = self.pop(line)?;
                     let a = self.pop(line)?;
-                    self.push(Rc::new(Object::Bool(a != b)));
+                    self.push(Rc::new(Object::Bool(a != b)), line)?;
                 }
                 Opcode::Greater => {
                     self.binary_op(BinaryOperation::Greater, |a, b| Object::Bool(a > b), line)?;
@@ -172,11 +198,11 @@ impl VM {
                     }
                     let obj = self.pop(line)?.clone();
                     let val = -&*obj;
-                    self.push(Rc::new(val));
+                    self.push(Rc::new(val), line)?;
                 }
                 Opcode::Bang => {
                     let obj = self.pop(line)?;
-                    self.push(Rc::new(Object::Bool(obj.is_falsey())));
+                    self.push(Rc::new(Object::Bool(obj.is_falsey())), line)?;
                 }
                 Opcode::Jump => {
                     let bytes = &instructions.code[ip + 1..ip + 3];
@@ -195,14 +221,14 @@ impl VM {
                     }
                 }
                 Opcode::Nil => {
-                    self.push(Rc::new(Object::Nil));
+                    self.push(Rc::new(Object::Nil), line)?;
                 }
                 Opcode::GetGlobal => {
                     let bytes = &instructions.code[ip + 1..ip + 3];
                     // decode the operand (index to globals)
                     let globals_index: usize = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
                     self.current_frame().ip += 2;
-                    self.push(self.globals[globals_index].clone());
+                    self.push(self.globals[globals_index].clone(), line)?;
                 }
                 Opcode::SetGlobal => {
                     let bytes = &instructions.code[ip + 1..ip + 3];
@@ -218,7 +244,7 @@ impl VM {
                     // pop 'num_elements' off the stack
                     self.sp -= num_elements;
                     // Push the array back onto the stack as an object
-                    self.push(Rc::new(Object::Arr(Array { elements })));
+                    self.push(Rc::new(Object::Arr(Array { elements })), line)?;
                     // skip over the two bytes of the operand in the next cycle
                     self.current_frame().ip += 2;
                 }
@@ -230,14 +256,18 @@ impl VM {
                     // pop 'num_elements' off the stack
                     self.sp -= num_elements;
                     // Push the array back onto the stack as an object
-                    self.push(Rc::new(Object::Map(HMap { pairs })));
+                    self.push(Rc::new(Object::Map(HMap { pairs })), line)?;
                     // skip over the two bytes of the operand in the next cycle
                     self.current_frame().ip += 2;
                 }
                 Opcode::Call => {
                     let obj = &*self.stack[self.sp - 1];
                     if let Object::CompiledFunc(comp_func) = obj {
-                        let frame = Frame::new(comp_func.clone());
+                        // Save the current stack pointer before calling a function
+                        let frame = Frame::new(comp_func.clone(), self.sp);
+                        // Allocate space for local bindings on stack starting at
+                        // base pointer with 'num_locals' slots on the stack
+                        self.sp = frame.bp + comp_func.num_locals;
                         self.push_frame(frame);
                     } else {
                         return Err(RTError::new("calling non-function", line));
@@ -248,15 +278,19 @@ impl VM {
                 }
                 Opcode::ReturnValue => {
                     let ret_val = self.pop(line)?;
-                    self.pop_frame();
-                    // pop the executed function
-                    self.pop(line)?;
-                    self.push(ret_val);
+                    let frame = self.pop_frame();
+                    // Reset stack frame by popping the local bindings and the
+                    // the compiled function (the '-1' is for the compled function)
+                    self.sp = frame.bp - 1;
+                    self.push(ret_val, line)?;
                 }
                 Opcode::Return => {
-                    self.pop_frame();
-                    self.pop(line)?;
-                    self.push(Rc::new(Object::Nil))
+                    // There is no return value to pop
+                    let frame = self.pop_frame();
+                    // Reset stack frame by popping the local bindings and the
+                    // the compiled function (the '-1' is for the compled function)
+                    self.sp = frame.bp - 1;
+                    self.push(Rc::new(Object::Nil), line)?
                 }
                 Opcode::Index => {
                     // Top most element is the index, the expression being indexed is below
@@ -264,8 +298,22 @@ impl VM {
                     let left = self.pop(line)?;
                     self.exec_index_expr(left, index, line)?;
                 }
-                Opcode::GetLocal => {}
-                Opcode::SetLocal => {}
+                Opcode::GetLocal => {
+                    // decode the operand (index to locals)
+                    let locals_index = instructions.code[ip + 1] as usize;
+                    self.current_frame().ip += 1;
+                    let bp = self.current_frame().bp;
+                    let obj = self.stack[bp + locals_index].clone();
+                    self.push(obj, line)?;
+                }
+                Opcode::SetLocal => {
+                    // decode the operand (index to locals)
+                    let locals_index = instructions.code[ip + 1] as usize;
+                    self.current_frame().ip += 1;
+                    let bp = self.current_frame().bp;
+                    // Create the local binding
+                    self.stack[bp + locals_index] = self.pop(line)?;
+                }
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),
@@ -291,12 +339,12 @@ impl VM {
 
         match (&*left, &*right) {
             (Object::Number(_), Object::Number(_)) => {
-                self.push(Rc::new(op(&left, &right)));
+                self.push(Rc::new(op(&left, &right)), line)?;
                 Ok(())
             }
             (Object::Str(left), Object::Str(right)) => {
                 if matches!(optype, BinaryOperation::Add) {
-                    self.push(Rc::new(Object::Str(format!("{}{}", left, right))));
+                    self.push(Rc::new(Object::Str(format!("{}{}", left, right))), line)?;
                     Ok(())
                 } else {
                     Err(RTError::new("Invalid operation on strings.", line))
@@ -304,7 +352,7 @@ impl VM {
             }
             (Object::Str(s), Object::Number(n)) | (Object::Number(n), Object::Str(s)) => {
                 if matches!(optype, BinaryOperation::Mul) {
-                    self.push(Rc::new(Object::Str(s.repeat(*n as usize))));
+                    self.push(Rc::new(Object::Str(s.repeat(*n as usize))), line)?;
                     Ok(())
                 } else {
                     Err(RTError::new("Invalid operation on strings.", line))
@@ -341,28 +389,33 @@ impl VM {
         line: usize,
     ) -> Result<(), RTError> {
         match (&*left, &*index) {
-            (Object::Arr(arr), Object::Number(idx)) => self.exec_array_index(arr, *idx),
-            (Object::Map(map), _) => self.exec_hash_index(map, &index),
+            (Object::Arr(arr), Object::Number(idx)) => self.exec_array_index(arr, *idx, line),
+            (Object::Map(map), _) => self.exec_hash_index(map, &index, line),
             _ => Err(RTError::new("index operator not supported.", line)),
         }
     }
 
-    fn exec_array_index(&mut self, arr: &Array, idx: f64) -> Result<(), RTError> {
+    fn exec_array_index(&mut self, arr: &Array, idx: f64, line: usize) -> Result<(), RTError> {
         if idx < 0. || idx >= arr.elements.len() as f64 {
             // Out of bounds
-            self.push(Rc::new(Object::Nil));
+            self.push(Rc::new(Object::Nil), line)?;
         } else {
-            self.push(arr.elements[idx as usize].clone());
+            self.push(arr.elements[idx as usize].clone(), line)?;
         }
         Ok(())
     }
 
-    fn exec_hash_index(&mut self, map: &HMap, key: &Rc<Object>) -> Result<(), RTError> {
+    fn exec_hash_index(
+        &mut self,
+        map: &HMap,
+        key: &Rc<Object>,
+        line: usize,
+    ) -> Result<(), RTError> {
         if let Some(obj) = map.pairs.get(key) {
-            self.push(obj.clone());
+            self.push(obj.clone(), line)?;
         } else {
             // Not found
-            self.push(Rc::new(Object::Nil));
+            self.push(Rc::new(Object::Nil), line)?;
         }
         Ok(())
     }

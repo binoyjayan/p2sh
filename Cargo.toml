@@ -8,3 +8,6 @@ edition = "2021"
 lazy_static = "1.4.0"
 byteorder = "1.4.3"
 
+[features]
+debug_trace_execution = []
+# default = ["debug_trace_execution"]

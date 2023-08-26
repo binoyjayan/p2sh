@@ -607,14 +607,15 @@ fn test_functions() {
             expected_constants: vec![
                 Object::Number(5.),
                 Object::Number(10.),
-                Object::CompiledFunc(Rc::new(CompiledFunction {
-                    instructions: concat_instructions(&[
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
                         definitions::make(Opcode::Constant, &[0], 1),
                         definitions::make(Opcode::Constant, &[1], 1),
                         definitions::make(Opcode::Add, &[0], 1),
                         definitions::make(Opcode::ReturnValue, &[0], 1),
                     ]),
-                })),
+                    0,
+                ))),
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[2], 1),
@@ -626,8 +627,8 @@ fn test_functions() {
             expected_constants: vec![
                 Object::Number(1.),
                 Object::Number(2.),
-                Object::CompiledFunc(Rc::new(CompiledFunction {
-                    instructions: concat_instructions(&[
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
                         definitions::make(Opcode::Constant, &[0], 1),
                         // Pop the first value
                         definitions::make(Opcode::Pop, &[0], 1),
@@ -635,7 +636,8 @@ fn test_functions() {
                         // The pop is replaced by the implicit return
                         definitions::make(Opcode::ReturnValue, &[0], 1),
                     ]),
-                })),
+                    0,
+                ))),
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[2], 1),
@@ -650,9 +652,10 @@ fn test_functions() {
 fn test_functions_without_return_value() {
     let tests = vec![CompilerTestCase {
         input: "fn() { }",
-        expected_constants: vec![Object::CompiledFunc(Rc::new(CompiledFunction {
-            instructions: definitions::make(Opcode::Return, &[0], 1),
-        }))],
+        expected_constants: vec![Object::CompiledFunc(Rc::new(CompiledFunction::new(
+            definitions::make(Opcode::Return, &[0], 1),
+            0,
+        )))],
         expected_instructions: vec![
             definitions::make(Opcode::Constant, &[0], 1),
             definitions::make(Opcode::Pop, &[0], 1),
@@ -738,13 +741,14 @@ fn test_function_calls() {
             input: "fn() { 24 }()",
             expected_constants: vec![
                 Object::Number(24.),
-                Object::CompiledFunc(Rc::new(CompiledFunction {
-                    instructions: concat_instructions(&[
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
                         // The literal '24'
                         definitions::make(Opcode::Constant, &[0], 1),
                         definitions::make(Opcode::ReturnValue, &[0], 1),
                     ]),
-                })),
+                    0,
+                ))),
             ],
             expected_instructions: vec![
                 // The compiled function
@@ -758,13 +762,14 @@ fn test_function_calls() {
             input: "let noArg = fn() { 24 }; noArg();",
             expected_constants: vec![
                 Object::Number(24.),
-                Object::CompiledFunc(Rc::new(CompiledFunction {
-                    instructions: concat_instructions(&[
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
                         // The literal '24'
                         definitions::make(Opcode::Constant, &[0], 1),
                         definitions::make(Opcode::ReturnValue, &[0], 1),
                     ]),
-                })),
+                    0,
+                ))),
             ],
             expected_instructions: vec![
                 // The compiled function
@@ -786,13 +791,14 @@ fn test_let_statement_scopes() {
             input: "let num = 55; fn() { num }",
             expected_constants: vec![
                 Object::Number(55.),
-                Object::CompiledFunc(Rc::new(CompiledFunction {
-                    instructions: concat_instructions(&[
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
                         // push the value of global variable 'num'
                         definitions::make(Opcode::GetGlobal, &[0], 1),
                         definitions::make(Opcode::ReturnValue, &[0], 1),
                     ]),
-                })),
+                    0,
+                ))),
             ],
             expected_instructions: vec![
                 // constant - number 55
@@ -808,8 +814,8 @@ fn test_let_statement_scopes() {
             input: "fn() { let num = 55; num }",
             expected_constants: vec![
                 Object::Number(55.),
-                Object::CompiledFunc(Rc::new(CompiledFunction {
-                    instructions: concat_instructions(&[
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
                         // constant - number 55
                         definitions::make(Opcode::Constant, &[0], 1),
                         // set the global variable 'num'
@@ -818,7 +824,8 @@ fn test_let_statement_scopes() {
                         definitions::make(Opcode::GetLocal, &[0], 1),
                         definitions::make(Opcode::ReturnValue, &[0], 1),
                     ]),
-                })),
+                    0,
+                ))),
             ],
             expected_instructions: vec![
                 // constant - compiled function
@@ -837,8 +844,8 @@ fn test_let_statement_scopes() {
             expected_constants: vec![
                 Object::Number(55.),
                 Object::Number(77.),
-                Object::CompiledFunc(Rc::new(CompiledFunction {
-                    instructions: concat_instructions(&[
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
                         definitions::make(Opcode::Constant, &[0], 1), // 55
                         definitions::make(Opcode::SetLocal, &[0], 1), // 'a'
                         definitions::make(Opcode::Constant, &[1], 1), // 77
@@ -848,7 +855,8 @@ fn test_let_statement_scopes() {
                         definitions::make(Opcode::Add, &[0], 1),
                         definitions::make(Opcode::ReturnValue, &[0], 1),
                     ]),
-                })),
+                    0,
+                ))),
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[2], 1), // compiled fn

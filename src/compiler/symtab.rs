@@ -37,7 +37,7 @@ impl fmt::Display for SymbolScope {
 #[derive(Default, Clone, Debug, Eq, PartialEq)]
 pub struct SymbolTable {
     store: HashMap<String, Rc<Symbol>>,
-    num_definitions: usize,
+    pub num_definitions: usize,
     pub outer: Option<Rc<SymbolTable>>,
 }
 

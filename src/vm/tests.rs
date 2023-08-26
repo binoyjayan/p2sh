@@ -592,13 +592,77 @@ fn test_calling_functions_without_return() {
 
 #[test]
 fn test_first_class_functions_() {
-    let tests = vec![VmTestCase {
-        input: r#"
-            let returnsOne = fn() { 1; };
-            let returnsOneReturner = fn() { returnsOne; };
-            returnsOneReturner()();
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+                let returnsOne = fn() { 1; };
+                let returnsOneReturner = fn() { returnsOne; };
+                returnsOneReturner()();
             "#,
-        expected: Object::Number(1.),
-    }];
+            expected: Object::Number(1.),
+        },
+        VmTestCase {
+            input: r#"
+                let returnsOneReturner = fn() {
+                let returnsOne = fn() { 1; };
+                returnsOne;
+                };
+                returnsOneReturner()();
+            "#,
+            expected: Object::Number(1.),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_calling_functions_with_bindings() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+                let one = fn() { let one = 1; one };
+                one();
+            "#,
+            expected: Object::Number(1.),
+        },
+        VmTestCase {
+            input: r#"
+                let one_and_two = fn() { let one = 1; let two = 2; one + two; };
+                one_and_two();
+            "#,
+            expected: Object::Number(3.),
+        },
+        VmTestCase {
+            input: r#"
+                let one_and_two = fn() { let one = 1; let two = 2; one + two; };
+                let three_and_four = fn() { let three = 3; let four = 4; three + four; };
+                one_and_two() + three_and_four();
+            "#,
+            expected: Object::Number(10.),
+        },
+        VmTestCase {
+            input: r#"
+                let first_foobar = fn() { let foobar = 50; foobar; };
+                let second_foobar = fn() { let foobar = 100; foobar; };
+                first_foobar() + second_foobar();
+            "#,
+            expected: Object::Number(150.),
+        },
+        VmTestCase {
+            input: r#"
+                let global_seed = 50;
+                let minus_one = fn() {
+                    let num = 1;
+                    global_seed - num;
+                };
+                let minus_two = fn() {
+                    let num = 2;
+                    global_seed - num;
+                };
+                minus_one() + minus_two();
+            "#,
+            expected: Object::Number(97.),
+        },
+    ];
     run_vm_tests(&tests);
 }

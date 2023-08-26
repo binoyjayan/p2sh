@@ -22,35 +22,61 @@ impl Symbol {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SymbolScope {
     GlobalScope,
+    LocalScope,
 }
 
 impl fmt::Display for SymbolScope {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SymbolScope::GlobalScope => write!(f, "GLOBAL"),
+            SymbolScope::LocalScope => write!(f, "LOCAL"),
         }
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Debug, Eq, PartialEq)]
 pub struct SymbolTable {
     store: HashMap<String, Rc<Symbol>>,
     num_definitions: usize,
+    pub outer: Option<Rc<SymbolTable>>,
 }
 
 impl SymbolTable {
+    pub fn new_enclosed(outer: SymbolTable) -> SymbolTable {
+        SymbolTable {
+            store: HashMap::new(),
+            num_definitions: 0,
+            outer: Some(Rc::new(outer)),
+        }
+    }
+
+    // If the SymbolTable being called is not enclosed in another SymbolTable,
+    // i.e. its outer field is not set, then its scope is global.
+    // If it is enclosed, the scope is local.
     pub fn define(&mut self, name: &str) -> Rc<Symbol> {
         let symbol = Rc::new(Symbol::new(
             name,
-            SymbolScope::GlobalScope,
+            if self.outer.is_none() {
+                SymbolScope::GlobalScope
+            } else {
+                SymbolScope::LocalScope
+            },
             self.num_definitions,
         ));
+
         self.store.insert(name.to_string(), Rc::clone(&symbol));
         self.num_definitions += 1;
+
         symbol
     }
 
     pub fn resolve(&self, name: &str) -> Option<Rc<Symbol>> {
-        self.store.get(name).cloned()
+        if let Some(symbol_ref) = self.store.get(name) {
+            Some(symbol_ref.clone())
+        } else if let Some(outer) = &self.outer {
+            outer.resolve(name)
+        } else {
+            None
+        }
     }
 }

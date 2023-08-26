@@ -662,7 +662,7 @@ fn test_functions_without_return_value() {
 }
 
 #[test]
-fn test_compiler_scopes() {
+fn _test_compiler_scopes() {
     let mut compiler = Compiler::new();
     assert_eq!(compiler.scope_index, 0);
     compiler.emit(Opcode::Mul, &[0], 1);
@@ -685,6 +685,50 @@ fn test_compiler_scopes() {
 
     let last_instruction = compiler.scopes[compiler.scope_index].last_ins.clone();
     assert_eq!(last_instruction.opcode, Opcode::Add);
+}
+
+#[test]
+fn test_compiler_scopes() {
+    let mut compiler = Compiler::new();
+    assert_eq!(compiler.scope_index, 0);
+
+    let global_symbol_table = compiler.symtab.clone();
+    compiler.emit(Opcode::Mul, &[0], 1);
+
+    compiler.enter_scope();
+    assert_eq!(compiler.scope_index, 1);
+
+    compiler.emit(Opcode::Sub, &[0], 1);
+    assert_eq!(compiler.scopes[compiler.scope_index].instructions.len(), 1);
+    let last = &compiler.scopes[compiler.scope_index].last_ins;
+    assert_eq!(last.opcode, Opcode::Sub);
+
+    if let Some(outer) = compiler.symtab.outer.clone() {
+        assert_eq!(*outer, global_symbol_table);
+    } else {
+        panic!("compiler did not enclose symbol table");
+    }
+
+    compiler.leave_scope();
+    assert_eq!(compiler.scope_index, 0, "scope index wrong");
+
+    assert_eq!(
+        compiler.symtab, global_symbol_table,
+        "compiler did not restore symbol table"
+    );
+    assert!(
+        compiler.symtab.outer.is_none(),
+        "compiler modified global symbol table incorrectly"
+    );
+
+    compiler.emit(Opcode::Add, &[0], 1);
+
+    assert_eq!(compiler.scopes[compiler.scope_index].instructions.len(), 2);
+    let last = &compiler.scopes[compiler.scope_index].last_ins;
+    assert_eq!(last.opcode, Opcode::Add);
+
+    let previous = &compiler.scopes[compiler.scope_index].prev_ins;
+    assert_eq!(previous.opcode, Opcode::Mul);
 }
 
 #[test]
@@ -728,6 +772,86 @@ fn test_function_calls() {
                 definitions::make(Opcode::SetGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::Call, &[0], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_let_statement_scopes() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "let num = 55; fn() { num }",
+            expected_constants: vec![
+                Object::Number(55.),
+                Object::CompiledFunc(Rc::new(CompiledFunction {
+                    instructions: concat_instructions(&[
+                        // push the value of global variable 'num'
+                        definitions::make(Opcode::GetGlobal, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                    ]),
+                })),
+            ],
+            expected_instructions: vec![
+                // constant - number 55
+                definitions::make(Opcode::Constant, &[0], 1),
+                // set the global variable 'num'
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                // constant - compiled function
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "fn() { let num = 55; num }",
+            expected_constants: vec![
+                Object::Number(55.),
+                Object::CompiledFunc(Rc::new(CompiledFunction {
+                    instructions: concat_instructions(&[
+                        // constant - number 55
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        // set the global variable 'num'
+                        definitions::make(Opcode::SetLocal, &[0], 1),
+                        // push the value of global variable 'num'
+                        definitions::make(Opcode::GetLocal, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                    ]),
+                })),
+            ],
+            expected_instructions: vec![
+                // constant - compiled function
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Pop, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "
+                fn() {
+                    let a = 55;
+                    let b = 77;
+                    a + b
+                }
+            ",
+            expected_constants: vec![
+                Object::Number(55.),
+                Object::Number(77.),
+                Object::CompiledFunc(Rc::new(CompiledFunction {
+                    instructions: concat_instructions(&[
+                        definitions::make(Opcode::Constant, &[0], 1), // 55
+                        definitions::make(Opcode::SetLocal, &[0], 1), // 'a'
+                        definitions::make(Opcode::Constant, &[1], 1), // 77
+                        definitions::make(Opcode::SetLocal, &[1], 1), // 'b'
+                        definitions::make(Opcode::GetLocal, &[0], 1), // 'a'
+                        definitions::make(Opcode::GetLocal, &[1], 1), // 'b'
+                        definitions::make(Opcode::Add, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                    ]),
+                })),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[2], 1), // compiled fn
                 definitions::make(Opcode::Pop, &[0], 1),
             ],
         },

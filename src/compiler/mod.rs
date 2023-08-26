@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use self::symtab::SymbolScope;
 use crate::code::definitions::{self, *};
 use crate::code::opcode::Opcode;
 use crate::common::error::CompileError;
@@ -78,12 +79,15 @@ impl Compiler {
         };
         self.scopes.push(scope);
         self.scope_index += 1;
+        self.symtab = SymbolTable::new_enclosed(self.symtab.clone());
     }
 
     pub fn leave_scope(&mut self) -> Instructions {
         let instructions = self.get_curr_instructions();
         self.scopes.truncate(self.scopes.len() - 1);
         self.scope_index -= 1;
+        let outer = self.symtab.outer.as_ref().unwrap().as_ref().clone();
+        self.symtab = outer;
         instructions
     }
 
@@ -229,7 +233,12 @@ impl Compiler {
             Statement::Let(stmt) => {
                 self.compile_let_stmt(stmt.value)?;
                 let symbol = self.symtab.define(&stmt.name.value);
-                self.emit(Opcode::SetGlobal, &[symbol.index], stmt.token.line);
+                // Use a Symbol's scope to emit the right instruction
+                if symbol.scope == SymbolScope::GlobalScope {
+                    self.emit(Opcode::SetGlobal, &[symbol.index], stmt.token.line);
+                } else {
+                    self.emit(Opcode::SetLocal, &[symbol.index], stmt.token.line);
+                }
             }
             Statement::Return(stmt) => {
                 self.compile_expression(stmt.value)?;
@@ -342,7 +351,11 @@ impl Compiler {
             }
             Expression::Ident(expr) => {
                 if let Some(symbol) = self.symtab.resolve(&expr.token.literal) {
-                    self.emit(Opcode::GetGlobal, &[symbol.index], expr.token.line);
+                    if symbol.scope == SymbolScope::GlobalScope {
+                        self.emit(Opcode::GetGlobal, &[symbol.index], expr.token.line);
+                    } else {
+                        self.emit(Opcode::GetLocal, &[symbol.index], expr.token.line);
+                    }
                 } else {
                     return Err(CompileError::new(
                         &format!("undefined variable {}", expr.token.literal),

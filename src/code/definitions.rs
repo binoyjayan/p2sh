@@ -44,7 +44,7 @@ lazy_static! {
         map.insert(Opcode::Array, Definition::new("OpArray", &[2]));
         map.insert(Opcode::Map, Definition::new("OpMap", &[2]));
         map.insert(Opcode::Index, Definition::new("OpIndex", &[]));
-        map.insert(Opcode::Call, Definition::new("OpCall", &[]));
+        map.insert(Opcode::Call, Definition::new("OpCall", &[1]));
         map.insert(Opcode::ReturnValue, Definition::new("OpReturnValue", &[]));
         map.insert(Opcode::Return, Definition::new("OpReturn", &[]));
         map.insert(Opcode::GetLocal, Definition::new("OpGetLocal", &[1]));

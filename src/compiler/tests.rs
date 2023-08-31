@@ -863,6 +863,52 @@ fn test_let_statement_scopes() {
                 definitions::make(Opcode::Pop, &[0], 1),
             ],
         },
+        CompilerTestCase {
+            input: "
+                let oneArg = fn(a) {};
+                oneArg(24);
+            ",
+            expected_constants: vec![
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[definitions::make(Opcode::Return, &[], 1)]),
+                    0,
+                ))),
+                Object::Number(24.),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Call, &[1], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "
+                let manyArg = fn(a, b, c) {};
+                manyArg(24, 25, 26);
+            ",
+            expected_constants: vec![
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[definitions::make(Opcode::Return, &[], 1)]),
+                    0,
+                ))),
+                Object::Number(24.),
+                Object::Number(25.),
+                Object::Number(26.),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Constant, &[3], 1),
+                definitions::make(Opcode::Call, &[3], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
     ];
     run_compiler_tests(&tests);
 }

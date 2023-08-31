@@ -398,7 +398,12 @@ impl Compiler {
             }
             Expression::Call(call) => {
                 self.compile_expression(*call.func)?;
-                self.emit(Opcode::Call, &[0], call.token.line);
+                let num_args = call.args.len();
+                for arg in call.args {
+                    self.compile_expression(arg)?;
+                }
+                // First operand to OpCall is the number of arguments
+                self.emit(Opcode::Call, &[num_args], call.token.line);
             }
             _ => {}
         }

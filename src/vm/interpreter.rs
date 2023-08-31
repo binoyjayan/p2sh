@@ -268,6 +268,9 @@ impl VM {
                         // Allocate space for local bindings on stack starting at
                         // base pointer with 'num_locals' slots on the stack
                         self.sp = frame.bp + comp_func.num_locals;
+                        // skip over the instruction and the 1-byte operand to OpCall 'before'
+                        // pushing a new frame so that the callee's frame is not meddled with
+                        self.current_frame().ip += 2;
                         self.push_frame(frame);
                     } else {
                         return Err(RTError::new("calling non-function", line));
@@ -281,8 +284,12 @@ impl VM {
                     let frame = self.pop_frame();
                     // Reset stack frame by popping the local bindings and the
                     // the compiled function (the '-1' is for the compled function)
+                    // Since the callee's frame has already been popped, the 'ip' used here
+                    // refers to the caller's frame. So, do not increment that at the
+                    // end of this loop and 'continue' immediately.
                     self.sp = frame.bp - 1;
                     self.push(ret_val, line)?;
+                    continue;
                 }
                 Opcode::Return => {
                     // There is no return value to pop
@@ -290,7 +297,9 @@ impl VM {
                     // Reset stack frame by popping the local bindings and the
                     // the compiled function (the '-1' is for the compled function)
                     self.sp = frame.bp - 1;
-                    self.push(Rc::new(Object::Nil), line)?
+                    self.push(Rc::new(Object::Nil), line)?;
+                    // continue for the same reason as that of 'OpReturnValue'
+                    continue;
                 }
                 Opcode::Index => {
                     // Top most element is the index, the expression being indexed is below

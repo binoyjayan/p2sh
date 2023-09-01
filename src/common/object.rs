@@ -302,13 +302,15 @@ impl Eq for HMap {}
 pub struct CompiledFunction {
     pub instructions: Instructions,
     pub num_locals: usize,
+    pub num_params: usize,
 }
 
 impl CompiledFunction {
-    pub fn new(instructions: Instructions, num_locals: usize) -> Self {
+    pub fn new(instructions: Instructions, num_locals: usize, num_params: usize) -> Self {
         Self {
             instructions,
             num_locals,
+            num_params,
         }
     }
 }

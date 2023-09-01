@@ -86,6 +86,12 @@ struct VmTestCase {
 }
 
 #[cfg(test)]
+struct VmTestCaseErr {
+    input: &'static str,
+    expected: &'static str,
+}
+
+#[cfg(test)]
 fn test_compile(input: &str) -> Bytecode {
     use crate::compiler::{Bytecode, Compiler};
 
@@ -112,6 +118,18 @@ fn run_vm_tests(tests: &[VmTestCase]) {
         // Get the object at the top of the VM's stack
         let stack_elem = vm.last_popped();
         test_expected_object(Rc::clone(&stack_elem), &t.expected);
+    }
+}
+
+#[cfg(test)]
+fn run_vm_negative_tests(tests: &[VmTestCaseErr]) {
+    for t in tests {
+        let bytecode = test_compile(t.input);
+        let mut vm = VM::new(bytecode);
+        let err = vm.run();
+        if let Err(err) = err {
+            assert_eq!(err.msg, t.expected);
+        }
     }
 }
 
@@ -665,4 +683,81 @@ fn test_calling_functions_with_bindings() {
         },
     ];
     run_vm_tests(&tests);
+}
+
+#[test]
+fn test_calling_functions_with_args_and_bindings() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+                let identity = fn(a) { a; };
+                identity(4);
+            "#,
+            expected: Object::Number(4.),
+        },
+        VmTestCase {
+            input: r#"
+                let sum = fn(a, b) { a + b; };
+                sum(1, 2);
+            "#,
+            expected: Object::Number(3.),
+        },
+        VmTestCase {
+            input: r#"
+                let sum = fn(a, b) { let c = a + b; c; };
+                sum(1, 2);
+            "#,
+            expected: Object::Number(3.),
+        },
+        VmTestCase {
+            input: r#"
+                let sum = fn(a, b) { let c = a + b; c; };
+                sum(1, 2) + sum(3, 4);
+            "#,
+            expected: Object::Number(10.),
+        },
+        VmTestCase {
+            input: r#"
+                let sum = fn(a, b) { let c = a + b; c; };
+                let outer = fn() { sum(1, 2) + sum(3, 4); };
+                outer();
+            "#,
+            expected: Object::Number(10.),
+        },
+        VmTestCase {
+            input: r#"
+                let globalNum = 10;
+                let sum = fn(a, b) {
+                    let c = a + b;
+                    c + globalNum;
+                };
+                let outer = fn() {
+                    sum(1, 2) + sum(3, 4) + globalNum;
+                };
+                outer() + globalNum;
+            "#,
+            expected: Object::Number(50.),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_wrong_number_of_arguments() {
+    let tests: Vec<VmTestCaseErr> = vec![
+        VmTestCaseErr {
+            input: "fn() { 1; }(1);",
+            expected: "wrong number of arguments: want=0, got=1",
+        },
+        VmTestCaseErr {
+            input: "fn(a) { a; }();",
+            expected: "wrong number of arguments: want=1, got=0",
+        },
+        VmTestCaseErr {
+            input: "fn(a, b) { a + b; }(1);",
+            expected: "wrong number of arguments: want=2, got=1",
+        },
+    ];
+
+    run_vm_negative_tests(&tests);
 }

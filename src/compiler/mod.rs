@@ -374,6 +374,16 @@ impl Compiler {
             Expression::Function(func) => {
                 // enter scope of a function
                 self.enter_scope();
+
+                // Tell the compiler to turn the local references to the function
+                // parameters into OpGetLocal instructions that load the arguments
+                // onto the stack. Since these definitions are done in the scope of
+                // the newly compiled function, they become part of the local
+                // variables (num_locals) of the function.
+                let num_params = func.params.len();
+                for p in func.params {
+                    self.symtab.define(&p.value);
+                }
                 self.compile_block_statement(func.body)?;
                 // Leave function scope. If the last expression statement in a
                 // function is not turned into an implicit return value, but
@@ -391,8 +401,11 @@ impl Compiler {
                 // of local bindings a function is going to create and use in the VM
                 let num_locals = self.symtab.num_definitions;
                 let instructions = self.leave_scope();
-                let compiled_fn =
-                    Object::CompiledFunc(Rc::new(CompiledFunction::new(instructions, num_locals)));
+                let compiled_fn = Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    instructions,
+                    num_locals,
+                    num_params,
+                )));
                 let idx = self.add_constant(compiled_fn);
                 self.emit(Opcode::Constant, &[idx], func.token.line);
             }

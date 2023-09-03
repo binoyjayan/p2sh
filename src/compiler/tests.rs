@@ -162,8 +162,8 @@ fn test_integer_arithmetic() {
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Add, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Add, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -172,8 +172,8 @@ fn test_integer_arithmetic() {
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Sub, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Sub, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -182,8 +182,8 @@ fn test_integer_arithmetic() {
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Mul, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Mul, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -192,8 +192,8 @@ fn test_integer_arithmetic() {
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Div, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Div, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -201,9 +201,9 @@ fn test_integer_arithmetic() {
             expected_constants: vec![Object::Number(1.), Object::Number(2.)],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -211,8 +211,8 @@ fn test_integer_arithmetic() {
             expected_constants: vec![Object::Number(1.)],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
-                definitions::make(Opcode::Minus, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Minus, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
     ];
@@ -227,16 +227,16 @@ fn test_boolean_expressions() {
             input: "true",
             expected_constants: vec![],
             expected_instructions: vec![
-                definitions::make(Opcode::True, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::True, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
             input: "false",
             expected_constants: vec![],
             expected_instructions: vec![
-                definitions::make(Opcode::False, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::False, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -245,8 +245,8 @@ fn test_boolean_expressions() {
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Greater, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Greater, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -256,8 +256,8 @@ fn test_boolean_expressions() {
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Greater, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Greater, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -266,8 +266,8 @@ fn test_boolean_expressions() {
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Equal, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Equal, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -276,37 +276,37 @@ fn test_boolean_expressions() {
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::NotEqual, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::NotEqual, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
             input: "true == false",
             expected_constants: vec![],
             expected_instructions: vec![
-                definitions::make(Opcode::True, &[0], 1),
-                definitions::make(Opcode::False, &[0], 1),
-                definitions::make(Opcode::Equal, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::True, &[], 1),
+                definitions::make(Opcode::False, &[], 1),
+                definitions::make(Opcode::Equal, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
             input: "true != false",
             expected_constants: vec![],
             expected_instructions: vec![
-                definitions::make(Opcode::True, &[0], 1),
-                definitions::make(Opcode::False, &[0], 1),
-                definitions::make(Opcode::NotEqual, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::True, &[], 1),
+                definitions::make(Opcode::False, &[], 1),
+                definitions::make(Opcode::NotEqual, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
             input: "!false",
             expected_constants: vec![],
             expected_instructions: vec![
-                definitions::make(Opcode::False, &[0], 1),
-                definitions::make(Opcode::Bang, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::False, &[], 1),
+                definitions::make(Opcode::Bang, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
     ];
@@ -322,7 +322,7 @@ fn test_conditional() {
             expected_constants: vec![Object::Number(10.), Object::Number(3333.)],
             expected_instructions: vec![
                 // 0000 : The condition
-                definitions::make(Opcode::True, &[0], 1),
+                definitions::make(Opcode::True, &[], 1),
                 // 0001 : Jump to the 'Nil' instruction following 'then_stmt'
                 definitions::make(Opcode::JumpIfFalse, &[10], 1),
                 // 0004 : The 'then_stmt'
@@ -330,13 +330,13 @@ fn test_conditional() {
                 // 0007 : To Jump over the 'else_stmt' which is 'Nil' here.
                 definitions::make(Opcode::Jump, &[11], 1),
                 // 0010
-                definitions::make(Opcode::Nil, &[0], 1),
+                definitions::make(Opcode::Nil, &[], 1),
                 // 0011 : [ Not part of the if expr - Pop its result ]
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
                 // 0012 : The instruction following the if expr
                 definitions::make(Opcode::Constant, &[1], 1),
                 // 0015
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -348,7 +348,7 @@ fn test_conditional() {
             ],
             expected_instructions: vec![
                 // 0000 : The condition
-                definitions::make(Opcode::True, &[0], 1),
+                definitions::make(Opcode::True, &[], 1),
                 // 0001: Jump to 'else_stmt' if condition is false
                 definitions::make(Opcode::JumpIfFalse, &[10], 1),
                 // 0004 : The 'then_stmt'
@@ -358,11 +358,11 @@ fn test_conditional() {
                 // 0010 : The 'else_stmt'
                 definitions::make(Opcode::Constant, &[1], 1),
                 // 0013 : [ Not part of the if expr - Pop its result ]
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
                 // 0014 : The instruction following the if expr
                 definitions::make(Opcode::Constant, &[2], 1),
                 // 0017
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
     ];
@@ -390,7 +390,7 @@ fn test_global_let_statements() {
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::SetGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -402,7 +402,7 @@ fn test_global_let_statements() {
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::SetGlobal, &[1], 1),
                 definitions::make(Opcode::GetGlobal, &[1], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
     ];
@@ -418,7 +418,7 @@ fn test_string_expressions() {
             expected_constants: vec![Object::Str(String::from("p2sh"))],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -430,8 +430,8 @@ fn test_string_expressions() {
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Add, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Add, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
     ];
@@ -449,7 +449,7 @@ fn test_array_literals() {
             expected_constants: vec![],
             expected_instructions: vec![
                 definitions::make(Opcode::Array, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -460,7 +460,7 @@ fn test_array_literals() {
                 definitions::make(Opcode::Constant, &[1], 1),
                 definitions::make(Opcode::Constant, &[2], 1),
                 definitions::make(Opcode::Array, &[3], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -476,15 +476,15 @@ fn test_array_literals() {
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Add, &[0], 1),
+                definitions::make(Opcode::Add, &[], 1),
                 definitions::make(Opcode::Constant, &[2], 1),
                 definitions::make(Opcode::Constant, &[3], 1),
-                definitions::make(Opcode::Sub, &[0], 1),
+                definitions::make(Opcode::Sub, &[], 1),
                 definitions::make(Opcode::Constant, &[4], 1),
                 definitions::make(Opcode::Constant, &[5], 1),
-                definitions::make(Opcode::Mul, &[0], 1),
+                definitions::make(Opcode::Mul, &[], 1),
                 definitions::make(Opcode::Array, &[3], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
     ];
@@ -500,7 +500,7 @@ fn test_hash_literals() {
             expected_constants: vec![],
             expected_instructions: vec![
                 definitions::make(Opcode::Map, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -521,7 +521,7 @@ fn test_hash_literals() {
                 definitions::make(Opcode::Constant, &[4], 1),
                 definitions::make(Opcode::Constant, &[5], 1),
                 definitions::make(Opcode::Map, &[6], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -538,13 +538,13 @@ fn test_hash_literals() {
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
                 definitions::make(Opcode::Constant, &[2], 1),
-                definitions::make(Opcode::Add, &[0], 1),
+                definitions::make(Opcode::Add, &[], 1),
                 definitions::make(Opcode::Constant, &[3], 1),
                 definitions::make(Opcode::Constant, &[4], 1),
                 definitions::make(Opcode::Constant, &[5], 1),
-                definitions::make(Opcode::Mul, &[0], 1),
+                definitions::make(Opcode::Mul, &[], 1),
                 definitions::make(Opcode::Map, &[4], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
     ];
@@ -570,7 +570,7 @@ fn test_index_expressions() {
                 definitions::make(Opcode::Array, &[3], 1),
                 definitions::make(Opcode::Constant, &[3], 1),
                 definitions::make(Opcode::Constant, &[4], 1),
-                definitions::make(Opcode::Add, &[0], 1),
+                definitions::make(Opcode::Add, &[], 1),
                 definitions::make(Opcode::Index, &[], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
@@ -589,7 +589,7 @@ fn test_index_expressions() {
                 definitions::make(Opcode::Map, &[2], 1),
                 definitions::make(Opcode::Constant, &[2], 1),
                 definitions::make(Opcode::Constant, &[3], 1),
-                definitions::make(Opcode::Sub, &[0], 1),
+                definitions::make(Opcode::Sub, &[], 1),
                 definitions::make(Opcode::Index, &[], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
@@ -611,8 +611,8 @@ fn test_functions() {
                     concat_instructions(&[
                         definitions::make(Opcode::Constant, &[0], 1),
                         definitions::make(Opcode::Constant, &[1], 1),
-                        definitions::make(Opcode::Add, &[0], 1),
-                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                        definitions::make(Opcode::Add, &[], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
                     ]),
                     0,
                     0,
@@ -620,7 +620,7 @@ fn test_functions() {
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[2], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -632,10 +632,10 @@ fn test_functions() {
                     concat_instructions(&[
                         definitions::make(Opcode::Constant, &[0], 1),
                         // Pop the first value
-                        definitions::make(Opcode::Pop, &[0], 1),
+                        definitions::make(Opcode::Pop, &[], 1),
                         definitions::make(Opcode::Constant, &[1], 1),
                         // The pop is replaced by the implicit return
-                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
                     ]),
                     0,
                     0,
@@ -643,7 +643,7 @@ fn test_functions() {
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[2], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
     ];
@@ -655,13 +655,13 @@ fn test_functions_without_return_value() {
     let tests = vec![CompilerTestCase {
         input: "fn() { }",
         expected_constants: vec![Object::CompiledFunc(Rc::new(CompiledFunction::new(
-            definitions::make(Opcode::Return, &[0], 1),
+            definitions::make(Opcode::Return, &[], 1),
             0,
             0,
         )))],
         expected_instructions: vec![
             definitions::make(Opcode::Constant, &[0], 1),
-            definitions::make(Opcode::Pop, &[0], 1),
+            definitions::make(Opcode::Pop, &[], 1),
         ],
     }];
     run_compiler_tests(&tests);
@@ -748,7 +748,7 @@ fn test_function_calls() {
                     concat_instructions(&[
                         // The literal '24'
                         definitions::make(Opcode::Constant, &[0], 1),
-                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
                     ]),
                     0,
                     0,
@@ -758,7 +758,7 @@ fn test_function_calls() {
                 // The compiled function
                 definitions::make(Opcode::Constant, &[1], 1),
                 definitions::make(Opcode::Call, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -770,7 +770,7 @@ fn test_function_calls() {
                     concat_instructions(&[
                         // The literal '24'
                         definitions::make(Opcode::Constant, &[0], 1),
-                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
                     ]),
                     0,
                     0,
@@ -782,7 +782,7 @@ fn test_function_calls() {
                 definitions::make(Opcode::SetGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::Call, &[0], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -860,7 +860,7 @@ fn test_let_statement_scopes() {
                     concat_instructions(&[
                         // push the value of global variable 'num'
                         definitions::make(Opcode::GetGlobal, &[0], 1),
-                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
                     ]),
                     0,
                     0,
@@ -873,7 +873,7 @@ fn test_let_statement_scopes() {
                 definitions::make(Opcode::SetGlobal, &[0], 1),
                 // constant - compiled function
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -888,7 +888,7 @@ fn test_let_statement_scopes() {
                         definitions::make(Opcode::SetLocal, &[0], 1),
                         // push the value of global variable 'num'
                         definitions::make(Opcode::GetLocal, &[0], 1),
-                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
                     ]),
                     1,
                     0,
@@ -897,7 +897,7 @@ fn test_let_statement_scopes() {
             expected_instructions: vec![
                 // constant - compiled function
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
         CompilerTestCase {
@@ -919,8 +919,8 @@ fn test_let_statement_scopes() {
                         definitions::make(Opcode::SetLocal, &[1], 1), // 'b'
                         definitions::make(Opcode::GetLocal, &[0], 1), // 'a'
                         definitions::make(Opcode::GetLocal, &[1], 1), // 'b'
-                        definitions::make(Opcode::Add, &[0], 1),
-                        definitions::make(Opcode::ReturnValue, &[0], 1),
+                        definitions::make(Opcode::Add, &[], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
                     ]),
                     2,
                     0,
@@ -928,7 +928,7 @@ fn test_let_statement_scopes() {
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[2], 1), // compiled fn
-                definitions::make(Opcode::Pop, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
             ],
         },
     ];

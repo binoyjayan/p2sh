@@ -55,7 +55,7 @@ fn concat_instructions(s: &[Instructions]) -> Instructions {
 #[test]
 fn test_instructions_string() {
     let instructions = vec![
-        definitions::make(Opcode::Add, &[0], 1),
+        definitions::make(Opcode::Add, &[], 1),
         definitions::make(Opcode::GetLocal, &[1], 1),
         definitions::make(Opcode::Constant, &[2], 1),
         definitions::make(Opcode::Constant, &[65535], 1),

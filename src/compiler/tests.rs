@@ -934,3 +934,49 @@ fn test_let_statement_scopes() {
     ];
     run_compiler_tests(&tests);
 }
+
+#[test]
+fn test_builtins() {
+    let tests = vec![
+        CompilerTestCase {
+            input: r#"
+                len([]);
+                push([], 1);
+            "#,
+            expected_constants: vec![Object::Number(1.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::GetBuiltin, &[0], 1),
+                definitions::make(Opcode::Array, &[0], 1),
+                // call built-in fn 'len' with one argument
+                definitions::make(Opcode::Call, &[1], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+                definitions::make(Opcode::GetBuiltin, &[5], 1),
+                definitions::make(Opcode::Array, &[0], 1),
+                definitions::make(Opcode::Constant, &[0], 1),
+                // call built-in fn 'push' with two arguments
+                definitions::make(Opcode::Call, &[2], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "fn() { len([]) }",
+            expected_constants: vec![Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                concat_instructions(&[
+                    definitions::make(Opcode::GetBuiltin, &[0], 1),
+                    definitions::make(Opcode::Array, &[0], 1),
+                    // call built-in fn 'len' with one argument
+                    definitions::make(Opcode::Call, &[1], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            )))],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}

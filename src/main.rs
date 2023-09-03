@@ -5,6 +5,7 @@ use std::io;
 use std::io::{BufRead, Write};
 use std::rc::Rc;
 
+use common::builtins::BUILTINS;
 use common::environment::*;
 use common::object::Object;
 use compiler::symtab::SymbolTable;
@@ -54,6 +55,10 @@ pub fn run_prompt() {
     let mut evaluator = Evaluator::new();
     let mut constants = vec![];
     let mut symtab = SymbolTable::default();
+    for (i, sym) in BUILTINS.iter().enumerate() {
+        // Define the built-in function via an index into the 'BUILTINS' array
+        symtab.define_builtin(i, &sym.name);
+    }
     let data = Rc::new(Object::Nil);
     let mut globals = vec![data; GLOBALS_SIZE];
 

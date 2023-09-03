@@ -255,7 +255,7 @@ impl Evaluator {
     ) -> Result<Rc<Object>, RTError> {
         if let Some(obj) = environment.borrow().get(&token.literal.clone()) {
             Ok(obj)
-        } else if let Some(obj) = BUILTINS.get(&token.literal.clone()) {
+        } else if let Some(obj) = BUILTINS.iter().find(|b| b.name == token.literal.clone()) {
             Ok(Rc::new(Object::Builtin(obj.clone())))
         } else {
             Err(RTError::new(
@@ -292,7 +292,7 @@ impl Evaluator {
         let args = self.eval_expressions(env, (*call.args).to_vec())?;
         match &*function {
             Object::Func(func) => self.invoke_function_call(func, args),
-            Object::Builtin(func) => self.invoke_builtin_function(func, args, call.token.line),
+            Object::Builtin(func) => self.invoke_builtin_function(func, args),
             _ => Err(RTError::new(
                 &format!("Not a function: '{}'", call.token.literal),
                 call.token.line,
@@ -327,23 +327,10 @@ impl Evaluator {
         &mut self,
         func: &BuiltinFunction,
         args: Vec<Rc<Object>>,
-        line: usize,
     ) -> Result<Rc<Object>, RTError> {
         let builtin_func = func.func;
-        // Validate arity for non variadic functions
-        if let Some(arity) = func.arity {
-            if args.len() != arity {
-                return Err(RTError::new(
-                    &format!(
-                        "wrong number of arguments. got={} needs={}",
-                        args.len(),
-                        arity
-                    ),
-                    line,
-                ));
-            }
-        }
 
+        // Invoke function
         match builtin_func(args) {
             Ok(obj) => Ok(obj),
             Err(s) => Err(RTError::new(&s, 1)),

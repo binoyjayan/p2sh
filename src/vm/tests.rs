@@ -108,12 +108,12 @@ fn test_compile(input: &str) -> Bytecode {
 
 #[cfg(test)]
 fn run_vm_tests(tests: &[VmTestCase]) {
-    for t in tests {
+    for (i, t) in tests.iter().enumerate() {
         let bytecode = test_compile(t.input);
         let mut vm = VM::new(bytecode);
         let err = vm.run();
         if let Err(err) = err {
-            panic!("vm error: {}", err);
+            panic!("Test [{}] vm error: {}", i, err);
         }
         // Get the object at the top of the VM's stack
         let stack_elem = vm.last_popped();
@@ -123,12 +123,12 @@ fn run_vm_tests(tests: &[VmTestCase]) {
 
 #[cfg(test)]
 fn run_vm_negative_tests(tests: &[VmTestCaseErr]) {
-    for t in tests {
+    for (i, t) in tests.iter().enumerate() {
         let bytecode = test_compile(t.input);
         let mut vm = VM::new(bytecode);
         let err = vm.run();
         if let Err(err) = err {
-            assert_eq!(err.msg, t.expected);
+            assert_eq!(err.msg, t.expected, "Test {}", i);
         }
     }
 }
@@ -756,6 +756,104 @@ fn test_wrong_number_of_arguments() {
         VmTestCaseErr {
             input: "fn(a, b) { a + b; }(1);",
             expected: "wrong number of arguments: want=2, got=1",
+        },
+    ];
+
+    run_vm_negative_tests(&tests);
+}
+
+#[test]
+fn test_builtin_functions() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"len("")"#,
+            expected: Object::Number(0.),
+        },
+        VmTestCase {
+            input: r#"len("four")"#,
+            expected: Object::Number(4.0),
+        },
+        VmTestCase {
+            input: r#"len("hello world")"#,
+            expected: Object::Number(11.0),
+        },
+        VmTestCase {
+            input: r#"len([1, 2, 3])"#,
+            expected: Object::Number(3.0),
+        },
+        VmTestCase {
+            input: r#"len([])"#,
+            expected: Object::Number(0.),
+        },
+        VmTestCase {
+            input: r#"puts("hello", "world!")"#,
+            expected: Object::Nil,
+        },
+        VmTestCase {
+            input: r#"first([1, 2, 3])"#,
+            expected: Object::Number(1.0),
+        },
+        VmTestCase {
+            input: r#"first([])"#,
+            expected: Object::Nil,
+        },
+        VmTestCase {
+            input: r#"last([1, 2, 3])"#,
+            expected: Object::Number(3.0),
+        },
+        VmTestCase {
+            input: r#"last([])"#,
+            expected: Object::Nil,
+        },
+        VmTestCase {
+            input: r#"rest([1, 2, 3])"#,
+            expected: Object::Arr(Array {
+                elements: vec![Rc::new(Object::Number(2.0)), Rc::new(Object::Number(3.0))],
+            }),
+        },
+        VmTestCase {
+            input: r#"rest([])"#,
+            expected: Object::Nil,
+        },
+        VmTestCase {
+            input: r#"push([], 1)"#,
+            expected: Object::Arr(Array {
+                elements: vec![Rc::new(Object::Number(1.0))],
+            }),
+        },
+        VmTestCase {
+            input: r#"
+                let array = [1, 2, 3];
+                first(rest(push(array, 4)));
+            "#,
+            expected: Object::Number(2.0),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_builtin_function_failures() {
+    let tests: Vec<VmTestCaseErr> = vec![
+        VmTestCaseErr {
+            input: r#"len(1)"#,
+            expected: "argument to 'len' not supported",
+        },
+        VmTestCaseErr {
+            input: r#"len("one", "two")"#,
+            expected: "wrong number of arguments. got=2, want=1",
+        },
+        VmTestCaseErr {
+            input: r#"first(1)"#,
+            expected: "argument to 'first' not supported",
+        },
+        VmTestCaseErr {
+            input: r#"last(1)"#,
+            expected: "argument to 'last' not supported",
+        },
+        VmTestCaseErr {
+            input: r#"push(1, 1)"#,
+            expected: "argument to 'push' not supported",
         },
     ];
 

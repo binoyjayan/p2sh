@@ -3,10 +3,11 @@ use byteorder::ByteOrder;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::code::definitions::Instructions;
 use crate::code::opcode::Opcode;
+use crate::common::builtins::BUILTINS;
 use crate::common::error::RTError;
 use crate::common::object::Array;
+use crate::common::object::BuiltinFunction;
 use crate::common::object::CompiledFunction;
 use crate::common::object::HMap;
 use crate::common::object::Object;
@@ -265,7 +266,8 @@ impl VM {
                     self.current_frame().ip += 2;
                 }
                 Opcode::Call => {
-                    self.exec_call(&instructions, ip, line)?;
+                    let num_args = instructions.code[ip + 1] as usize;
+                    self.exec_call(num_args, line)?;
                     // Do not increment ip here since the vm is using a new frame
                     // and 'ip' should point to the first instruction in that frame
                     continue;
@@ -313,6 +315,15 @@ impl VM {
                     let bp = self.current_frame().bp;
                     // Create the local binding
                     self.stack[bp + locals_index] = self.pop(line)?;
+                }
+                Opcode::GetBuiltin => {
+                    // decode the operand (index to built-in functions)
+                    let builtin_index = instructions.code[ip + 1] as usize;
+                    self.current_frame().ip += 1;
+                    if let Some(bt) = BUILTINS.get(builtin_index) {
+                        // let builtin_func = bt.func;
+                        self.push(Rc::new(Object::Builtin(bt.clone())), line)?;
+                    }
                 }
                 Opcode::Invalid => {
                     return Err(RTError::new(
@@ -420,6 +431,26 @@ impl VM {
         Ok(())
     }
 
+    fn exec_call(&mut self, num_args: usize, line: usize) -> Result<(), RTError> {
+        // Calculate the location of the function on the stack by decoding
+        // the operand, 'num_args', and subtracting it from 'sp'. The additional
+        // '-1' is there because 'sp' points to the next free slot on the stack.
+        let callee = self.stack[self.sp - 1 - num_args].clone();
+
+        match &*callee {
+            Object::CompiledFunc(comp_func) => {
+                self.call_func(comp_func, num_args, line)?;
+            }
+            Object::Builtin(builtin) => {
+                self.call_builtin(builtin, num_args, line)?;
+            }
+            _ => {
+                return Err(RTError::new("calling non-function", line));
+            }
+        }
+        Ok(())
+    }
+
     // The stack during the execution of a function call
     // looks like the following:
     //                                  <<------ sp
@@ -428,46 +459,61 @@ impl VM {
     //       <arg 2>                    <<------ bp + 2
     //       <arg 1>                    <<------ bp + 1
     //       <compiled-function>        <<------ bp
-    fn exec_call(
+    fn call_func(
         &mut self,
-        instructions: &Instructions,
-        ip: usize,
+        comp_func: &Rc<CompiledFunction>,
+        num_args: usize,
         line: usize,
     ) -> Result<(), RTError> {
-        let num_args = instructions.code[ip + 1] as usize;
-        // Calculate the location of the function on the stack by decoding
-        // the operand, 'num_args', and subtracting it from 'sp'. The additional
-        // '-1' is there because 'sp' points to the next free slot on the stack.
-        let obj = &*self.stack[self.sp - 1 - num_args];
-        if let Object::CompiledFunc(comp_func) = obj {
-            // Make sure that the right number of arguments is sitting on the stack
-            if num_args != comp_func.num_params {
-                return Err(RTError::new(
-                    &format!(
-                        "wrong number of arguments: want={}, got={}",
-                        comp_func.num_params, num_args
-                    ),
-                    line,
-                ));
-            }
-            // Save the current stack pointer before calling a function
-            // The base pointer 'bp' is further down the stack and points to
-            // the first argument to the function.
-            let bp = self.sp - num_args;
-            let frame = Frame::new(comp_func.clone(), bp);
-            // Allocate space for local bindings on stack starting at the base
-            // pointer 'bp' with 'num_locals' slots on the stack. Note that the
-            // parameters to the function are also part of the local bindings,
-            // i.e. 'num_locals' is the sum of #locals and #arguments
-            // In the example above, num_locals = args(2) + locals(2) = 4.
-            self.sp = frame.bp + comp_func.num_locals;
-            // skip over the instruction and the 1-byte operand to OpCall 'before'
-            // pushing a new frame so that the callee's frame is not meddled with
-            self.current_frame().ip += 2;
-            self.push_frame(frame);
-        } else {
-            return Err(RTError::new("calling non-function", line));
+        // Make sure that the right number of arguments is sitting on the stack
+        if num_args != comp_func.num_params {
+            return Err(RTError::new(
+                &format!(
+                    "wrong number of arguments: want={}, got={}",
+                    comp_func.num_params, num_args
+                ),
+                line,
+            ));
         }
+
+        // Save the current stack pointer before calling a function
+        // The base pointer 'bp' is further down the stack and points to
+        // the first argument to the function.
+        let bp = self.sp - num_args;
+        let frame = Frame::new(comp_func.clone(), bp);
+
+        // Allocate space for local bindings on stack starting at the base
+        // pointer 'bp' with 'num_locals' slots on the stack. Note that the
+        // parameters to the function are also part of the local bindings,
+        // i.e. 'num_locals' is the sum of #locals and #arguments
+        // In the example above, num_locals = args(2) + locals(2) = 4.
+        self.sp = frame.bp + comp_func.num_locals;
+
+        // skip over the instruction and the 1-byte operand to OpCall 'before'
+        // pushing a new frame so that the callee's frame is not meddled with
+        self.current_frame().ip += 2;
+        self.push_frame(frame);
+        Ok(())
+    }
+
+    fn call_builtin(
+        &mut self,
+        builtin: &BuiltinFunction,
+        num_args: usize,
+        line: usize,
+    ) -> Result<(), RTError> {
+        // copy arguments from the stack into a vector
+        let args = self.stack[self.sp - num_args..self.sp].to_vec();
+        let builtin_func = builtin.func;
+        match builtin_func(args) {
+            Ok(obj) => {
+                // pop the arguments and the function
+                self.sp = self.sp - num_args - 1;
+                self.push(obj, line)?;
+            }
+            Err(s) => return Err(RTError::new(&s, 1)),
+        }
+        self.current_frame().ip += 2;
         Ok(())
     }
 }

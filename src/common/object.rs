@@ -197,8 +197,6 @@ pub type BuiltinFunctionProto = fn(Vec<Rc<Object>>) -> Result<Rc<Object>, String
 #[derive(Debug, Clone)]
 pub struct BuiltinFunction {
     pub name: String,
-    // Variadic functions do not have arity
-    pub arity: Option<usize>,
     pub func: BuiltinFunctionProto,
 }
 
@@ -209,8 +207,8 @@ impl fmt::Display for BuiltinFunction {
 }
 
 impl BuiltinFunction {
-    pub fn new(name: String, arity: Option<usize>, func: BuiltinFunctionProto) -> BuiltinFunction {
-        BuiltinFunction { name, arity, func }
+    pub fn new(name: String, func: BuiltinFunctionProto) -> BuiltinFunction {
+        BuiltinFunction { name, func }
     }
 }
 

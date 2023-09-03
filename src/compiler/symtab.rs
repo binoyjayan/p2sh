@@ -21,15 +21,17 @@ impl Symbol {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SymbolScope {
-    GlobalScope,
-    LocalScope,
+    Global,
+    Local,
+    Builtin,
 }
 
 impl fmt::Display for SymbolScope {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SymbolScope::GlobalScope => write!(f, "GLOBAL"),
-            SymbolScope::LocalScope => write!(f, "LOCAL"),
+            SymbolScope::Global => write!(f, "GLOBAL"),
+            SymbolScope::Local => write!(f, "LOCAL"),
+            SymbolScope::Builtin => write!(f, "BUILTIN"),
         }
     }
 }
@@ -57,9 +59,9 @@ impl SymbolTable {
         let symbol = Rc::new(Symbol::new(
             name,
             if self.outer.is_none() {
-                SymbolScope::GlobalScope
+                SymbolScope::Global
             } else {
-                SymbolScope::LocalScope
+                SymbolScope::Local
             },
             self.num_definitions,
         ));
@@ -78,5 +80,11 @@ impl SymbolTable {
         } else {
             None
         }
+    }
+
+    pub fn define_builtin(&mut self, index: usize, name: &str) -> Symbol {
+        let symbol = Symbol::new(name, SymbolScope::Builtin, index);
+        self.store.insert(name.to_string(), Rc::new(symbol.clone()));
+        symbol
     }
 }

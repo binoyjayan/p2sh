@@ -1,8 +1,10 @@
 use std::rc::Rc;
 
+use self::symtab::Symbol;
 use self::symtab::SymbolScope;
 use crate::code::definitions::{self, *};
 use crate::code::opcode::Opcode;
+use crate::common::builtins::BUILTINS;
 use crate::common::error::CompileError;
 use crate::common::object::CompiledFunction;
 use crate::common::object::Object;
@@ -51,6 +53,13 @@ pub struct Compiler {
 
 impl Compiler {
     pub fn new() -> Compiler {
+        let mut symtab = SymbolTable::default();
+
+        for (i, sym) in BUILTINS.iter().enumerate() {
+            // Define the built-in function via an index into the 'BUILTINS' array
+            symtab.define_builtin(i, &sym.name);
+        }
+
         let main_scope = CompilationScope {
             instructions: Instructions::default(),
             last_ins: EmittedInstruction::default(),
@@ -58,7 +67,7 @@ impl Compiler {
         };
         Compiler {
             constants: Vec::new(),
-            symtab: SymbolTable::default(),
+            symtab,
             scopes: vec![main_scope],
             scope_index: 0,
         }
@@ -124,6 +133,14 @@ impl Compiler {
         let pos = self.add_instruction(ins);
         self.set_last_instruction(op, pos);
         pos
+    }
+
+    fn load_symbol(&mut self, sym: Symbol, line: usize) {
+        match sym.scope {
+            SymbolScope::Global => self.emit(Opcode::GetGlobal, &[sym.index], line),
+            SymbolScope::Local => self.emit(Opcode::GetLocal, &[sym.index], line),
+            SymbolScope::Builtin => self.emit(Opcode::GetBuiltin, &[sym.index], line),
+        };
     }
 
     // Save the last and the previous instructions
@@ -234,7 +251,7 @@ impl Compiler {
                 self.compile_let_stmt(stmt.value)?;
                 let symbol = self.symtab.define(&stmt.name.value);
                 // Use a Symbol's scope to emit the right instruction
-                if symbol.scope == SymbolScope::GlobalScope {
+                if symbol.scope == SymbolScope::Global {
                     self.emit(Opcode::SetGlobal, &[symbol.index], stmt.token.line);
                 } else {
                     self.emit(Opcode::SetLocal, &[symbol.index], stmt.token.line);
@@ -351,11 +368,7 @@ impl Compiler {
             }
             Expression::Ident(expr) => {
                 if let Some(symbol) = self.symtab.resolve(&expr.token.literal) {
-                    if symbol.scope == SymbolScope::GlobalScope {
-                        self.emit(Opcode::GetGlobal, &[symbol.index], expr.token.line);
-                    } else {
-                        self.emit(Opcode::GetLocal, &[symbol.index], expr.token.line);
-                    }
+                    self.load_symbol((*symbol).clone(), expr.token.line);
                 } else {
                     return Err(CompileError::new(
                         &format!("undefined variable {}", expr.token.literal),

@@ -49,6 +49,7 @@ lazy_static! {
         map.insert(Opcode::Return, Definition::new("OpReturn", &[]));
         map.insert(Opcode::GetLocal, Definition::new("OpGetLocal", &[1]));
         map.insert(Opcode::SetLocal, Definition::new("OpSetLocal", &[1]));
+        map.insert(Opcode::GetBuiltin, Definition::new("OpGetBuiltin", &[1]));
         map
     };
 }

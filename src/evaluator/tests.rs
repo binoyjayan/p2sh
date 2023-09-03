@@ -746,7 +746,7 @@ fn test_builtin_functions() {
         },
         ErrorTest {
             input: r#"len("one", "two")"#,
-            expected: RTError::new("wrong number of arguments. got=2 needs=1", 1),
+            expected: RTError::new("wrong number of arguments. got=2, want=1", 1),
         },
     ];
 

@@ -13,18 +13,27 @@ fn test_make() {
      * of the maximum value 65535. This way the endianness can be validated.
      * 65534 is encoded in big endian as the byte sequence 0xFF 0xFE.
      */
-    let tests = vec![
+    let tests: Vec<(Opcode, Vec<usize>, Vec<u8>)> = vec![
         (
             Opcode::Constant,
-            &[65534],
+            vec![65534],
             vec![Opcode::Constant as u8, 255, 254],
         ),
-        (Opcode::GetLocal, &[255], vec![Opcode::GetLocal as u8, 255]),
-        (Opcode::Add, &[0], vec![Opcode::Add as u8]),
+        (
+            Opcode::GetLocal,
+            vec![255],
+            vec![Opcode::GetLocal as u8, 255],
+        ),
+        (Opcode::Add, vec![0], vec![Opcode::Add as u8]),
+        (
+            Opcode::Closure,
+            vec![65534, 255],
+            vec![Opcode::Closure as u8, 255, 254, 255],
+        ),
     ];
 
     for (op, operands, expected) in tests {
-        let instruction = definitions::make(op, operands, 1);
+        let instruction = definitions::make(op, &operands, 1);
         assert_eq!(
             instruction.len(),
             expected.len(),
@@ -59,13 +68,15 @@ fn test_instructions_string() {
         definitions::make(Opcode::GetLocal, &[1], 1),
         definitions::make(Opcode::Constant, &[2], 1),
         definitions::make(Opcode::Constant, &[65535], 1),
+        definitions::make(Opcode::Closure, &[65535, 255], 1),
     ];
     // The '\' at the end of the lines escapes indentation in the next line
     let expected = "\
         0000 OpAdd\n\
         0001 OpGetLocal 1\n\
         0003 OpConstant 2\n\
-        0006 OpConstant 65535\n";
+        0006 OpConstant 65535\n\
+        0009 OpClosure 65535 255\n";
     let concatted = concat_instructions(&instructions);
 
     assert_eq!(concatted.to_string(), expected);

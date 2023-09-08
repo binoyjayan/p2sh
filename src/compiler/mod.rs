@@ -420,7 +420,9 @@ impl Compiler {
                     num_params,
                 )));
                 let idx = self.add_constant(compiled_fn);
-                self.emit(Opcode::Constant, &[idx], func.token.line);
+                // emit closure instruction with the index to the compiled fn
+                // and with number of free variables
+                self.emit(Opcode::Closure, &[idx, 0], func.token.line);
             }
             Expression::Call(call) => {
                 self.compile_expression(*call.func)?;

@@ -50,6 +50,8 @@ lazy_static! {
         map.insert(Opcode::GetLocal, Definition::new("OpGetLocal", &[1]));
         map.insert(Opcode::SetLocal, Definition::new("OpSetLocal", &[1]));
         map.insert(Opcode::GetBuiltin, Definition::new("OpGetBuiltin", &[1]));
+        // 'OpClosure' has two operands - a 2-byte constant index and #free-variables
+        map.insert(Opcode::Closure, Definition::new("OpClosure", &[2, 1]));
         map
     };
 }
@@ -151,7 +153,11 @@ impl Instructions {
         match operand_count {
             0 => def.name.to_string(),
             1 => format!("{} {}", def.name, operands[0]),
-            _ => format!("ERROR: unhandled operandCount for {}", def.name),
+            2 => format!("{} {} {}", def.name, operands[0], operands[1]),
+            _ => format!(
+                "ERROR: unhandled operand count for {} ['{}']",
+                def.name, operand_count
+            ),
         }
     }
 

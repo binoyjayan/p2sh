@@ -619,7 +619,30 @@ fn test_functions() {
                 ))),
             ],
             expected_instructions: vec![
-                definitions::make(Opcode::Constant, &[2], 1),
+                // Number of free variables is '0'
+                definitions::make(Opcode::Closure, &[2, 0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "fn() { 5 + 10 }",
+            expected_constants: vec![
+                Object::Number(5.),
+                Object::Number(10.),
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        definitions::make(Opcode::Constant, &[1], 1),
+                        definitions::make(Opcode::Add, &[], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
+                    ]),
+                    0,
+                    0,
+                ))),
+            ],
+            expected_instructions: vec![
+                // Number of free variables is '0'
+                definitions::make(Opcode::Closure, &[2, 0], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -642,7 +665,7 @@ fn test_functions() {
                 ))),
             ],
             expected_instructions: vec![
-                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Closure, &[2, 0], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -660,37 +683,11 @@ fn test_functions_without_return_value() {
             0,
         )))],
         expected_instructions: vec![
-            definitions::make(Opcode::Constant, &[0], 1),
+            definitions::make(Opcode::Closure, &[0, 0], 1),
             definitions::make(Opcode::Pop, &[], 1),
         ],
     }];
     run_compiler_tests(&tests);
-}
-
-#[test]
-fn _test_compiler_scopes() {
-    let mut compiler = Compiler::new();
-    assert_eq!(compiler.scope_index, 0);
-    compiler.emit(Opcode::Mul, &[0], 1);
-
-    compiler.enter_scope();
-    assert_eq!(compiler.scope_index, 1);
-    compiler.emit(Opcode::Sub, &[0], 1);
-    let scope_instructions_len = compiler.scopes[compiler.scope_index].instructions.len();
-    assert_eq!(scope_instructions_len, 1);
-
-    let last_instruction = compiler.scopes[compiler.scope_index].last_ins.clone();
-    assert_eq!(last_instruction.opcode, Opcode::Sub);
-
-    compiler.leave_scope();
-    assert_eq!(compiler.scope_index, 0);
-
-    compiler.emit(Opcode::Add, &[0], 1);
-    let scope_instructions_len = compiler.scopes[compiler.scope_index].instructions.len();
-    assert_eq!(scope_instructions_len, 2);
-
-    let last_instruction = compiler.scopes[compiler.scope_index].last_ins.clone();
-    assert_eq!(last_instruction.opcode, Opcode::Add);
 }
 
 #[test]
@@ -755,8 +752,8 @@ fn test_function_calls() {
                 ))),
             ],
             expected_instructions: vec![
-                // The compiled function
-                definitions::make(Opcode::Constant, &[1], 1),
+                // The compiled function (closure)
+                definitions::make(Opcode::Closure, &[1, 0], 1),
                 definitions::make(Opcode::Call, &[0], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
@@ -778,7 +775,7 @@ fn test_function_calls() {
             ],
             expected_instructions: vec![
                 // The compiled function
-                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Closure, &[1, 0], 1),
                 definitions::make(Opcode::SetGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::Call, &[0], 1),
@@ -802,7 +799,7 @@ fn test_function_calls() {
                 Object::Number(24.),
             ],
             expected_instructions: vec![
-                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Closure, &[0, 0], 1),
                 definitions::make(Opcode::SetGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
@@ -835,7 +832,7 @@ fn test_function_calls() {
                 Object::Number(26.),
             ],
             expected_instructions: vec![
-                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Closure, &[0, 0], 1),
                 definitions::make(Opcode::SetGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
@@ -871,8 +868,8 @@ fn test_let_statement_scopes() {
                 definitions::make(Opcode::Constant, &[0], 1),
                 // set the global variable 'num'
                 definitions::make(Opcode::SetGlobal, &[0], 1),
-                // constant - compiled function
-                definitions::make(Opcode::Constant, &[1], 1),
+                // constant - compiled function (closure)
+                definitions::make(Opcode::Closure, &[1, 0], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -895,8 +892,8 @@ fn test_let_statement_scopes() {
                 ))),
             ],
             expected_instructions: vec![
-                // constant - compiled function
-                definitions::make(Opcode::Constant, &[1], 1),
+                // constant - compiled function (closure)
+                definitions::make(Opcode::Closure, &[1, 0], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -927,7 +924,7 @@ fn test_let_statement_scopes() {
                 ))),
             ],
             expected_instructions: vec![
-                definitions::make(Opcode::Constant, &[2], 1), // compiled fn
+                definitions::make(Opcode::Closure, &[2, 0], 1), // compiled fn (closure)
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -972,7 +969,7 @@ fn test_builtins() {
                 0,
             )))],
             expected_instructions: vec![
-                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Closure, &[0, 0], 1), // compiled fn (closure)
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },

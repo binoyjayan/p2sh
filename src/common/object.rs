@@ -24,6 +24,7 @@ pub enum Object {
     CompiledFunc(Rc<CompiledFunction>),
     Arr(Array),
     Map(HMap),
+    Clos(Rc<Closure>),
 }
 
 impl PartialEq for Object {
@@ -37,6 +38,7 @@ impl PartialEq for Object {
             (Object::Map(a), Object::Map(b)) => a.eq(b),
             (Object::Builtin(a), Object::Builtin(b)) => a.eq(b),
             (Object::CompiledFunc(a), Object::CompiledFunc(b)) => a.eq(b),
+            (Object::Clos(a), Object::Clos(b)) => a.eq(b),
             _ => false,
         }
     }
@@ -69,6 +71,7 @@ impl Clone for Object {
             Object::Arr(a) => Object::Arr(a.clone()),
             Object::Map(m) => Object::Map(m.clone()),
             Object::CompiledFunc(f) => Object::CompiledFunc(f.clone()),
+            Object::Clos(f) => Object::Clos(f.clone()),
         }
     }
 }
@@ -104,6 +107,7 @@ impl fmt::Display for Object {
             Self::CompiledFunc(val) => write!(f, "{}", val),
             Self::Arr(val) => write!(f, "{}", val),
             Self::Map(val) => write!(f, "{}", val),
+            Self::Clos(val) => write!(f, "{}", val),
         }
     }
 }
@@ -326,3 +330,38 @@ impl PartialEq for CompiledFunction {
 }
 
 impl Eq for CompiledFunction {}
+
+// A closure object has a pointer to the function it wraps, a function, and
+// a place to keep the free variables it carries around, 'free'. This object
+// is used to represent functions that 'close over' their environment at the
+// time of their definition. The environment here is captured in a vector of
+// Object's. Note that closures are only created at runtime and aren't
+// available to the compiler. Instead an opcode 'OpClosure' is used by the
+// compiler to inform the VM to create a closure and wrap the function and
+// its environment.
+#[derive(Debug, Clone, Default)]
+pub struct Closure {
+    pub func: Rc<CompiledFunction>,
+    pub free: Vec<Rc<Object>>,
+}
+
+impl Closure {
+    pub fn new(func: Rc<CompiledFunction>) -> Self {
+        Self {
+            func,
+            free: Vec::new(),
+        }
+    }
+}
+
+impl fmt::Display for Closure {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<closure>")
+    }
+}
+
+impl PartialEq for Closure {
+    fn eq(&self, other: &Self) -> bool {
+        self.func == other.func
+    }
+}

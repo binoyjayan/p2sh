@@ -8,6 +8,7 @@ use crate::common::builtins::BUILTINS;
 use crate::common::error::RTError;
 use crate::common::object::Array;
 use crate::common::object::BuiltinFunction;
+use crate::common::object::Closure;
 use crate::common::object::CompiledFunction;
 use crate::common::object::HMap;
 use crate::common::object::Object;
@@ -44,11 +45,10 @@ enum BinaryOperation {
 impl VM {
     pub fn new(bytecode: Bytecode) -> VM {
         let data = Rc::new(Object::Nil);
+        let fn_main = Rc::new(CompiledFunction::new(bytecode.instructions, 0, 0));
+        let closure_m: Rc<Closure> = Rc::new(Closure::new(fn_main));
         let frame_e = Frame::default();
-        let frame_m = Frame::new(
-            Rc::new(CompiledFunction::new(bytecode.instructions, 0, 0)),
-            0,
-        );
+        let frame_m = Frame::new(closure_m, 0);
         let mut frames = vec![frame_e; MAX_FRAMES];
         frames[0] = frame_m;
 
@@ -325,6 +325,16 @@ impl VM {
                         self.push(Rc::new(Object::Builtin(bt.clone())), line)?;
                     }
                 }
+                Opcode::Closure => {
+                    // Decode first operand (index to closure in the constant pool)
+                    let const_idx =
+                        BigEndian::read_u16(&instructions.code[ip + 1..ip + 3]) as usize;
+                    // Decode second operand (number of free varaibles)
+                    let _num_free = instructions.code[ip + 3] as usize;
+                    // push the compiled function as a closure on stack
+                    self.push_closure(const_idx, line)?;
+                    self.current_frame().ip += 3;
+                }
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),
@@ -438,8 +448,8 @@ impl VM {
         let callee = self.stack[self.sp - 1 - num_args].clone();
 
         match &*callee {
-            Object::CompiledFunc(comp_func) => {
-                self.call_func(comp_func, num_args, line)?;
+            Object::Clos(closure) => {
+                self.call_func(closure, num_args, line)?;
             }
             Object::Builtin(builtin) => {
                 self.call_builtin(builtin, num_args, line)?;
@@ -461,16 +471,16 @@ impl VM {
     //       <compiled-function>        <<------ bp
     fn call_func(
         &mut self,
-        comp_func: &Rc<CompiledFunction>,
+        closure: &Rc<Closure>,
         num_args: usize,
         line: usize,
     ) -> Result<(), RTError> {
         // Make sure that the right number of arguments is sitting on the stack
-        if num_args != comp_func.num_params {
+        if num_args != closure.func.num_params {
             return Err(RTError::new(
                 &format!(
                     "wrong number of arguments: want={}, got={}",
-                    comp_func.num_params, num_args
+                    closure.func.num_params, num_args
                 ),
                 line,
             ));
@@ -480,14 +490,14 @@ impl VM {
         // The base pointer 'bp' is further down the stack and points to
         // the first argument to the function.
         let bp = self.sp - num_args;
-        let frame = Frame::new(comp_func.clone(), bp);
+        let frame = Frame::new(closure.clone(), bp);
 
         // Allocate space for local bindings on stack starting at the base
         // pointer 'bp' with 'num_locals' slots on the stack. Note that the
         // parameters to the function are also part of the local bindings,
         // i.e. 'num_locals' is the sum of #locals and #arguments
         // In the example above, num_locals = args(2) + locals(2) = 4.
-        self.sp = frame.bp + comp_func.num_locals;
+        self.sp = frame.bp + closure.func.num_locals;
 
         // skip over the instruction and the 1-byte operand to OpCall 'before'
         // pushing a new frame so that the callee's frame is not meddled with
@@ -515,5 +525,18 @@ impl VM {
         }
         self.current_frame().ip += 2;
         Ok(())
+    }
+
+    fn push_closure(&mut self, const_idx: usize, line: usize) -> Result<(), RTError> {
+        let constant = self.constants[const_idx].clone();
+        if let Object::CompiledFunc(function) = constant {
+            let closure = Rc::new(Closure::new(function.clone()));
+            self.push(Rc::new(Object::Clos(closure)), line)
+        } else {
+            Err(RTError::new(
+                &format!("not a function: {:?}", constant),
+                line,
+            ))
+        }
     }
 }

@@ -135,11 +135,12 @@ impl Compiler {
         pos
     }
 
-    fn load_symbol(&mut self, sym: Symbol, line: usize) {
+    fn load_symbol(&mut self, sym: Rc<Symbol>, line: usize) {
         match sym.scope {
             SymbolScope::Global => self.emit(Opcode::GetGlobal, &[sym.index], line),
             SymbolScope::Local => self.emit(Opcode::GetLocal, &[sym.index], line),
             SymbolScope::Builtin => self.emit(Opcode::GetBuiltin, &[sym.index], line),
+            SymbolScope::Free => self.emit(Opcode::GetFree, &[sym.index], line),
         };
     }
 
@@ -368,7 +369,7 @@ impl Compiler {
             }
             Expression::Ident(expr) => {
                 if let Some(symbol) = self.symtab.resolve(&expr.token.literal) {
-                    self.load_symbol((*symbol).clone(), expr.token.line);
+                    self.load_symbol(symbol, expr.token.line);
                 } else {
                     return Err(CompileError::new(
                         &format!("undefined variable {}", expr.token.literal),
@@ -412,8 +413,16 @@ impl Compiler {
                 // Take the current symbol table's num_definitions, save it to
                 // Object::CompiledFunction. That gives the info on the number
                 // of local bindings a function is going to create and use in the VM
-                let num_locals = self.symtab.num_definitions;
+                // Make sure to also load free variables on to the stack after
+                // compiling the function so they are accessible to 'OpClosure'.
+                let num_locals = self.symtab.get_num_definitions();
+                // It is important to get the free symbols before leaving the scope
+                let free_symbols = self.symtab.free_symbols.clone();
                 let instructions = self.leave_scope();
+
+                for f in &free_symbols {
+                    self.load_symbol(f.clone(), func.token.line);
+                }
                 let compiled_fn = Object::CompiledFunc(Rc::new(CompiledFunction::new(
                     instructions,
                     num_locals,
@@ -422,7 +431,7 @@ impl Compiler {
                 let idx = self.add_constant(compiled_fn);
                 // emit closure instruction with the index to the compiled fn
                 // and with number of free variables
-                self.emit(Opcode::Closure, &[idx, 0], func.token.line);
+                self.emit(Opcode::Closure, &[idx, free_symbols.len()], func.token.line);
             }
             Expression::Call(call) => {
                 self.compile_expression(*call.func)?;

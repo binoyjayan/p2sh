@@ -29,6 +29,7 @@ pub enum Opcode {
     SetLocal,
     GetBuiltin,
     Closure,
+    GetFree,
     #[default]
     Invalid,
 }
@@ -64,6 +65,7 @@ impl From<u8> for Opcode {
             25 => Opcode::SetLocal,
             26 => Opcode::GetBuiltin,
             27 => Opcode::Closure,
+            28 => Opcode::GetFree,
             _ => Opcode::Invalid,
         }
     }

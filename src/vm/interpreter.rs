@@ -335,6 +335,7 @@ impl VM {
                     self.push_closure(const_idx, line)?;
                     self.current_frame().ip += 3;
                 }
+                Opcode::GetFree => {}
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),
@@ -530,7 +531,7 @@ impl VM {
     fn push_closure(&mut self, const_idx: usize, line: usize) -> Result<(), RTError> {
         let constant = self.constants[const_idx].clone();
         if let Object::CompiledFunc(function) = constant {
-            let closure = Rc::new(Closure::new(function.clone()));
+            let closure = Rc::new(Closure::new(function));
             self.push(Rc::new(Object::Clos(closure)), line)
         } else {
             Err(RTError::new(

@@ -146,7 +146,7 @@ fn run_compiler_tests(tests: &[CompilerTestCase]) {
         if let Err(err) = result {
             panic!("[{}] {}", n, err);
         }
-        // println!("[{}] Compiler Test", n);
+        println!("[{}] Compiler Test", n);
         let bytecode = compiler.bytecode();
         test_instructions(&t.expected_instructions, &bytecode.instructions);
         test_constants(&t.expected_constants, &bytecode.constants);
@@ -707,7 +707,7 @@ fn test_compiler_scopes() {
     assert_eq!(last.opcode, Opcode::Sub);
 
     if let Some(outer) = compiler.symtab.outer.clone() {
-        assert_eq!(*outer, global_symbol_table);
+        assert_eq!(outer.as_ref().clone(), global_symbol_table);
     } else {
         panic!("compiler did not enclose symbol table");
     }
@@ -975,5 +975,193 @@ fn test_builtins() {
         },
     ];
 
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_closures() {
+    let tests = vec![CompilerTestCase {
+        input: "
+                fn(a) {
+                    fn(b) {
+                        a + b
+                    }
+                }
+            ",
+
+        expected_constants: vec![
+            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                // the real closure
+                concat_instructions(&[
+                    // variable 'a' defined in the enclosing scope is a
+                    // 'free' variable for this scope
+                    definitions::make(Opcode::GetFree, &[0], 1),
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    definitions::make(Opcode::Add, &[], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                concat_instructions(&[
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    // #free-vars is 1 as there is one free variable on the stack
+                    // that needs to be saved into the free field of the closure
+                    definitions::make(Opcode::Closure, &[0, 1], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+        ],
+
+        expected_instructions: vec![
+            definitions::make(Opcode::Closure, &[1, 0], 1),
+            definitions::make(Opcode::Pop, &[], 1),
+        ],
+    }];
+    run_compiler_tests(&tests);
+}
+
+// There are three nested functions. The innermost function, the one with the
+// c parameter, references two free variables: a and b. b is defined in the
+// immediate enclosing scope, but a is defined in the outermost function, two
+// scopes removed. The middle function is expected to contain an OpClosure
+// instruction that turns the innermost function into a closure. Since the
+// second operand is 2, there are supposed to be two free variables sitting
+// on the stack when the VM executes it. From the perspective of the middle
+// function, a is also a free variable. It is neither defined in scope nor
+// as a parameter.
+#[test]
+fn test_nested_closures() {
+    let tests = vec![CompilerTestCase {
+        input: "
+                fn(a) {
+                    fn(b) {
+                        fn(c) {
+                            a + b + c
+                        }
+                    }
+                }
+            ",
+        expected_constants: vec![
+            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                // This is the defintion of the inner-most function that has
+                // two free variables 'a' and 'b' but defines no closure(s)
+                // within itself (via the OpClosure instruction).
+                concat_instructions(&[
+                    definitions::make(Opcode::GetFree, &[0], 1),
+                    definitions::make(Opcode::GetFree, &[1], 1),
+                    definitions::make(Opcode::Add, &[], 1),
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    definitions::make(Opcode::Add, &[], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                // middle function has one free variable 'a' and defines the
+                // inner-most function as a closure that has two free variables
+                // The number of free variables is passed as the second arg.
+                concat_instructions(&[
+                    definitions::make(Opcode::GetFree, &[0], 1),
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    // two free variables on stack
+                    definitions::make(Opcode::Closure, &[0, 2], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                // outer-most function has no free variables but compiles
+                // the middle closure that has a single free variable
+                concat_instructions(&[
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    definitions::make(Opcode::Closure, &[1, 1], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+        ],
+        expected_instructions: vec![
+            definitions::make(Opcode::Closure, &[2, 0], 1),
+            definitions::make(Opcode::Pop, &[], 1),
+        ],
+    }];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_closures_with_scopes() {
+    let tests = vec![CompilerTestCase {
+        input: "
+                let global = 55;
+                fn() {
+                    let a = 66;
+                    fn() {
+                        let b = 77;
+                        fn() {
+                            let c = 88;
+                            global + a + b + c;
+                        }
+                    }
+                }
+            ",
+        expected_constants: vec![
+            Object::Number(55.),
+            Object::Number(66.),
+            Object::Number(77.),
+            Object::Number(88.),
+            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                concat_instructions(&[
+                    definitions::make(Opcode::Constant, &[3], 1),
+                    definitions::make(Opcode::SetLocal, &[0], 1),
+                    definitions::make(Opcode::GetGlobal, &[0], 1),
+                    definitions::make(Opcode::GetFree, &[0], 1),
+                    definitions::make(Opcode::Add, &[], 1),
+                    definitions::make(Opcode::GetFree, &[1], 1),
+                    definitions::make(Opcode::Add, &[], 1),
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    definitions::make(Opcode::Add, &[], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                concat_instructions(&[
+                    definitions::make(Opcode::Constant, &[2], 1),
+                    definitions::make(Opcode::SetLocal, &[0], 1),
+                    definitions::make(Opcode::GetFree, &[0], 1),
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    definitions::make(Opcode::Closure, &[4, 2], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                concat_instructions(&[
+                    definitions::make(Opcode::Constant, &[1], 1),
+                    definitions::make(Opcode::SetLocal, &[0], 1),
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    definitions::make(Opcode::Closure, &[5, 1], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+        ],
+        expected_instructions: vec![
+            definitions::make(Opcode::Constant, &[0], 1),
+            definitions::make(Opcode::SetGlobal, &[0], 1),
+            definitions::make(Opcode::Closure, &[6, 0], 1),
+            definitions::make(Opcode::Pop, &[], 1),
+        ],
+    }];
     run_compiler_tests(&tests);
 }

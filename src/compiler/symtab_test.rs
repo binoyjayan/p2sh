@@ -103,7 +103,7 @@ fn test_resolve_nested_local() {
     second_local.define("e");
     second_local.define("f");
 
-    let tests = vec![
+    let mut tests = vec![
         ResolveTest {
             table: first_local,
             expected_symbols: vec![
@@ -124,7 +124,7 @@ fn test_resolve_nested_local() {
         },
     ];
 
-    for tt in &tests {
+    for tt in &mut tests {
         for sym in &tt.expected_symbols {
             let result = tt.table.resolve(&sym.name);
             assert!(result.is_some(), "name {} not resolvable", sym.name);
@@ -151,12 +151,12 @@ fn test_define_resolve_builtins() {
     for (i, sym) in expected.iter().enumerate() {
         global.define_builtin(i, &sym.name);
     }
-    let first_local = SymbolTable::new_enclosed(global.clone());
-    let second_local = SymbolTable::new_enclosed(first_local.clone());
+    let mut first_local = SymbolTable::new_enclosed(global.clone());
+    let mut second_local = SymbolTable::new_enclosed(first_local.clone());
 
     // Expect every symbol that has been defined in the global scope with
     // define_builtin to resolve to the new BuiltinScope
-    for tab in [global, first_local, second_local] {
+    for tab in [&mut global, &mut first_local, &mut second_local] {
         for sym_exp in &expected {
             let result = tab.resolve(&sym_exp.name);
             assert!(result.is_some(), "name {} not resolvable", sym_exp.name);
@@ -167,5 +167,140 @@ fn test_define_resolve_builtins() {
                 sym_exp.name, sym_exp, symbol_eval
             );
         }
+    }
+}
+
+#[test]
+fn test_resolve_free() {
+    struct ResolveTest {
+        table: SymbolTable,
+        expected_symbols: Vec<Symbol>,
+        expected_free_symbols: Vec<Symbol>,
+    }
+
+    let mut global = SymbolTable::default();
+    global.define("a");
+    global.define("b");
+
+    let mut first_local = SymbolTable::new_enclosed(global.clone());
+    first_local.define("c");
+    first_local.define("d");
+
+    // inner-most scope
+    let mut second_local = SymbolTable::new_enclosed(first_local.clone());
+    second_local.define("e");
+    second_local.define("f");
+
+    let mut tests = vec![
+        ResolveTest {
+            table: first_local,
+            expected_symbols: vec![
+                Symbol::new("a", SymbolScope::Global, 0),
+                Symbol::new("b", SymbolScope::Global, 1),
+                Symbol::new("c", SymbolScope::Local, 0),
+                Symbol::new("d", SymbolScope::Local, 1),
+            ],
+            expected_free_symbols: Vec::new(),
+        },
+        ResolveTest {
+            table: second_local,
+            expected_symbols: vec![
+                Symbol::new("a", SymbolScope::Global, 0),
+                Symbol::new("b", SymbolScope::Global, 1),
+                Symbol::new("c", SymbolScope::Free, 0),
+                Symbol::new("d", SymbolScope::Free, 1),
+                Symbol::new("e", SymbolScope::Local, 0),
+                Symbol::new("f", SymbolScope::Local, 1),
+            ],
+            expected_free_symbols: vec![
+                Symbol::new("c", SymbolScope::Local, 0),
+                Symbol::new("d", SymbolScope::Local, 1),
+            ],
+        },
+    ];
+
+    for t in &mut tests {
+        // The test expects that all the identifiers used in the
+        // arithmetic expressions can be resolved correctly.
+        for sym in &t.expected_symbols {
+            let result = t.table.resolve(&sym.name);
+            assert!(result.is_some(), "name {} not resolvable", sym.name);
+            let symbol_eval = result.unwrap();
+
+            assert_eq!(
+                *symbol_eval, *sym,
+                "expected {:?} to resolve to {:?}, got={:?}",
+                sym.name, sym, symbol_eval
+            );
+        }
+
+        assert_eq!(
+            t.table.free_symbols.len(),
+            t.expected_free_symbols.len(),
+            "wrong number of free symbols. got={}, want={}",
+            t.table.free_symbols.len(),
+            t.expected_free_symbols.len()
+        );
+        // Iterate through 'expected_free_symbols' and make sure they match
+        // the symbol table’s 'free_symbols'. FreeSymbols should contain the
+        // original symbols of the the enclosing scope. For example, when the
+        // the symbol table is asked to resolve 'c' and 'd' while being in the
+        // 'second_local' scope, return symbols with FreeScope. But at the same
+        // time, the original symbols, which were created when the names were
+        // defined, should be added to FreeSymbols. A "free variable" is a
+        // relative term. A free variable in the current scope could be a local
+        // binding in the enclosing scope.
+        for (i, sym) in t.expected_free_symbols.iter().enumerate() {
+            let result = &t.table.free_symbols[i].clone();
+            assert_eq!(
+                **result, *sym,
+                "wrong free symbol. got={:?}, want={:?}",
+                result, sym
+            );
+        }
+    }
+}
+
+// make sure that the symbol table does not automatically mark
+// every symbol as a free variable if it can't resolve it.
+// #[test]
+#[test]
+fn test_resolve_unresolvable_free() {
+    let mut global = SymbolTable::default();
+    global.define("a");
+    let mut first_local = SymbolTable::new_enclosed(global.clone());
+    first_local.define("c");
+    let mut second_local = SymbolTable::new_enclosed(first_local.clone());
+    second_local.define("e");
+    second_local.define("f");
+
+    let expected = vec![
+        Symbol::new("a", SymbolScope::Global, 0),
+        Symbol::new("c", SymbolScope::Free, 0),
+        Symbol::new("e", SymbolScope::Local, 0),
+        Symbol::new("f", SymbolScope::Local, 1),
+    ];
+
+    for sym in &expected {
+        let result = second_local.resolve(&sym.name);
+        assert!(result.is_some(), "name {} not resolvable", sym.name);
+        let symbol_eval = result.unwrap();
+
+        assert_eq!(
+            *symbol_eval, *sym,
+            "expected {} to resolve to {:?}, got={:?}",
+            sym.name, sym, symbol_eval
+        );
+    }
+
+    let expected_unresolvable = vec!["b", "d"];
+
+    for name in &expected_unresolvable {
+        let result = second_local.resolve(name);
+        assert!(
+            result.is_none(),
+            "name {} resolved, but was unexpected not to",
+            name
+        );
     }
 }

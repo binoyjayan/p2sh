@@ -24,6 +24,7 @@ pub enum SymbolScope {
     Global,
     Local,
     Builtin,
+    Free,
 }
 
 impl fmt::Display for SymbolScope {
@@ -32,6 +33,7 @@ impl fmt::Display for SymbolScope {
             SymbolScope::Global => write!(f, "GLOBAL"),
             SymbolScope::Local => write!(f, "LOCAL"),
             SymbolScope::Builtin => write!(f, "BUILTIN"),
+            SymbolScope::Free => write!(f, "FREE"),
         }
     }
 }
@@ -39,8 +41,10 @@ impl fmt::Display for SymbolScope {
 #[derive(Default, Clone, Debug, Eq, PartialEq)]
 pub struct SymbolTable {
     store: HashMap<String, Rc<Symbol>>,
-    pub num_definitions: usize,
-    pub outer: Option<Rc<SymbolTable>>,
+    num_definitions: usize,
+    pub outer: Option<Box<SymbolTable>>,
+    // original symbols of the enclosing scope
+    pub free_symbols: Vec<Rc<Symbol>>,
 }
 
 impl SymbolTable {
@@ -48,8 +52,13 @@ impl SymbolTable {
         SymbolTable {
             store: HashMap::new(),
             num_definitions: 0,
-            outer: Some(Rc::new(outer)),
+            outer: Some(Box::new(outer)),
+            free_symbols: Vec::new(),
         }
+    }
+
+    pub fn get_num_definitions(&self) -> usize {
+        self.num_definitions
     }
 
     // If the SymbolTable being called is not enclosed in another SymbolTable,
@@ -72,19 +81,36 @@ impl SymbolTable {
         symbol
     }
 
-    pub fn resolve(&self, name: &str) -> Option<Rc<Symbol>> {
-        if let Some(symbol_ref) = self.store.get(name) {
-            Some(symbol_ref.clone())
-        } else if let Some(outer) = &self.outer {
-            outer.resolve(name)
-        } else {
-            None
+    pub fn resolve(&mut self, name: &str) -> Option<Rc<Symbol>> {
+        let symbol = self.store.get(name).cloned();
+        if let Some(symbol_ref) = symbol {
+            return Some(Rc::clone(&symbol_ref));
+        } else if let Some(outer) = &mut self.outer {
+            if let Some(obj) = outer.resolve(name) {
+                if matches!(obj.scope, SymbolScope::Global | SymbolScope::Builtin) {
+                    return Some(obj);
+                } else {
+                    return Some(self.define_free(obj));
+                }
+            }
         }
+        None
     }
 
-    pub fn define_builtin(&mut self, index: usize, name: &str) -> Symbol {
-        let symbol = Symbol::new(name, SymbolScope::Builtin, index);
-        self.store.insert(name.to_string(), Rc::new(symbol.clone()));
+    pub fn define_builtin(&mut self, index: usize, name: &str) -> Rc<Symbol> {
+        let symbol = Rc::new(Symbol::new(name, SymbolScope::Builtin, index));
+        self.store.insert(name.to_string(), Rc::clone(&symbol));
+        symbol
+    }
+
+    fn define_free(&mut self, original: Rc<Symbol>) -> Rc<Symbol> {
+        self.free_symbols.push(original.clone());
+        let len = self.free_symbols.len();
+
+        let symbol = Rc::new(Symbol::new(&original.name, SymbolScope::Free, len - 1));
+
+        self.store.insert(symbol.name.clone(), symbol.clone());
+
         symbol
     }
 }

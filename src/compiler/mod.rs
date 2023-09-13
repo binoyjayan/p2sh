@@ -141,6 +141,7 @@ impl Compiler {
             SymbolScope::Local => self.emit(Opcode::GetLocal, &[sym.index], line),
             SymbolScope::Builtin => self.emit(Opcode::GetBuiltin, &[sym.index], line),
             SymbolScope::Free => self.emit(Opcode::GetFree, &[sym.index], line),
+            SymbolScope::Function => self.emit(Opcode::CurrClosure, &[sym.index], line),
         };
     }
 
@@ -249,8 +250,11 @@ impl Compiler {
                 self.emit(Opcode::Pop, &[0], stmt.token.line);
             }
             Statement::Let(stmt) => {
-                self.compile_let_stmt(stmt.value)?;
+                // Defining the symbol before the value allows compiling
+                // recursive functions that has reference to its own name.
                 let symbol = self.symtab.define(&stmt.name.value);
+                self.compile_let_stmt(stmt.value)?;
+
                 // Use a Symbol's scope to emit the right instruction
                 if symbol.scope == SymbolScope::Global {
                     self.emit(Opcode::SetGlobal, &[symbol.index], stmt.token.line);
@@ -389,6 +393,10 @@ impl Compiler {
                 // enter scope of a function
                 self.enter_scope();
 
+                if !func.name.is_empty() {
+                    self.symtab.define_function_name(&func.name);
+                }
+
                 // Tell the compiler to turn the local references to the function
                 // parameters into OpGetLocal instructions that load the arguments
                 // onto the stack. Since these definitions are done in the scope of
@@ -420,6 +428,7 @@ impl Compiler {
                 let free_symbols = self.symtab.free_symbols.clone();
                 let instructions = self.leave_scope();
 
+                // load free symbols on stack
                 for f in &free_symbols {
                     self.load_symbol(f.clone(), func.token.line);
                 }

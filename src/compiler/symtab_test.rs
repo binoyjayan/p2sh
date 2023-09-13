@@ -304,3 +304,30 @@ fn test_resolve_unresolvable_free() {
         );
     }
 }
+
+#[test]
+fn test_define_and_resolve_function_name() {
+    let mut global = SymbolTable::default();
+    let _ = global.define_function_name("a");
+
+    let expected = Symbol::new("a", SymbolScope::Function, 0);
+
+    match global.resolve(&expected.name) {
+        None => panic!("name {} not resolvable", expected.name),
+        Some(s) => assert_eq!(expected, *s, "mismatch in function names"),
+    }
+}
+
+#[test]
+fn test_shadowing_function_name() {
+    let mut global = SymbolTable::default();
+    let _ = global.define_function_name("a");
+    let _ = global.define("a");
+
+    let expected = Symbol::new("a", SymbolScope::Global, 0);
+
+    match global.resolve(&expected.name) {
+        None => panic!("name {} not resolvable", expected.name),
+        Some(s) => assert_eq!(expected, *s, "mismatch in function names"),
+    }
+}

@@ -341,6 +341,11 @@ impl VM {
                     let curr_closure = self.current_frame().closure.clone();
                     self.push(curr_closure.free[free_idx].clone(), line)?;
                 }
+                Opcode::CurrClosure => {
+                    let curr_closure = self.current_frame().closure.clone();
+                    // push the current closure on stack
+                    self.push(Rc::new(Object::Clos(curr_closure)), line)?;
+                }
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),

@@ -251,7 +251,11 @@ impl Parser {
             return Expression::Nil;
         }
         let body = self.parse_block_statement();
+        // The name of the string is unknown here so just use it as a
+        // placeholder. Fill this in after parsing the 'let' statement.
+        // The name of the function is available in that statement.
         Expression::Function(FunctionLiteral {
+            name: String::new(),
             token,
             params,
             body,

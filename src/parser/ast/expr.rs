@@ -114,6 +114,7 @@ impl fmt::Display for IfExpr {
 
 #[derive(Clone, Debug)]
 pub struct FunctionLiteral {
+    pub name: String, // name of the function
     pub token: Token,
     pub params: Vec<Identifier>,
     pub body: BlockStatement,

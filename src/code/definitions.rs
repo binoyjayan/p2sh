@@ -53,6 +53,7 @@ lazy_static! {
         // 'OpClosure' has two operands - a 2-byte constant index and #free-variables
         map.insert(Opcode::Closure, Definition::new("OpClosure", &[2, 1]));
         map.insert(Opcode::GetFree, Definition::new("OpGetFree", &[1]));
+        map.insert(Opcode::CurrClosure, Definition::new("OpCurrClosure", &[]));
         map
     };
 }

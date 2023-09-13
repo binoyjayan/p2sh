@@ -30,6 +30,7 @@ pub enum Opcode {
     GetBuiltin,
     Closure,
     GetFree,
+    CurrClosure,
     #[default]
     Invalid,
 }
@@ -66,6 +67,7 @@ impl From<u8> for Opcode {
             26 => Opcode::GetBuiltin,
             27 => Opcode::Closure,
             28 => Opcode::GetFree,
+            29 => Opcode::CurrClosure,
             _ => Opcode::Invalid,
         }
     }

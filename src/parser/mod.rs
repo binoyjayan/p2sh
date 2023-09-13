@@ -116,6 +116,20 @@ impl Parser {
         self.next_token();
         let value = self.parse_expression(Precedence::Lowest);
 
+        // If the value expression is a function, the update the function node
+        // with the identifier contained from compiling the let statement since
+        // the name of the function is not available within the function
+        // expression. This is needed so that self references to recursive
+        // functions can be parsed effectively.
+        let value = if let Expression::Function(mut func) = value.clone() {
+            func.name = token_ident.literal.clone();
+            // use the updated function
+            Expression::Function(func)
+        } else {
+            // if any other expression, use the original value
+            value
+        };
+
         if self.peek_token_is(&TokenType::Semicolon) {
             self.next_token();
         }

@@ -146,7 +146,7 @@ fn run_compiler_tests(tests: &[CompilerTestCase]) {
         if let Err(err) = result {
             panic!("[{}] {}", n, err);
         }
-        println!("[{}] Compiler Test", n);
+        // println!("[{}] Compiler Test", n);
         let bytecode = compiler.bytecode();
         test_instructions(&t.expected_instructions, &bytecode.instructions);
         test_constants(&t.expected_constants, &bytecode.constants);
@@ -1163,5 +1163,89 @@ fn test_closures_with_scopes() {
             definitions::make(Opcode::Pop, &[], 1),
         ],
     }];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_recursive_functions() {
+    let tests = vec![
+        CompilerTestCase {
+            input: r#"
+            let countDown = fn(x) { countDown(x - 1); };
+            countDown(1);
+        "#,
+            expected_constants: vec![
+                Object::Number(1.0),
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
+                        // first load callee, the the args and then the OpCall
+                        // Here, the callee is also the current closure
+                        definitions::make(Opcode::CurrClosure, &[], 1),
+                        definitions::make(Opcode::GetLocal, &[0], 1),
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        definitions::make(Opcode::Sub, &[], 1),
+                        definitions::make(Opcode::Call, &[1], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
+                    ]),
+                    1,
+                    0,
+                ))),
+                Object::Number(1.0),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Closure, &[1, 0], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Call, &[1], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+            let wrapper = fn() {
+                let countDown = fn(x) { countDown(x - 1); };
+                countDown(1);
+            };
+            wrapper();
+        "#,
+            expected_constants: vec![
+                Object::Number(1.0),
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
+                        definitions::make(Opcode::CurrClosure, &[], 1),
+                        definitions::make(Opcode::GetLocal, &[0], 1),
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        definitions::make(Opcode::Sub, &[], 1),
+                        definitions::make(Opcode::Call, &[1], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
+                    ]),
+                    1,
+                    0,
+                ))),
+                Object::Number(1.0),
+                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
+                        definitions::make(Opcode::Closure, &[1, 0], 1),
+                        definitions::make(Opcode::SetLocal, &[0], 1),
+                        definitions::make(Opcode::GetLocal, &[0], 1),
+                        definitions::make(Opcode::Constant, &[2], 1),
+                        definitions::make(Opcode::Call, &[1], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
+                    ]),
+                    1,
+                    0,
+                ))),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Closure, &[3, 0], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::Call, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+
     run_compiler_tests(&tests);
 }

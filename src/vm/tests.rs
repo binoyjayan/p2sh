@@ -941,3 +941,58 @@ fn test_closures() {
 
     run_vm_tests(&tests);
 }
+
+#[test]
+fn test_recursive_functions() {
+    let tests: Vec<VmTestCase> = vec![
+        VmTestCase {
+            input: r#"
+                let countDown = fn(x) {
+                    if (x == 0) {
+                        return 0;
+                    } else {
+                        countDown(x - 1);
+                    }
+                };
+                countDown(1);
+                "#,
+            expected: Object::Number(0.),
+        },
+        VmTestCase {
+            input: r#"
+                let countDown = fn(x) {
+                    if (x == 0) {
+                        return 0;
+                    } else {
+                        countDown(x - 1);
+                    }
+                };
+                let wrapper = fn() {
+                    countDown(1);
+                };
+                wrapper();
+            "#,
+            expected: Object::Number(0.),
+        },
+        // define a recursive function inside another function and also
+        // call it inside this other function.
+        VmTestCase {
+            input: r#"
+                let wrapper = fn() {
+                    let countDown = fn(x) {
+                        if (x == 0) {
+                            return 0;
+                        } else {
+                            countDown(x - 1);
+                        }
+                    };
+                    countDown(1);
+                };
+                wrapper();
+            "#,
+            expected: Object::Number(0.),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}

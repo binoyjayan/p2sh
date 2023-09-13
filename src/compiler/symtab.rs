@@ -25,6 +25,7 @@ pub enum SymbolScope {
     Local,
     Builtin,
     Free,
+    Function,
 }
 
 impl fmt::Display for SymbolScope {
@@ -34,6 +35,7 @@ impl fmt::Display for SymbolScope {
             SymbolScope::Local => write!(f, "LOCAL"),
             SymbolScope::Builtin => write!(f, "BUILTIN"),
             SymbolScope::Free => write!(f, "FREE"),
+            SymbolScope::Function => write!(f, "FUNCTION"),
         }
     }
 }
@@ -78,6 +80,12 @@ impl SymbolTable {
         self.store.insert(name.to_string(), Rc::clone(&symbol));
         self.num_definitions += 1;
 
+        symbol
+    }
+
+    pub fn define_function_name(&mut self, name: &str) -> Rc<Symbol> {
+        let symbol = Rc::new(Symbol::new(name, SymbolScope::Function, 0));
+        self.store.insert(name.to_string(), Rc::clone(&symbol));
         symbol
     }
 

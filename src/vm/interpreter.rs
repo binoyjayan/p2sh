@@ -46,7 +46,7 @@ impl VM {
     pub fn new(bytecode: Bytecode) -> VM {
         let data = Rc::new(Object::Nil);
         let fn_main = Rc::new(CompiledFunction::new(bytecode.instructions, 0, 0));
-        let closure_m: Rc<Closure> = Rc::new(Closure::new(fn_main));
+        let closure_m: Rc<Closure> = Rc::new(Closure::new(fn_main, Vec::new()));
         let frame_e = Frame::default();
         let frame_m = Frame::new(closure_m, 0);
         let mut frames = vec![frame_e; MAX_FRAMES];
@@ -330,12 +330,17 @@ impl VM {
                     let const_idx =
                         BigEndian::read_u16(&instructions.code[ip + 1..ip + 3]) as usize;
                     // Decode second operand (number of free varaibles)
-                    let _num_free = instructions.code[ip + 3] as usize;
+                    let num_free = instructions.code[ip + 3] as usize;
                     // push the compiled function as a closure on stack
-                    self.push_closure(const_idx, line)?;
+                    self.push_closure(const_idx, num_free, line)?;
                     self.current_frame().ip += 3;
                 }
-                Opcode::GetFree => {}
+                Opcode::GetFree => {
+                    let free_idx = instructions.code[ip + 1] as usize;
+                    self.current_frame().ip += 1;
+                    let curr_closure = self.current_frame().closure.clone();
+                    self.push(curr_closure.free[free_idx].clone(), line)?;
+                }
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),
@@ -528,10 +533,28 @@ impl VM {
         Ok(())
     }
 
-    fn push_closure(&mut self, const_idx: usize, line: usize) -> Result<(), RTError> {
+    // const_idx: Index of the compiled function in the constant pool
+    // num_free: number of free variables waiting on the stack
+    fn push_closure(
+        &mut self,
+        const_idx: usize,
+        num_free: usize,
+        line: usize,
+    ) -> Result<(), RTError> {
         let constant = self.constants[const_idx].clone();
         if let Object::CompiledFunc(function) = constant {
-            let closure = Rc::new(Closure::new(function));
+            let mut free = Vec::with_capacity(num_free);
+
+            // Take each free variable from stack and copy it to 'free'
+            // copy in the same order they are referenced in GetFree
+            for i in 0..num_free {
+                let idx = self.sp - num_free + i;
+                free.push(self.stack[idx].clone());
+            }
+            // cleanup stack of free variables
+            self.sp -= num_free;
+
+            let closure = Rc::new(Closure::new(function, free));
             self.push(Rc::new(Object::Clos(closure)), line)
         } else {
             Err(RTError::new(

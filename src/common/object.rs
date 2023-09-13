@@ -346,11 +346,8 @@ pub struct Closure {
 }
 
 impl Closure {
-    pub fn new(func: Rc<CompiledFunction>) -> Self {
-        Self {
-            func,
-            free: Vec::new(),
-        }
+    pub fn new(func: Rc<CompiledFunction>, free: Vec<Rc<Object>>) -> Self {
+        Self { func, free }
     }
 }
 

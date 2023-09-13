@@ -859,3 +859,85 @@ fn test_builtin_function_failures() {
 
     run_vm_negative_tests(&tests);
 }
+
+#[test]
+fn test_closures() {
+    let tests: Vec<VmTestCase> = vec![
+        // newClosure returns a closure that closes over a free variable,
+        // the parameter 'a' of newClosure
+        VmTestCase {
+            input: r#"
+                let newClosure = fn(a) {
+                    fn() { a; }
+                }
+                let closure = newClosure(99);
+                closure();
+                "#,
+            expected: Object::Number(99.),
+        },
+        VmTestCase {
+            input: r#"
+                let newAdder = fn(a, b) {
+                    fn(c) { a + b + c; }
+                }
+                let adder = newAdder(1, 2);
+                adder(8);
+                "#,
+            expected: Object::Number(11.),
+        },
+        VmTestCase {
+            input: r#"
+                let newAdder = fn(a, b) {
+                    let c = a + b;
+                    fn(d) { c + d; }
+                }
+                let adder = newAdder(1, 2);
+                adder(8);
+                "#,
+            expected: Object::Number(11.),
+        },
+        VmTestCase {
+            input: r#"
+                let newAdderOuter = fn(a, b) {
+                    let c = a + b;
+                    fn(d) {
+                        let e = d + c;
+                        fn(f) { e + f; };
+                    };
+                };
+                let newAdderInner = newAdderOuter(1, 2);
+                let adder = newAdderInner(3);
+                adder(8);
+                "#,
+            expected: Object::Number(14.),
+        },
+        VmTestCase {
+            input: r#"
+                let a = 1;
+                let newAdderOuter = fn(b) {
+                    fn(c) {
+                        fn(d) { a + b + c + d };
+                    };
+                };
+                let newAdderInner = newAdderOuter(2);
+                let adder = newAdderInner(3);
+                adder(8);
+                "#,
+            expected: Object::Number(14.),
+        },
+        VmTestCase {
+            input: r#"
+                let newClosure = fn(a, b) {
+                    let one = fn() { a; };
+                    let two = fn() { b; };
+                    fn() { one() + two(); };
+                };
+                let closure = newClosure(9, 90);
+                closure();
+                "#,
+            expected: Object::Number(99.),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}

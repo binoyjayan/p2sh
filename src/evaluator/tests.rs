@@ -979,3 +979,33 @@ fn test_hash_index_expressions() {
         }
     }
 }
+
+#[test]
+fn test_recursive_fibonacci() {
+    let input = r#"
+        let fibonacci = fn(x) {
+            if (x == 0) {
+                return 0;
+            } else {
+                if (x == 1) {
+                    return 1;
+                } else {
+                    fibonacci(x - 1) + fibonacci(x - 2);
+                }
+            }
+        };
+        fibonacci(15);
+        "#;
+    let expected = Object::Number(610.);
+
+    let evaluated = test_eval(input);
+    match evaluated {
+        Ok(evaluated) => match expected {
+            Object::Number(expect) => test_numeric_object(evaluated, expect),
+            Object::Nil => test_nil_object(evaluated),
+            Object::Str(s) => test_string_object(evaluated, &s),
+            _ => panic!("Invalid expected object"),
+        },
+        Err(e) => panic!("{}", e),
+    }
+}

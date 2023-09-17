@@ -1,0 +1,22 @@
+let fibonacci = fn(x) {
+    if (x == 0) {
+        return 0;
+    } else {
+        if (x == 1) {
+            return 1;
+        } else {
+            fibonacci(x - 1) + fibonacci(x - 2);
+        }
+    }
+};
+
+let n = 30;
+
+let t1 = time();
+let fib = fibonacci(n);
+let t2 = time();
+let secs = t2 - t1;
+
+puts("fib(" + str(n) + ") = " + str(fib) + " [took " + str(secs) + " secs]");
+
+

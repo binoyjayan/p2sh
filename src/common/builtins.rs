@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::common::object::*;
 use lazy_static::lazy_static;
@@ -13,6 +14,7 @@ lazy_static! {
             BuiltinFunction::new("rest".into(), builtin_rest),
             BuiltinFunction::new("push".into(), builtin_push),
             BuiltinFunction::new("str".into(), builtin_str),
+            BuiltinFunction::new("time".into(), builtin_time),
         ]
     };
 }
@@ -134,4 +136,16 @@ fn builtin_str(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         return Err(String::from("argument to 'str' not supported"));
     }
     Ok(Rc::new(Object::Str(obj.to_string())))
+}
+
+fn builtin_time(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 0 {
+        return Err(String::from("'time' takes no argument(s)"));
+    }
+    let current_time = SystemTime::now();
+    let duration = current_time
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    let seconds = duration.as_secs();
+    Ok(Rc::new(Object::Number(seconds as f64)))
 }

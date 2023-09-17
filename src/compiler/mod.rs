@@ -105,10 +105,41 @@ impl Compiler {
     }
 
     pub fn bytecode(&self) -> Bytecode {
-        Bytecode {
-            instructions: self.get_curr_instructions(),
-            constants: self.constants.clone(),
+        let instructions = self.get_curr_instructions();
+        let constants = self.constants.clone();
+        #[cfg(feature = "debug_print_code")]
+        {
+            instructions.disassemble();
+            self.print_constants();
         }
+        Bytecode {
+            instructions,
+            constants,
+        }
+    }
+
+    #[allow(dead_code)]
+    fn print_constants(&self) {
+        let constants = self.constants.clone();
+        println!(
+            "----------- Constants [len: {:<4} ---------------------",
+            constants.len(),
+        );
+
+        for (i, obj) in constants.iter().enumerate() {
+            println!("[{}] {}", i, obj);
+            match obj {
+                Object::Clos(cl) => {
+                    let closure = cl.clone();
+                    closure.func.instructions.disassemble();
+                }
+                Object::CompiledFunc(func) => {
+                    func.instructions.disassemble();
+                }
+                _ => {}
+            }
+        }
+        println!("------------------------------------------------------");
     }
 
     // Helper to add a constant to the constants pool
@@ -217,28 +248,15 @@ impl Compiler {
     }
 
     fn compile_block_statement(&mut self, stmt: BlockStatement) -> Result<(), CompileError> {
-        self.compile_statements_nounwrap(stmt.statements)
+        for stmt in stmt.statements {
+            self.compile_statement(stmt)?;
+        }
+        Ok(())
     }
 
     fn compile_statements(&mut self, statements: Vec<Statement>) -> Result<(), CompileError> {
-        self.compile_statements_nounwrap(statements)
-        // if let Object::Return(retval) = result {
-        //     return Ok(*retval);
-        // }
-        // Ok(result)
-    }
-
-    fn compile_statements_nounwrap(
-        &mut self,
-        statements: Vec<Statement>,
-    ) -> Result<(), CompileError> {
-        // let mut result = Object::Nil;
         for stmt in statements {
-            // let result =
             self.compile_statement(stmt)?;
-            // if let Object::Return(_) = result {
-            //     return Ok(result);
-            // }
         }
         Ok(())
     }

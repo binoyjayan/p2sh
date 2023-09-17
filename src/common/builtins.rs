@@ -139,7 +139,7 @@ fn builtin_str(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 }
 
 fn builtin_time(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
-    if args.len() != 0 {
+    if !args.is_empty() {
         return Err(String::from("'time' takes no argument(s)"));
     }
     let current_time = SystemTime::now();

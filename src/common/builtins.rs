@@ -12,6 +12,7 @@ lazy_static! {
             BuiltinFunction::new("last".into(), builtin_last),
             BuiltinFunction::new("rest".into(), builtin_rest),
             BuiltinFunction::new("push".into(), builtin_push),
+            BuiltinFunction::new("str".into(), builtin_str),
         ]
     };
 }
@@ -113,4 +114,24 @@ fn builtin_push(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         }
         _ => Err(String::from("argument to 'push' not supported")),
     }
+}
+
+fn builtin_str(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(String::from("'str' requires one argument"));
+    }
+
+    let obj = args[0].as_ref();
+    if !matches!(
+        obj,
+        Object::Nil
+            | Object::Str(_)
+            | Object::Number(_)
+            | Object::Bool(_)
+            | Object::Arr(_)
+            | Object::Map(_)
+    ) {
+        return Err(String::from("argument to 'str' not supported"));
+    }
+    Ok(Rc::new(Object::Str(obj.to_string())))
 }

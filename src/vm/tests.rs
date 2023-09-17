@@ -828,6 +828,40 @@ fn test_builtin_functions() {
             "#,
             expected: Object::Number(2.0),
         },
+        VmTestCase {
+            // rest([]) is Nil
+            input: "str(rest([]))",
+            expected: Object::Str(String::from("nil")),
+        },
+        VmTestCase {
+            input: r#"str("hello")"#,
+            expected: Object::Str(String::from("hello")),
+        },
+        VmTestCase {
+            input: "str(999)",
+            expected: Object::Str(String::from("999")),
+        },
+        VmTestCase {
+            input: "str(str(999))",
+            expected: Object::Str(String::from("999")),
+        },
+        VmTestCase {
+            input: "str(true)",
+            expected: Object::Str(String::from("true")),
+        },
+        VmTestCase {
+            input: "str([1, 2, 3333, 4, 5])",
+            expected: Object::Str(String::from("[1, 2, 3333, 4, 5]")),
+        },
+        VmTestCase {
+            // maps are unordered so use only a single item
+            input: r#"str({"a": 1})"#,
+            expected: Object::Str(String::from(r#"{"a": 1}"#)),
+        },
+        VmTestCase {
+            input: "str({})",
+            expected: Object::Str(String::from("{}")),
+        },
     ];
     run_vm_tests(&tests);
 }
@@ -854,6 +888,10 @@ fn test_builtin_function_failures() {
         VmTestCaseErr {
             input: r#"push(1, 1)"#,
             expected: "argument to 'push' not supported",
+        },
+        VmTestCaseErr {
+            input: "str(fn() {})",
+            expected: "argument to 'str' not supported",
         },
     ];
 

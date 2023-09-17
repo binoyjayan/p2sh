@@ -1,8 +1,10 @@
 use lazy_static::lazy_static;
 use std::cell::RefCell;
 use std::env;
+use std::fs;
 use std::io;
 use std::io::{BufRead, Write};
+use std::process;
 use std::rc::Rc;
 
 use common::builtins::BUILTINS;
@@ -44,11 +46,19 @@ fn main() {
             PKG_DESC, PKG_VERSION
         );
     }
-    println!("Ctrl+D to quit");
-    run_prompt();
+    let args: Vec<String> = env::args().collect();
+    match args.len() {
+        1 => run_prompt(),
+        2 => run_file(&args[1]),
+        _ => {
+            println!("Usage: {} <script>", &args[0]);
+            process::exit(64);
+        }
+    }
 }
 
 pub fn run_prompt() {
+    println!("Ctrl+D to quit");
     // Define globals outside REPL loop so the environment is retained
     let stdin = io::stdin();
     let environment = Rc::new(RefCell::new(Environment::default()));
@@ -110,6 +120,58 @@ pub fn run_prompt() {
         io::stdout().flush().unwrap();
     }
     println!("\nExiting...");
+}
+
+pub fn run_file(path: &str) {
+    let buf = fs::read_to_string(path);
+    if buf.is_err() {
+        eprintln!("Failed to read file {}", path);
+        return;
+    }
+    let buf = buf.unwrap();
+    let environment = Rc::new(RefCell::new(Environment::default()));
+    let mut evaluator = Evaluator::new();
+    let constants = vec![];
+    let mut symtab = SymbolTable::default();
+    for (i, sym) in BUILTINS.iter().enumerate() {
+        // Define the built-in function via an index into the 'BUILTINS' array
+        symtab.define_builtin(i, &sym.name);
+    }
+    let data = Rc::new(Object::Nil);
+    let globals = vec![data; GLOBALS_SIZE];
+
+    if !buf.trim().is_empty() {
+        let program = match parse_program(&buf) {
+            Some(program) => program,
+            None => return,
+        };
+        if *AST_EVAL {
+            let evaluated = evaluator.eval_program(&environment, program);
+            match evaluated {
+                Ok(obj) => {
+                    if !obj.is_nil() {
+                        println!("{}", obj);
+                    }
+                }
+                Err(err) => {
+                    eprintln!("{}", err);
+                }
+            }
+        } else {
+            let mut compiler = Compiler::new_with_state(symtab, constants);
+
+            if let Err(e) = compiler.compile(program) {
+                eprintln!("Compilation error: {}", e);
+                return;
+            }
+            let bytecode = compiler.bytecode();
+            let mut vm = VM::new_with_global_store(bytecode, globals);
+            let err = vm.run();
+            if let Err(err) = err {
+                eprintln!("vm error: {}", err);
+            }
+        }
+    }
 }
 
 fn parse_program(source: &str) -> Option<Program> {

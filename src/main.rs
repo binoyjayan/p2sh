@@ -37,7 +37,7 @@ lazy_static! {
     };
 }
 
-fn main() {
+fn print_version() {
     if *AST_EVAL {
         println!("{} v{} [AST Evaluator]", PKG_DESC, PKG_VERSION);
     } else {
@@ -46,6 +46,9 @@ fn main() {
             PKG_DESC, PKG_VERSION
         );
     }
+}
+
+fn main() {
     let args: Vec<String> = env::args().collect();
     match args.len() {
         1 => run_prompt(),
@@ -58,6 +61,7 @@ fn main() {
 }
 
 pub fn run_prompt() {
+    print_version();
     println!("Ctrl+D to quit");
     // Define globals outside REPL loop so the environment is retained
     let stdin = io::stdin();

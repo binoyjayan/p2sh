@@ -31,7 +31,7 @@ fn parse_program(input: &str) -> Program {
 }
 
 #[cfg(test)]
-pub fn test_constants(expected: &Vec<Object>, actual: &Vec<Object>) {
+pub fn test_constants(expected: &Vec<Object>, actual: &Vec<Rc<Object>>) {
     assert_eq!(
         actual.len(),
         expected.len(),
@@ -43,7 +43,7 @@ pub fn test_constants(expected: &Vec<Object>, actual: &Vec<Object>) {
         match exp {
             Object::Bool(e) => test_boolean_object(got.clone(), e.clone()),
             Object::Number(e) => test_numeric_object(got.clone(), e.clone()),
-            Object::Str(s) => test_string_object(&got.clone(), &s.clone()),
+            Object::Str(s) => test_string_object(got, &s.clone()),
             Object::CompiledFunc(func) => test_function_object(&got.clone(), &func),
             _ => {}
         }
@@ -51,8 +51,8 @@ pub fn test_constants(expected: &Vec<Object>, actual: &Vec<Object>) {
 }
 
 #[cfg(test)]
-fn test_boolean_object(actual: Object, exp: bool) {
-    if let Object::Bool(act) = actual.clone() {
+fn test_boolean_object(actual: Rc<Object>, exp: bool) {
+    if let Object::Bool(act) = *actual.clone() {
         assert_eq!(
             act, exp,
             "object has wrong value. got={}, want={}",
@@ -64,8 +64,8 @@ fn test_boolean_object(actual: Object, exp: bool) {
 }
 
 #[cfg(test)]
-fn test_numeric_object(actual: Object, exp: f64) {
-    if let Object::Number(act) = actual.clone() {
+fn test_numeric_object(actual: Rc<Object>, exp: f64) {
+    if let Object::Number(act) = *actual.clone() {
         assert_eq!(
             act, exp,
             "object has wrong value. got={}, want={}",

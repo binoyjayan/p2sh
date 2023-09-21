@@ -26,7 +26,7 @@ pub const GLOBALS_SIZE: usize = 65536;
  * is assumed to be '0' when stack is empt and stack_top() would return Nil.
  */
 pub struct VM {
-    constants: Vec<Object>,
+    constants: Vec<Rc<Object>>,
     stack: Vec<Rc<Object>>,
     sp: usize,
     pub globals: Vec<Rc<Object>>,
@@ -163,7 +163,7 @@ impl VM {
                     let constant = self.constants.get(const_index).ok_or_else(|| {
                         RTError::new(&format!("constant not found [idx: {}]", const_index), line)
                     })?;
-                    self.push(Rc::new(constant.clone()), line)?;
+                    self.push(constant.clone(), line)?;
                     // skip over the two bytes of the operand in the next cycle
                     self.current_frame().ip += 2;
                 }
@@ -547,7 +547,7 @@ impl VM {
         line: usize,
     ) -> Result<(), RTError> {
         let constant = self.constants[const_idx].clone();
-        if let Object::CompiledFunc(function) = constant {
+        if let Object::CompiledFunc(function) = constant.as_ref() {
             let mut free = Vec::with_capacity(num_free);
 
             // Take each free variable from stack and copy it to 'free'
@@ -559,7 +559,7 @@ impl VM {
             // cleanup stack of free variables
             self.sp -= num_free;
 
-            let closure = Rc::new(Closure::new(function, free));
+            let closure = Rc::new(Closure::new(function.clone(), free));
             self.push(Rc::new(Object::Clos(closure)), line)
         } else {
             Err(RTError::new(

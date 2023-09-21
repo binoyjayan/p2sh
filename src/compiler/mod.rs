@@ -20,7 +20,7 @@ pub mod tests;
 
 pub struct Bytecode {
     pub instructions: Instructions,
-    pub constants: Vec<Object>,
+    pub constants: Vec<Rc<Object>>,
 }
 
 #[derive(Default, Clone)]
@@ -45,7 +45,7 @@ struct CompilationScope {
 }
 
 pub struct Compiler {
-    pub constants: Vec<Object>,
+    pub constants: Vec<Rc<Object>>,
     pub symtab: SymbolTable,
     scopes: Vec<CompilationScope>,
     scope_index: usize,
@@ -73,7 +73,7 @@ impl Compiler {
         }
     }
 
-    pub fn new_with_state(symtab: SymbolTable, constants: Vec<Object>) -> Compiler {
+    pub fn new_with_state(symtab: SymbolTable, constants: Vec<Rc<Object>>) -> Compiler {
         let mut compiler = Self::new();
         compiler.constants = constants;
         compiler.symtab = symtab;
@@ -128,7 +128,7 @@ impl Compiler {
 
         for (i, obj) in constants.iter().enumerate() {
             println!("[{}] {}", i, obj);
-            match obj {
+            match obj.as_ref() {
                 Object::Clos(cl) => {
                     let closure = cl.clone();
                     closure.func.instructions.disassemble();
@@ -144,7 +144,7 @@ impl Compiler {
 
     // Helper to add a constant to the constants pool
     pub fn add_constant(&mut self, obj: Object) -> usize {
-        self.constants.push(obj);
+        self.constants.push(Rc::new(obj));
         self.constants.len() - 1
     }
 

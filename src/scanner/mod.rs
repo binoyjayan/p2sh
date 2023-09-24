@@ -56,7 +56,7 @@ impl Scanner {
     }
 
     // peek_char() does a lookahead in the input for the next character
-    pub fn peek_char(&mut self) -> char {
+    fn peek_char(&mut self) -> char {
         if self.read_position >= self.input.len() {
             '\0'
         } else {
@@ -70,6 +70,8 @@ impl Scanner {
 
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
+        self.skip_comments();
+
         let token = match self.ch {
             '\0' => self.make_token(TokenType::Eof, ""),
             ';' => self.make_token_ch(TokenType::Semicolon),
@@ -96,7 +98,7 @@ impl Scanner {
                 } else if self.ch.is_ascii_digit() {
                     return self.read_number();
                 }
-                self.make_token(TokenType::Illegal, "")
+                self.make_token(TokenType::Illegal, &self.ch.to_string())
             }
         };
         self.read_char();
@@ -186,6 +188,23 @@ impl Scanner {
                 _ => {
                     return;
                 }
+            }
+        }
+    }
+
+    // skip single line comments
+    fn skip_comments(&mut self) {
+        loop {
+            if self.ch == '/' && self.peek_char() == '/' {
+                loop {
+                    self.read_char();
+                    if self.ch == '\n' || self.ch == '\0' {
+                        break;
+                    }
+                }
+                self.skip_whitespace();
+            } else {
+                break;
             }
         }
     }

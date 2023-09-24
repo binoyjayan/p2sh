@@ -227,13 +227,13 @@ impl Parser {
             }
             left_expr
         } else {
-            self.no_prefix_parse_error(self.current.ttype);
+            self.no_prefix_parse_error();
             Expression::Nil
         }
     }
 
-    fn no_prefix_parse_error(&mut self, ttype: TokenType) {
-        let msg = format!("no prefix parser is available for token type '{}'", ttype);
+    fn no_prefix_parse_error(&mut self) {
+        let msg = format!("no prefix parser is available for token type '{}'", self.current);
         self.push_error(&msg);
     }
 

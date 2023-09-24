@@ -786,10 +786,6 @@ fn test_builtin_functions() {
             expected: Object::Number(0.),
         },
         VmTestCase {
-            input: r#"puts("hello", "world!")"#,
-            expected: Object::Nil,
-        },
-        VmTestCase {
             input: r#"first([1, 2, 3])"#,
             expected: Object::Number(1.0),
         },
@@ -861,6 +857,46 @@ fn test_builtin_functions() {
         VmTestCase {
             input: "str({})",
             expected: Object::Str(String::from("{}")),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_builtin_functions_display() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"puts("hello", "world!")"#,
+            expected: Object::Nil,
+        },
+        VmTestCase {
+            input: r#"print("Hello, World!")"#,
+            expected: Object::Number(13.0),
+        },
+        VmTestCase {
+            input: r#"println("Hello, World!")"#,
+            expected: Object::Number(14.0),
+        },
+        VmTestCase {
+            input: r#"
+                format("{0:<10},{1:0<05},{2},{3:b},{3:o},{4:x},{4:X}",
+                "Hello", 1, true, 10, 65535
+            )"#,
+            expected: Object::Str("Hello     ,1    ,true,1010,12,ffff,FFFF".to_string()),
+        },
+        VmTestCase {
+            input: r#"
+                print("{0:<10},{1:0<05},{2},{3:b},{3:o},{4:x},{4:X}",
+                "Hello", 1, true, 10, 65535
+            )"#,
+            expected: Object::Number(39.0),
+        },
+        VmTestCase {
+            input: r#"
+                println("{0:<10},{1:0<05},{2},{3:b},{3:o},{4:x},{4:X}",
+                "Hello", 1, true, 10, 65535
+            )"#,
+            expected: Object::Number(40.0),
         },
     ];
     run_vm_tests(&tests);

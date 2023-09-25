@@ -214,7 +214,7 @@ pub fn format_buf(args: Vec<Rc<Object>>) -> Result<Collector, String> {
             }
             if in_spec_format && (curr == '<' || curr == '>') {
                 // the specifier is actually a padding one
-                curr_spec_padding = curr_spec_padding.clone();
+                curr_spec_padding = curr_spec_width.clone();
                 curr_spec_width = String::new();
                 idx_fmt += 1;
                 curr_spec_just = if curr == '<' {

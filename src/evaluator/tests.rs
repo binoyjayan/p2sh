@@ -742,11 +742,11 @@ fn test_builtin_functions() {
     let error_tests = vec![
         ErrorTest {
             input: "len(1)",
-            expected: RTError::new("argument to 'len' not supported", 1),
+            expected: RTError::new("len: unsupported argument", 1),
         },
         ErrorTest {
             input: r#"len("one", "two")"#,
-            expected: RTError::new("wrong number of arguments. got=2, want=1", 1),
+            expected: RTError::new("len: takes one argument. got=2", 1),
         },
     ];
 

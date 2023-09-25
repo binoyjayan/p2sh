@@ -532,7 +532,11 @@ impl VM {
                 self.sp = self.sp - num_args - 1;
                 self.push(obj, line)?;
             }
-            Err(s) => return Err(RTError::new(&s, 1)),
+            Err(s) => {
+                // Prefix error messaage with the function name
+                let msg = format!("{}: {}", builtin.name, s);
+                return Err(RTError::new(&msg, 1));
+            }
         }
         self.current_frame().ip += 2;
         Ok(())

@@ -879,21 +879,21 @@ fn test_builtin_functions_display() {
         },
         VmTestCase {
             input: r#"
-                format("{0:<10},{1:0<05},{2},{3:b},{3:o},{4:x},{4:X}",
+                format("{0:<10},{1:0>5},{2},{3:b},{3:o},{4:x},{4:X}",
                 "Hello", 1, true, 10, 65535
             )"#,
-            expected: Object::Str("Hello     ,1    ,true,1010,12,ffff,FFFF".to_string()),
+            expected: Object::Str("Hello     ,00001,true,1010,12,ffff,FFFF".to_string()),
         },
         VmTestCase {
             input: r#"
-                print("{0:<10},{1:0<05},{2},{3:b},{3:o},{4:x},{4:X}",
+                print("{0:<10},{1:0>5},{2},{3:b},{3:o},{4:x},{4:X}",
                 "Hello", 1, true, 10, 65535
             )"#,
             expected: Object::Number(39.0),
         },
         VmTestCase {
             input: r#"
-                println("{0:<10},{1:0<05},{2},{3:b},{3:o},{4:x},{4:X}",
+                println("{0:<10},{1:0>5},{2},{3:b},{3:o},{4:x},{4:X}",
                 "Hello", 1, true, 10, 65535
             )"#,
             expected: Object::Number(40.0),
@@ -907,27 +907,27 @@ fn test_builtin_function_failures() {
     let tests: Vec<VmTestCaseErr> = vec![
         VmTestCaseErr {
             input: r#"len(1)"#,
-            expected: "argument to 'len' not supported",
+            expected: "len: unsupported argument",
         },
         VmTestCaseErr {
             input: r#"len("one", "two")"#,
-            expected: "wrong number of arguments. got=2, want=1",
+            expected: "len: takes one argument. got=2",
         },
         VmTestCaseErr {
             input: r#"first(1)"#,
-            expected: "argument to 'first' not supported",
+            expected: "first: unsupported argument",
         },
         VmTestCaseErr {
             input: r#"last(1)"#,
-            expected: "argument to 'last' not supported",
+            expected: "last: unsupported argument",
         },
         VmTestCaseErr {
             input: r#"push(1, 1)"#,
-            expected: "argument to 'push' not supported",
+            expected: "push: unsupported argument",
         },
         VmTestCaseErr {
             input: "str(fn() {})",
-            expected: "argument to 'str' not supported",
+            expected: "str: unsupported argument",
         },
     ];
 

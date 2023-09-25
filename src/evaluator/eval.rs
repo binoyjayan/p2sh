@@ -333,7 +333,11 @@ impl Evaluator {
         // Invoke function
         match builtin_func(args) {
             Ok(obj) => Ok(obj),
-            Err(s) => Err(RTError::new(&s, 1)),
+            Err(s) => {
+                // Prefix error messaage with the function name
+                let msg = format!("{}: {}", func.name, s);
+                Err(RTError::new(&msg, 1))
+            }
         }
     }
 

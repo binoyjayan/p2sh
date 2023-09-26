@@ -135,3 +135,57 @@ fn test_builtin_function_format() {
         panic!("{} format tests failed", count);
     }
 }
+
+#[test]
+fn test_builtin_function_format_failures() {
+    struct FormatTest {
+        args: Vec<Rc<Object>>,
+        expected: &'static str,
+    }
+    let format_tests = vec![
+        FormatTest {
+            args: vec![
+                Rc::new(Object::Number(69420.)),
+                Rc::new(Object::Str("{:b}".to_string())),
+            ],
+            expected: "Expected a string or format specifier",
+        },
+        // Indexed arguments
+        FormatTest {
+            args: vec![
+                Rc::new(Object::Str("{} {} {}".to_string())),
+                Rc::new(Object::Str("Hello".to_string())),
+                Rc::new(Object::Str("World".to_string())),
+            ],
+            expected: "positional arguments exceeded the count",
+        },
+        FormatTest {
+            args: vec![
+                Rc::new(Object::Str("{0} {2} {1}".to_string())),
+                Rc::new(Object::Str("Hello".to_string())),
+                Rc::new(Object::Str("World".to_string())),
+            ],
+            expected: "positional argument index exceeded the count",
+        },
+    ];
+
+    let mut count: usize = 0;
+    for (i, t) in format_tests.iter().enumerate() {
+        let result = builtin_format(t.args.clone());
+        if let Err(msg) = result {
+            if msg != t.expected {
+                eprintln!(
+                    "[{}] Incorrect result. want: {}, got: {}",
+                    i, t.expected, msg
+                );
+                count += 1;
+            }
+        } else {
+            eprintln!("[{}] Test failed: Expected error", i);
+            count += 1;
+        }
+    }
+    if count != 0 {
+        panic!("{} format tests failed", count);
+    }
+}

@@ -233,10 +233,7 @@ impl Parser {
     }
 
     fn no_prefix_parse_error(&mut self) {
-        let msg = format!(
-            "no prefix parser is available for token '{}'",
-            self.current
-        );
+        let msg = format!("no prefix parser is available for token '{}'", self.current);
         self.push_error(&msg);
     }
 

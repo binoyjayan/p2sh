@@ -17,6 +17,6 @@ let fib = fibonacci(n);
 let t2 = time();
 let secs = t2 - t1;
 
-puts("fib(" + str(n) + ") = " + str(fib) + " [took " + str(secs) + " secs]");
+println("fib({}) = {} [took {} secs] ", n, fib, secs);
 
 

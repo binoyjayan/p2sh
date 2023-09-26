@@ -30,4 +30,4 @@ let double = fn(x) { x * 2; };
 let arr = [1, 2, 3, 4, 5];
 let arr_double = map(arr, double);
 let total = sum(arr_double);
-puts("Sum = " + str(total));
+println("Sum = {}", total);

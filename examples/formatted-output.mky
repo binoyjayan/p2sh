@@ -1,0 +1,44 @@
+//
+// Examples adopted from Rust by example: "Formatted Print"
+//
+
+// print newline
+puts();
+
+// print objects
+puts(1, "hello", true, fn(){}, [1,2,3], {});
+
+// In general, the '{}' will be automatically replaced with any
+// arguments. These will be stringified.
+
+println("{} days", 31);
+
+// Positional arguments can be used. Specifying an integer inside `{}`
+// determines which additional argument will be replaced. Arguments start
+// at 0 immediately after the format string.
+println("{0}, this is {1}. {1}, this is {0}", "Alice", "Bob");
+println("My name is {1}, {0} {1}", "James", "Bond");
+
+// Different formatting can be invoked by specifying the format character after a ':'
+println("Base 10               : {}",   69420); // 69420
+println("Base 2 (binary)       : {:b}", 69420); // 10000111100101100
+println("Base 8 (octal)        : {:o}", 69420); // 207454
+println("Base 16 (hexadecimal) : {:x}", 69420); // 10f2c
+println("Base 16 (hexadecimal) : {:X}", 69420); // 10F2C
+
+// Default Justify
+println("Print with width      : {:10} [ Default justify - number ]", 1);
+println("Print with width      : {:10} [ Default justify - string ]", "hello");
+
+// Justify specifiers
+println("Print with width      : {:>10} [ Right justify - number ]", 1);
+println("Print with width      : {:<10} [ Left justify - number ]", 1);
+println("Print with width      : {:>10} [ Right justify - string ]", "hello");
+println("Print with width      : {:<10} [ Left justify - string ]", "hello");
+
+// Justify specifiers, with padding
+println("Print with width      : {:0>10} [ Right justify, padding - number ]", 1);
+println("Print with width      : {:0<10} [ Left justify, padding- number ]", 1);
+println("Print with width      : {:->10} [ Right justify, padding - string ]", "hello");
+println("Print with width      : {:-<10} [ Left justify, padding - string ]", "hello");
+

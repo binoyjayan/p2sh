@@ -115,9 +115,9 @@ impl Evaluator {
             Expression::Function(expr) => Ok(self.eval_function_expr(env, expr)),
             Expression::Ident(expr) => self.eval_identifier_expr(env, &expr.token),
             Expression::Call(expr) => Ok(self.eval_call_expr(env, expr)?),
-            Expression::Array(arr) => Ok(Rc::new(Object::Arr(Array {
+            Expression::Array(arr) => Ok(Rc::new(Object::Arr(Rc::new(Array {
                 elements: self.eval_expressions(env, (*arr.elements).to_vec())?,
-            }))),
+            })))),
             Expression::Hash(expr) => Ok(self.eval_hash_literal(env, expr)?),
             Expression::Index(expr) => Ok(self.eval_index_expr(env, expr)?),
             _ => Ok(Rc::new(Object::Nil)),
@@ -256,7 +256,7 @@ impl Evaluator {
         if let Some(obj) = environment.borrow().get(&token.literal.clone()) {
             Ok(obj)
         } else if let Some(obj) = BUILTINS.iter().find(|b| b.name == token.literal.clone()) {
-            Ok(Rc::new(Object::Builtin(obj.clone())))
+            Ok(Rc::new(Object::Builtin(Box::new(obj.clone()))))
         } else {
             Err(RTError::new(
                 &format!("Undefined identifier: '{}'", token.literal),
@@ -271,11 +271,11 @@ impl Evaluator {
         environment: &Rc<RefCell<Environment>>,
         func: FunctionLiteral,
     ) -> Rc<Object> {
-        Rc::new(Object::Func(Function {
+        Rc::new(Object::Func(Rc::new(Function {
             params: func.params,
             body: func.body,
             env: environment.clone(),
-        }))
+        })))
     }
 
     // Evaluate call expression (e.g. function calls)
@@ -402,7 +402,7 @@ impl Evaluator {
             .collect();
 
         match pairs {
-            Ok(pairs) => Ok(Rc::new(Object::Map(HMap { pairs }))),
+            Ok(pairs) => Ok(Rc::new(Object::Map(Rc::new(HMap { pairs })))),
             Err(e) => Err(e),
         }
     }

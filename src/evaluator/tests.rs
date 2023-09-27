@@ -688,15 +688,15 @@ fn test_builtin_functions() {
         },
         BuiltinTest {
             input: "rest([1, 2, 3])",
-            expected: Object::Arr(Array {
+            expected: Object::Arr(Rc::new(Array {
                 elements: vec![Rc::new(Object::Number(2.)), Rc::new(Object::Number(3.))],
-            }),
+            })),
         },
         BuiltinTest {
             input: "let a = [1, 2, 3, 4]; rest(rest(rest(a)))",
-            expected: Object::Arr(Array {
+            expected: Object::Arr(Rc::new(Array {
                 elements: vec![Rc::new(Object::Number(4.))],
-            }),
+            })),
         },
         BuiltinTest {
             input: r#"puts("Hello")"#,

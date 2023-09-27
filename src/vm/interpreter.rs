@@ -249,7 +249,7 @@ impl VM {
                     // pop 'num_elements' off the stack
                     self.sp -= num_elements;
                     // Push the array back onto the stack as an object
-                    self.push(Rc::new(Object::Arr(Array { elements })), line)?;
+                    self.push(Rc::new(Object::Arr(Rc::new(Array { elements }))), line)?;
                     // skip over the two bytes of the operand in the next cycle
                     self.current_frame().ip += 2;
                 }
@@ -261,7 +261,7 @@ impl VM {
                     // pop 'num_elements' off the stack
                     self.sp -= num_elements;
                     // Push the array back onto the stack as an object
-                    self.push(Rc::new(Object::Map(HMap { pairs })), line)?;
+                    self.push(Rc::new(Object::Map(Rc::new(HMap { pairs }))), line)?;
                     // skip over the two bytes of the operand in the next cycle
                     self.current_frame().ip += 2;
                 }
@@ -322,7 +322,7 @@ impl VM {
                     self.current_frame().ip += 1;
                     if let Some(bt) = BUILTINS.get(builtin_index) {
                         // let builtin_func = bt.func;
-                        self.push(Rc::new(Object::Builtin(bt.clone())), line)?;
+                        self.push(Rc::new(Object::Builtin(Box::new(bt.clone()))), line)?;
                     }
                 }
                 Opcode::Closure => {

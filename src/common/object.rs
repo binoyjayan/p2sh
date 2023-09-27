@@ -11,7 +11,7 @@ use crate::common::environment::Environment;
 use crate::parser::ast::expr::*;
 use crate::parser::ast::stmt::*;
 
-// TODO: Check if Rc is needed for individual objects for performance
+// TODO: Wrap BuiltinFunction in an Rc
 #[derive(Debug)]
 pub enum Object {
     Nil,
@@ -19,11 +19,11 @@ pub enum Object {
     Number(f64),
     Bool(bool),
     Return(Rc<Object>),
-    Func(Function),
-    Builtin(BuiltinFunction),
+    Func(Rc<Function>),
+    Builtin(Box<BuiltinFunction>),
     CompiledFunc(Rc<CompiledFunction>),
-    Arr(Array),
-    Map(HMap),
+    Arr(Rc<Array>),
+    Map(Rc<HMap>),
     Clos(Rc<Closure>),
 }
 

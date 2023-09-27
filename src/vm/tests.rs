@@ -413,29 +413,29 @@ fn test_array_literals() {
     let tests = vec![
         VmTestCase {
             input: "[]",
-            expected: Object::Arr(Array {
+            expected: Object::Arr(Rc::new(Array {
                 elements: Vec::new(),
-            }),
+            })),
         },
         VmTestCase {
             input: "[1, 2, 3]",
-            expected: Object::Arr(Array {
+            expected: Object::Arr(Rc::new(Array {
                 elements: vec![
                     Rc::new(Object::Number(1.0)),
                     Rc::new(Object::Number(2.0)),
                     Rc::new(Object::Number(3.0)),
                 ],
-            }),
+            })),
         },
         VmTestCase {
             input: "[1 + 2, 3 * 4, 5 + 6]",
-            expected: Object::Arr(Array {
+            expected: Object::Arr(Rc::new(Array {
                 elements: vec![
                     Rc::new(Object::Number(3.0)),
                     Rc::new(Object::Number(12.0)),
                     Rc::new(Object::Number(11.0)),
                 ],
-            }),
+            })),
         },
     ];
     run_vm_tests(&tests);
@@ -446,7 +446,7 @@ fn test_hash_literals() {
     let tests = vec![
         VmTestCase {
             input: "{}",
-            expected: Object::Map(HMap::default()),
+            expected: Object::Map(Rc::new(HMap::default())),
         },
         VmTestCase {
             input: "{1: 2, 2: 3}",
@@ -460,7 +460,7 @@ fn test_hash_literals() {
                     Rc::new(Object::Number(2.into())),
                     Rc::new(Object::Number(3.into())),
                 );
-                map
+                Rc::new(map)
             }),
         },
         VmTestCase {
@@ -475,7 +475,7 @@ fn test_hash_literals() {
                     Rc::new(Object::Number(6.into())),
                     Rc::new(Object::Number(16.into())),
                 );
-                map
+                Rc::new(map)
             }),
         },
     ];
@@ -803,9 +803,9 @@ fn test_builtin_functions() {
         },
         VmTestCase {
             input: r#"rest([1, 2, 3])"#,
-            expected: Object::Arr(Array {
+            expected: Object::Arr(Rc::new(Array {
                 elements: vec![Rc::new(Object::Number(2.0)), Rc::new(Object::Number(3.0))],
-            }),
+            })),
         },
         VmTestCase {
             input: r#"rest([])"#,
@@ -813,9 +813,9 @@ fn test_builtin_functions() {
         },
         VmTestCase {
             input: r#"push([], 1)"#,
-            expected: Object::Arr(Array {
+            expected: Object::Arr(Rc::new(Array {
                 elements: vec![Rc::new(Object::Number(1.0))],
-            }),
+            })),
         },
         VmTestCase {
             input: r#"

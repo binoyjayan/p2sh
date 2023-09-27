@@ -104,9 +104,9 @@ fn builtin_rest(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             if a.elements.is_empty() {
                 Ok(Rc::new(Object::Nil))
             } else {
-                Ok(Rc::new(Object::Arr(Array {
+                Ok(Rc::new(Object::Arr(Rc::new(Array {
                     elements: a.elements[1..].to_vec(),
-                })))
+                }))))
             }
         }
         _ => Err(String::from("unsupported argument")),
@@ -120,7 +120,9 @@ fn builtin_push(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     match args[0].as_ref() {
         Object::Arr(a) => {
             let mut new_array = a.clone();
-            new_array.elements.push(args[1].clone());
+            // Use interior mutability of the Array
+            let new_array_mut = Rc::make_mut(&mut new_array);
+            new_array_mut.elements.push(args[1].clone());
             Ok(Rc::new(Object::Arr(new_array)))
         }
         _ => Err(String::from("unsupported argument")),

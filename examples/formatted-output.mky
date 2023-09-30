@@ -2,11 +2,11 @@
 // Examples adopted from Rust by example: "Formatted Print"
 //
 
+// print objects
+puts(1, " ", "hello", " ", true, " ", fn(){}, " ", [1,2,3], " ", {});
+
 // print newline
 puts();
-
-// print objects
-puts(1, "hello", true, fn(){}, [1,2,3], {});
 
 // In general, the '{}' will be automatically replaced with any
 // arguments. These will be stringified.

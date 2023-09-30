@@ -95,12 +95,6 @@ pub fn run_file(path: &str) {
         return;
     }
     let buf = buf.unwrap();
-    let constants = vec![];
-    let mut symtab = SymbolTable::default();
-    for (i, sym) in BUILTINS.iter().enumerate() {
-        // Define the built-in function via an index into the 'BUILTINS' array
-        symtab.define_builtin(i, &sym.name);
-    }
     let data = Rc::new(Object::Nil);
     let globals = vec![data; GLOBALS_SIZE];
 
@@ -110,8 +104,7 @@ pub fn run_file(path: &str) {
             None => return,
         };
 
-        let mut compiler = Compiler::new_with_state(symtab, constants);
-
+        let mut compiler = Compiler::new();
         if let Err(e) = compiler.compile(program) {
             eprintln!("Compilation error: {}", e);
             return;

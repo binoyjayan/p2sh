@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
@@ -7,9 +6,6 @@ use std::ops;
 use std::rc::Rc;
 
 use crate::code::definitions::Instructions;
-use crate::common::environment::Environment;
-use crate::parser::ast::expr::*;
-use crate::parser::ast::stmt::*;
 
 // TODO: Wrap BuiltinFunction in an Rc
 #[derive(Debug)]
@@ -19,9 +15,8 @@ pub enum Object {
     Number(f64),
     Bool(bool),
     Return(Rc<Object>),
-    Func(Rc<Function>),
     Builtin(Box<BuiltinFunction>),
-    CompiledFunc(Rc<CompiledFunction>),
+    Func(Rc<CompiledFunction>),
     Arr(Rc<Array>),
     Map(Rc<HMap>),
     Clos(Rc<Closure>),
@@ -37,7 +32,7 @@ impl PartialEq for Object {
             (Object::Arr(a), Object::Arr(b)) => a.eq(b),
             (Object::Map(a), Object::Map(b)) => a.eq(b),
             (Object::Builtin(a), Object::Builtin(b)) => a.eq(b),
-            (Object::CompiledFunc(a), Object::CompiledFunc(b)) => a.eq(b),
+            (Object::Func(a), Object::Func(b)) => a.eq(b),
             (Object::Clos(a), Object::Clos(b)) => a.eq(b),
             _ => false,
         }
@@ -66,11 +61,10 @@ impl Clone for Object {
             Object::Number(n) => Object::Number(*n),
             Object::Bool(b) => Object::Bool(*b),
             Object::Return(r) => Object::Return(r.clone()),
-            Object::Func(f) => Object::Func(f.clone()),
             Object::Builtin(f) => Object::Builtin(f.clone()),
             Object::Arr(a) => Object::Arr(a.clone()),
             Object::Map(m) => Object::Map(m.clone()),
-            Object::CompiledFunc(f) => Object::CompiledFunc(f.clone()),
+            Object::Func(f) => Object::Func(f.clone()),
             Object::Clos(f) => Object::Clos(f.clone()),
         }
     }
@@ -102,9 +96,8 @@ impl fmt::Display for Object {
             Self::Number(val) => write!(f, "{}", val),
             Self::Bool(val) => write!(f, "{}", val),
             Self::Return(val) => write!(f, "{}", val),
-            Self::Func(val) => write!(f, "{}", val),
             Self::Builtin(val) => write!(f, "{}", val),
-            Self::CompiledFunc(val) => write!(f, "{}", val),
+            Self::Func(val) => write!(f, "{}", val),
             Self::Arr(val) => write!(f, "{}", val),
             Self::Map(val) => write!(f, "{}", val),
             Self::Clos(val) => write!(f, "{}", val),
@@ -174,25 +167,6 @@ impl Hash for Object {
             Object::Str(ref s) => s.hash(state),
             _ => "".hash(state),
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Function {
-    pub params: Vec<Identifier>,
-    pub body: BlockStatement,
-    pub env: Rc<RefCell<Environment>>,
-}
-
-impl fmt::Display for Function {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let params_str = self
-            .params
-            .iter()
-            .map(|p| format!("{}, ", p))
-            .collect::<String>();
-        let params_str = params_str.trim_end_matches(|c| c == ' ' || c == ',');
-        write!(f, "fn({}) {{\n{}\n}}\n", params_str, self.body)
     }
 }
 

@@ -551,7 +551,7 @@ impl VM {
         line: usize,
     ) -> Result<(), RTError> {
         let constant = self.constants[const_idx].clone();
-        if let Object::CompiledFunc(function) = constant.as_ref() {
+        if let Object::Func(function) = constant.as_ref() {
             let mut free = Vec::with_capacity(num_free);
 
             // Take each free variable from stack and copy it to 'free'

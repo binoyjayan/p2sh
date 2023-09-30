@@ -133,7 +133,7 @@ impl Compiler {
                     let closure = cl.clone();
                     closure.func.instructions.disassemble();
                 }
-                Object::CompiledFunc(func) => {
+                Object::Func(func) => {
                     func.instructions.disassemble();
                 }
                 _ => {}
@@ -450,7 +450,7 @@ impl Compiler {
                 for f in &free_symbols {
                     self.load_symbol(f.clone(), func.token.line);
                 }
-                let compiled_fn = Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                let compiled_fn = Object::Func(Rc::new(CompiledFunction::new(
                     instructions,
                     num_locals,
                     num_params,

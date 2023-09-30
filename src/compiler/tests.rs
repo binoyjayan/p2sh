@@ -5,10 +5,8 @@ use std::rc::Rc;
 use super::*;
 use crate::code::definitions;
 use crate::code::opcode::*;
-use crate::common::environment::*;
 use crate::common::error::*;
 use crate::common::object::*;
-use crate::evaluator::Evaluator;
 use crate::parser::*;
 use crate::scanner::*;
 
@@ -44,7 +42,7 @@ pub fn test_constants(expected: &Vec<Object>, actual: &Vec<Rc<Object>>) {
             Object::Bool(e) => test_boolean_object(got.clone(), e.clone()),
             Object::Number(e) => test_numeric_object(got.clone(), e.clone()),
             Object::Str(s) => test_string_object(got, &s.clone()),
-            Object::CompiledFunc(func) => test_function_object(&got.clone(), &func),
+            Object::Func(func) => test_function_object(&got.clone(), &func),
             _ => {}
         }
     }
@@ -91,7 +89,7 @@ fn test_string_object(actual: &Object, expected: &str) {
 
 #[cfg(test)]
 fn test_function_object(actual_obj: &Object, expected: &CompiledFunction) {
-    if let Object::CompiledFunc(actual) = actual_obj {
+    if let Object::Func(actual) = actual_obj {
         test_instructions(
             &vec![(&*expected.instructions).clone()],
             &actual.instructions,
@@ -610,7 +608,7 @@ fn test_functions() {
             expected_constants: vec![
                 Object::Number(5.),
                 Object::Number(10.),
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         definitions::make(Opcode::Constant, &[0], 1),
                         definitions::make(Opcode::Constant, &[1], 1),
@@ -632,7 +630,7 @@ fn test_functions() {
             expected_constants: vec![
                 Object::Number(5.),
                 Object::Number(10.),
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         definitions::make(Opcode::Constant, &[0], 1),
                         definitions::make(Opcode::Constant, &[1], 1),
@@ -654,7 +652,7 @@ fn test_functions() {
             expected_constants: vec![
                 Object::Number(1.),
                 Object::Number(2.),
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         definitions::make(Opcode::Constant, &[0], 1),
                         // Pop the first value
@@ -680,7 +678,7 @@ fn test_functions() {
 fn test_functions_without_return_value() {
     let tests = vec![CompilerTestCase {
         input: "fn() { }",
-        expected_constants: vec![Object::CompiledFunc(Rc::new(CompiledFunction::new(
+        expected_constants: vec![Object::Func(Rc::new(CompiledFunction::new(
             definitions::make(Opcode::Return, &[], 1),
             0,
             0,
@@ -744,7 +742,7 @@ fn test_function_calls() {
             input: "fn() { 24 }()",
             expected_constants: vec![
                 Object::Number(24.),
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         // The literal '24'
                         definitions::make(Opcode::Constant, &[0], 1),
@@ -766,7 +764,7 @@ fn test_function_calls() {
             input: "let noArg = fn() { 24 }; noArg();",
             expected_constants: vec![
                 Object::Number(24.),
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         // The literal '24'
                         definitions::make(Opcode::Constant, &[0], 1),
@@ -791,7 +789,7 @@ fn test_function_calls() {
                 oneArg(24);
             ",
             expected_constants: vec![
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         definitions::make(Opcode::GetLocal, &[0], 1),
                         definitions::make(Opcode::ReturnValue, &[], 1),
@@ -816,7 +814,7 @@ fn test_function_calls() {
                 manyArg(24, 25, 26);
             ",
             expected_constants: vec![
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         // References to the arguments to the function
                         definitions::make(Opcode::GetLocal, &[0], 1),
@@ -856,7 +854,7 @@ fn test_let_statement_scopes() {
             input: "let num = 55; fn() { num }",
             expected_constants: vec![
                 Object::Number(55.),
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         // push the value of global variable 'num'
                         definitions::make(Opcode::GetGlobal, &[0], 1),
@@ -880,7 +878,7 @@ fn test_let_statement_scopes() {
             input: "fn() { let num = 55; num }",
             expected_constants: vec![
                 Object::Number(55.),
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         // constant - number 55
                         definitions::make(Opcode::Constant, &[0], 1),
@@ -911,7 +909,7 @@ fn test_let_statement_scopes() {
             expected_constants: vec![
                 Object::Number(55.),
                 Object::Number(77.),
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         definitions::make(Opcode::Constant, &[0], 1), // 55
                         definitions::make(Opcode::SetLocal, &[0], 1), // 'a'
@@ -960,7 +958,7 @@ fn test_builtins() {
         },
         CompilerTestCase {
             input: "fn() { len([]) }",
-            expected_constants: vec![Object::CompiledFunc(Rc::new(CompiledFunction::new(
+            expected_constants: vec![Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
                     definitions::make(Opcode::GetBuiltin, &[0], 1),
                     definitions::make(Opcode::Array, &[0], 1),
@@ -993,7 +991,7 @@ fn test_closures() {
             ",
 
         expected_constants: vec![
-            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+            Object::Func(Rc::new(CompiledFunction::new(
                 // the real closure
                 concat_instructions(&[
                     // variable 'a' defined in the enclosing scope is a
@@ -1006,7 +1004,7 @@ fn test_closures() {
                 1,
                 0,
             ))),
-            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+            Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
                     definitions::make(Opcode::GetLocal, &[0], 1),
                     // #free-vars is 1 as there is one free variable on the stack
@@ -1049,7 +1047,7 @@ fn test_nested_closures() {
                 }
             ",
         expected_constants: vec![
-            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+            Object::Func(Rc::new(CompiledFunction::new(
                 // This is the defintion of the inner-most function that has
                 // two free variables 'a' and 'b' but defines no closure(s)
                 // within itself (via the OpClosure instruction).
@@ -1064,7 +1062,7 @@ fn test_nested_closures() {
                 1,
                 0,
             ))),
-            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+            Object::Func(Rc::new(CompiledFunction::new(
                 // middle function has one free variable 'a' and defines the
                 // inner-most function as a closure that has two free variables
                 // The number of free variables is passed as the second arg.
@@ -1078,7 +1076,7 @@ fn test_nested_closures() {
                 1,
                 0,
             ))),
-            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+            Object::Func(Rc::new(CompiledFunction::new(
                 // outer-most function has no free variables but compiles
                 // the middle closure that has a single free variable
                 concat_instructions(&[
@@ -1119,7 +1117,7 @@ fn test_closures_with_scopes() {
             Object::Number(66.),
             Object::Number(77.),
             Object::Number(88.),
-            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+            Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
                     definitions::make(Opcode::Constant, &[3], 1),
                     definitions::make(Opcode::SetLocal, &[0], 1),
@@ -1135,7 +1133,7 @@ fn test_closures_with_scopes() {
                 1,
                 0,
             ))),
-            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+            Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
                     definitions::make(Opcode::Constant, &[2], 1),
                     definitions::make(Opcode::SetLocal, &[0], 1),
@@ -1147,7 +1145,7 @@ fn test_closures_with_scopes() {
                 1,
                 0,
             ))),
-            Object::CompiledFunc(Rc::new(CompiledFunction::new(
+            Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
                     definitions::make(Opcode::Constant, &[1], 1),
                     definitions::make(Opcode::SetLocal, &[0], 1),
@@ -1179,7 +1177,7 @@ fn test_recursive_functions() {
         "#,
             expected_constants: vec![
                 Object::Number(1.0),
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         // first load callee, the the args and then the OpCall
                         // Here, the callee is also the current closure
@@ -1214,7 +1212,7 @@ fn test_recursive_functions() {
         "#,
             expected_constants: vec![
                 Object::Number(1.0),
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         definitions::make(Opcode::CurrClosure, &[], 1),
                         definitions::make(Opcode::GetLocal, &[0], 1),
@@ -1227,7 +1225,7 @@ fn test_recursive_functions() {
                     0,
                 ))),
                 Object::Number(1.0),
-                Object::CompiledFunc(Rc::new(CompiledFunction::new(
+                Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         definitions::make(Opcode::Closure, &[1, 0], 1),
                         definitions::make(Opcode::SetLocal, &[0], 1),

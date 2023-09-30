@@ -4,7 +4,6 @@ use std::rc::Rc;
 use super::*;
 use crate::common::object::*;
 use crate::compiler::*;
-use crate::evaluator::*;
 use crate::parser::*;
 use crate::scanner::*;
 use crate::vm::interpreter::VM;

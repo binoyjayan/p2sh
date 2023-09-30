@@ -122,7 +122,7 @@ impl Compiler {
     fn print_constants(&self) {
         let constants = self.constants.clone();
         println!(
-            "----------- Constants [len: {:<4} ---------------------",
+            "----------- Constants [len: {:<4}] --------------------",
             constants.len(),
         );
 

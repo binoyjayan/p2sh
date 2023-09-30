@@ -92,7 +92,10 @@ fn test_string_object(actual: &Object, expected: &str) {
 #[cfg(test)]
 fn test_function_object(actual_obj: &Object, expected: &CompiledFunction) {
     if let Object::CompiledFunc(actual) = actual_obj {
-        test_instructions(&vec![expected.instructions.clone()], &actual.instructions);
+        test_instructions(
+            &vec![(&*expected.instructions).clone()],
+            &actual.instructions,
+        );
     } else {
         panic!("object is not a compiled function. got={:?}", actual_obj);
     }

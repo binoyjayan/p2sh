@@ -302,7 +302,7 @@ impl Eq for HMap {}
 // OpReturn is similar to OpReturnValue except that it returns Nil.
 #[derive(Debug, Clone, Default)]
 pub struct CompiledFunction {
-    pub instructions: Instructions,
+    pub instructions: Rc<Instructions>,
     pub num_locals: usize,
     pub num_params: usize,
 }
@@ -310,7 +310,7 @@ pub struct CompiledFunction {
 impl CompiledFunction {
     pub fn new(instructions: Instructions, num_locals: usize, num_params: usize) -> Self {
         Self {
-            instructions,
+            instructions: Rc::new(instructions),
             num_locals,
             num_params,
         }

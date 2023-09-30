@@ -167,7 +167,7 @@ impl Instructions {
     #[allow(dead_code)]
     pub fn disassemble(&self) {
         println!(
-            "--------- Instructions [len: {:<4} --------------------",
+            "--------- Instructions [len: {:<4}] -------------------",
             self.len(),
         );
         print!("{}", self);

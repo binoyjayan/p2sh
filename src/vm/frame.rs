@@ -15,7 +15,7 @@ impl Frame {
         Frame { closure, ip: 0, bp }
     }
 
-    pub fn instructions(&self) -> &Instructions {
+    pub fn instructions(&self) -> &Rc<Instructions> {
         &self.closure.func.instructions
     }
 }

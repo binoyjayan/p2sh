@@ -47,18 +47,21 @@ fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 fn builtin_puts(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.is_empty() {
         println!();
+        return Ok(Rc::new(Object::Nil));
     }
 
     for obj in args {
         match obj.as_ref() {
             Object::Str(t) => {
-                println!("{}", t);
+                // Avoid quotes around string
+                print!("{}", t);
             }
             o => {
-                println!("{}", o);
+                print!("{}", o);
             }
         }
     }
+    println!();
     // puts returns Nil
     Ok(Rc::new(Object::Nil))
 }

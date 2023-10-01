@@ -4,7 +4,8 @@ use self::symtab::Symbol;
 use self::symtab::SymbolScope;
 use crate::code::definitions::{self, *};
 use crate::code::opcode::Opcode;
-use crate::common::builtins::BUILTINS;
+use crate::common::builtins::functions::BUILTINFNS;
+use crate::common::builtins::variables::BuiltinVarType;
 use crate::common::error::CompileError;
 use crate::common::object::CompiledFunction;
 use crate::common::object::Object;
@@ -55,9 +56,15 @@ impl Compiler {
     pub fn new() -> Compiler {
         let mut symtab = SymbolTable::default();
 
-        for (i, sym) in BUILTINS.iter().enumerate() {
+        for (i, sym) in BUILTINFNS.iter().enumerate() {
             // Define the built-in function via an index into the 'BUILTINS' array
-            symtab.define_builtin(i, &sym.name);
+            symtab.define_builtin_fn(i, sym.name);
+        }
+
+        // Define the built-in variables
+        for n in BuiltinVarType::range() {
+            let name: &str = BuiltinVarType::from(n).into();
+            symtab.define_builtin_var(n, name);
         }
 
         let main_scope = CompilationScope {
@@ -170,7 +177,8 @@ impl Compiler {
         match sym.scope {
             SymbolScope::Global => self.emit(Opcode::GetGlobal, &[sym.index], line),
             SymbolScope::Local => self.emit(Opcode::GetLocal, &[sym.index], line),
-            SymbolScope::Builtin => self.emit(Opcode::GetBuiltin, &[sym.index], line),
+            SymbolScope::BuiltinFn => self.emit(Opcode::GetBuiltinFn, &[sym.index], line),
+            SymbolScope::BuiltinVar => self.emit(Opcode::GetBuiltinVar, &[sym.index], line),
             SymbolScope::Free => self.emit(Opcode::GetFree, &[sym.index], line),
             SymbolScope::Function => self.emit(Opcode::CurrClosure, &[sym.index], line),
         };

@@ -943,12 +943,12 @@ fn test_builtins() {
             "#,
             expected_constants: vec![Object::Number(1.)],
             expected_instructions: vec![
-                definitions::make(Opcode::GetBuiltin, &[0], 1),
+                definitions::make(Opcode::GetBuiltinFn, &[0], 1),
                 definitions::make(Opcode::Array, &[0], 1),
                 // call built-in fn 'len' with one argument
                 definitions::make(Opcode::Call, &[1], 1),
                 definitions::make(Opcode::Pop, &[], 1),
-                definitions::make(Opcode::GetBuiltin, &[5], 1),
+                definitions::make(Opcode::GetBuiltinFn, &[5], 1),
                 definitions::make(Opcode::Array, &[0], 1),
                 definitions::make(Opcode::Constant, &[0], 1),
                 // call built-in fn 'push' with two arguments
@@ -960,8 +960,47 @@ fn test_builtins() {
             input: "fn() { len([]) }",
             expected_constants: vec![Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
-                    definitions::make(Opcode::GetBuiltin, &[0], 1),
+                    definitions::make(Opcode::GetBuiltinFn, &[0], 1),
                     definitions::make(Opcode::Array, &[0], 1),
+                    // call built-in fn 'len' with one argument
+                    definitions::make(Opcode::Call, &[1], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            )))],
+            expected_instructions: vec![
+                definitions::make(Opcode::Closure, &[0, 0], 1), // compiled fn (closure)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                len(argv);
+                push(argv, 1);
+            "#,
+            expected_constants: vec![Object::Number(1.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::GetBuiltinFn, &[0], 1),
+                definitions::make(Opcode::GetBuiltinVar, &[0], 1),
+                // call built-in fn 'len' with one argument
+                definitions::make(Opcode::Call, &[1], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+                // built-in function push
+                definitions::make(Opcode::GetBuiltinFn, &[5], 1),
+                definitions::make(Opcode::GetBuiltinVar, &[0], 1),
+                definitions::make(Opcode::Constant, &[0], 1),
+                // call built-in fn 'push' with two arguments
+                definitions::make(Opcode::Call, &[2], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "fn() { len(argv) }",
+            expected_constants: vec![Object::Func(Rc::new(CompiledFunction::new(
+                concat_instructions(&[
+                    definitions::make(Opcode::GetBuiltinFn, &[0], 1),
+                    definitions::make(Opcode::GetBuiltinVar, &[0], 1),
                     // call built-in fn 'len' with one argument
                     definitions::make(Opcode::Call, &[1], 1),
                     definitions::make(Opcode::ReturnValue, &[], 1),

@@ -2,6 +2,7 @@
 use std::rc::Rc;
 
 use super::*;
+use crate::common::builtins::variables::BuiltinVarType;
 use crate::common::object::*;
 use crate::compiler::*;
 use crate::parser::*;
@@ -110,6 +111,8 @@ fn run_vm_tests(tests: &[VmTestCase]) {
     for (i, t) in tests.iter().enumerate() {
         let bytecode = test_compile(t.input);
         let mut vm = VM::new(bytecode);
+        let arr = Rc::new(Object::Arr(Rc::new(Array::new(Vec::new()))));
+        vm.update_builtin_var(BuiltinVarType::Argv, arr);
         let err = vm.run();
         if let Err(err) = err {
             panic!("Test [{}] vm error: {}", i, err);
@@ -857,6 +860,22 @@ fn test_builtin_functions() {
             input: "str({})",
             expected: Object::Str(String::from("{}")),
         },
+        VmTestCase {
+            input: r#"int("999")"#,
+            expected: Object::Number(999.),
+        },
+        VmTestCase {
+            input: "int(str(999))",
+            expected: Object::Number(999.),
+        },
+        VmTestCase {
+            input: "int(true)",
+            expected: Object::Number(1.),
+        },
+        VmTestCase {
+            input: "int(false)",
+            expected: Object::Number(0.),
+        },
     ];
     run_vm_tests(&tests);
 }
@@ -928,9 +947,35 @@ fn test_builtin_function_failures() {
             input: "str(fn() {})",
             expected: "str: unsupported argument",
         },
+        VmTestCaseErr {
+            input: "int([])",
+            expected: "int: unsupported argument",
+        },
+        VmTestCaseErr {
+            input: "int({})",
+            expected: "int: unsupported argument",
+        },
     ];
 
     run_vm_negative_tests(&tests);
+}
+
+#[test]
+fn test_builtin_variables() {
+    // run_vm_tests passes empty argv to the vm
+    let tests = vec![
+        VmTestCase {
+            input: r#"argv"#,
+            expected: Object::Arr(Rc::new(Array {
+                elements: Vec::new(),
+            })),
+        },
+        VmTestCase {
+            input: r#"len(argv)"#,
+            expected: Object::Number(0.),
+        },
+    ];
+    run_vm_tests(&tests);
 }
 
 #[test]

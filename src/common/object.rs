@@ -7,7 +7,6 @@ use std::rc::Rc;
 
 use crate::code::definitions::Instructions;
 
-// TODO: Wrap BuiltinFunction in an Rc
 #[derive(Debug)]
 pub enum Object {
     Nil,
@@ -15,7 +14,7 @@ pub enum Object {
     Number(f64),
     Bool(bool),
     Return(Rc<Object>),
-    Builtin(Box<BuiltinFunction>),
+    Builtin(Rc<BuiltinFunction>),
     Func(Rc<CompiledFunction>),
     Arr(Rc<Array>),
     Map(Rc<HMap>),
@@ -174,7 +173,8 @@ pub type BuiltinFunctionProto = fn(Vec<Rc<Object>>) -> Result<Rc<Object>, String
 
 #[derive(Debug, Clone)]
 pub struct BuiltinFunction {
-    pub name: String,
+    // pub name: String,
+    pub name: &'static str,
     pub func: BuiltinFunctionProto,
 }
 
@@ -185,7 +185,7 @@ impl fmt::Display for BuiltinFunction {
 }
 
 impl BuiltinFunction {
-    pub fn new(name: String, func: BuiltinFunctionProto) -> BuiltinFunction {
+    pub const fn new(name: &'static str, func: BuiltinFunctionProto) -> BuiltinFunction {
         BuiltinFunction { name, func }
     }
 }
@@ -199,6 +199,12 @@ impl PartialEq for BuiltinFunction {
 #[derive(Debug, Clone)]
 pub struct Array {
     pub elements: Vec<Rc<Object>>,
+}
+
+impl Array {
+    pub fn new(elements: Vec<Rc<Object>>) -> Self {
+        Self { elements }
+    }
 }
 
 #[derive(Debug, Clone, Default)]

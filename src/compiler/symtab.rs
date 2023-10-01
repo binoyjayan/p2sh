@@ -23,7 +23,8 @@ impl Symbol {
 pub enum SymbolScope {
     Global,
     Local,
-    Builtin,
+    BuiltinFn,
+    BuiltinVar,
     Free,
     Function,
 }
@@ -33,7 +34,8 @@ impl fmt::Display for SymbolScope {
         match self {
             SymbolScope::Global => write!(f, "GLOBAL"),
             SymbolScope::Local => write!(f, "LOCAL"),
-            SymbolScope::Builtin => write!(f, "BUILTIN"),
+            SymbolScope::BuiltinFn => write!(f, "BUILTINFN"),
+            SymbolScope::BuiltinVar => write!(f, "BUILTINVAR"),
             SymbolScope::Free => write!(f, "FREE"),
             SymbolScope::Function => write!(f, "FUNCTION"),
         }
@@ -95,7 +97,10 @@ impl SymbolTable {
             return Some(Rc::clone(&symbol_ref));
         } else if let Some(outer) = &mut self.outer {
             if let Some(obj) = outer.resolve(name) {
-                if matches!(obj.scope, SymbolScope::Global | SymbolScope::Builtin) {
+                if matches!(
+                    obj.scope,
+                    SymbolScope::Global | SymbolScope::BuiltinFn | SymbolScope::BuiltinVar
+                ) {
                     return Some(obj);
                 } else {
                     return Some(self.define_free(obj));
@@ -105,8 +110,14 @@ impl SymbolTable {
         None
     }
 
-    pub fn define_builtin(&mut self, index: usize, name: &str) -> Rc<Symbol> {
-        let symbol = Rc::new(Symbol::new(name, SymbolScope::Builtin, index));
+    pub fn define_builtin_fn(&mut self, index: usize, name: &str) -> Rc<Symbol> {
+        let symbol = Rc::new(Symbol::new(name, SymbolScope::BuiltinFn, index));
+        self.store.insert(name.to_string(), Rc::clone(&symbol));
+        symbol
+    }
+
+    pub fn define_builtin_var(&mut self, index: usize, name: &str) -> Rc<Symbol> {
+        let symbol = Rc::new(Symbol::new(name, SymbolScope::BuiltinVar, index));
         self.store.insert(name.to_string(), Rc::clone(&symbol));
         symbol
     }

@@ -49,7 +49,8 @@ lazy_static! {
         map.insert(Opcode::Return, Definition::new("OpReturn", &[]));
         map.insert(Opcode::GetLocal, Definition::new("OpGetLocal", &[1]));
         map.insert(Opcode::SetLocal, Definition::new("OpSetLocal", &[1]));
-        map.insert(Opcode::GetBuiltin, Definition::new("OpGetBuiltin", &[1]));
+        map.insert(Opcode::GetBuiltinFn, Definition::new("OpGetBuiltinFn", &[1]));
+        map.insert(Opcode::GetBuiltinVar, Definition::new("OpGetBuiltinVar", &[1]));
         // 'OpClosure' has two operands - a 2-byte constant index and #free-variables
         map.insert(Opcode::Closure, Definition::new("OpClosure", &[2, 1]));
         map.insert(Opcode::GetFree, Definition::new("OpGetFree", &[1]));

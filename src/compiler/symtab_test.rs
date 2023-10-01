@@ -141,15 +141,15 @@ fn test_resolve_nested_local() {
 #[test]
 fn test_define_resolve_builtins() {
     let expected = vec![
-        Symbol::new("a", SymbolScope::Builtin, 0),
-        Symbol::new("c", SymbolScope::Builtin, 1),
-        Symbol::new("e", SymbolScope::Builtin, 2),
-        Symbol::new("f", SymbolScope::Builtin, 3),
+        Symbol::new("a", SymbolScope::BuiltinFn, 0),
+        Symbol::new("c", SymbolScope::BuiltinFn, 1),
+        Symbol::new("e", SymbolScope::BuiltinFn, 2),
+        Symbol::new("f", SymbolScope::BuiltinFn, 3),
     ];
 
     let mut global = SymbolTable::default();
     for (i, sym) in expected.iter().enumerate() {
-        global.define_builtin(i, &sym.name);
+        global.define_builtin_fn(i, &sym.name);
     }
     let mut first_local = SymbolTable::new_enclosed(global.clone());
     let mut second_local = SymbolTable::new_enclosed(first_local.clone());

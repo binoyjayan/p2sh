@@ -2,9 +2,8 @@
 use std::fmt;
 use std::rc::Rc;
 
-use super::builtin_format;
-use super::format_buf;
-use super::Object;
+use super::functions::builtin_format;
+use crate::common::object::Object;
 use std::collections::HashMap;
 
 #[test]

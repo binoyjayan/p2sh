@@ -10,7 +10,11 @@ let fibonacci = fn(x) {
     }
 };
 
-let n = 30;
+let n = if (len(argv) > 1) {
+  int(argv[1])
+} else {
+ 30
+};
 
 let t1 = time();
 let fib = fibonacci(n);

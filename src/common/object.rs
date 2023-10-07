@@ -224,6 +224,9 @@ impl HMap {
             pairs: RefCell::new(pairs),
         }
     }
+    pub fn contains(&self, key: &Rc<Object>) -> bool {
+        self.pairs.borrow().contains_key(key)
+    }
     pub fn insert(&self, key: Rc<Object>, val: Rc<Object>) -> Rc<Object> {
         match self.pairs.borrow_mut().insert(key, val) {
             Some(v) => v,

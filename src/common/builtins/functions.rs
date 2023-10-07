@@ -13,6 +13,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("last", builtin_last),
     BuiltinFunction::new("rest", builtin_rest),
     BuiltinFunction::new("push", builtin_push),
+    BuiltinFunction::new("contains", builtin_contains),
     BuiltinFunction::new("insert", builtin_insert),
     BuiltinFunction::new("str", builtin_str),
     BuiltinFunction::new("int", builtin_int),
@@ -119,6 +120,21 @@ fn builtin_push(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         Object::Arr(arr) => {
             arr.push(args[1].clone());
             Ok(Rc::new(Object::Nil))
+        }
+        _ => Err(String::from("unsupported argument")),
+    }
+}
+
+fn builtin_contains(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 2 {
+        return Err(format!("takes two arguments. got={}", args.len()));
+    }
+
+    match args[0].as_ref() {
+        Object::Map(map) => {
+            let key = args[1].clone();
+            let contains = map.contains(&key);
+            Ok(Rc::new(Object::Bool(contains)))
         }
         _ => Err(String::from("unsupported argument")),
     }

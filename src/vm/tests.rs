@@ -450,6 +450,34 @@ fn test_array_literals() {
 }
 
 #[test]
+fn test_array_operations() {
+    let tests = vec![
+        VmTestCase {
+            input: "[] + []",
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(Vec::new()),
+            })),
+        },
+        VmTestCase {
+            input: "[] + [1]",
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![Rc::new(Object::Number(1.0))]),
+            })),
+        },
+        VmTestCase {
+            input: "[1] + [2]",
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Number(1.0)),
+                    Rc::new(Object::Number(2.0)),
+                ]),
+            })),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
 fn test_hash_literals() {
     let tests = vec![
         VmTestCase {
@@ -829,6 +857,14 @@ fn test_builtin_functions() {
                 first(rest(array));
             "#,
             expected: Object::Number(2.0),
+        },
+        VmTestCase {
+            input: r#"contains({}, "k")"#,
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: r#"let m = {"k1": 1, "k": 0, "k2": 2}; contains(m, "k")"#,
+            expected: Object::Bool(true),
         },
         VmTestCase {
             input: r#"let m = {}; insert(m, "k", 1)"#,

@@ -400,10 +400,10 @@ impl VM {
                 }
             }
             (Object::Arr(a), Object::Arr(b)) => {
-                let len = a.elements.borrow().len() + b.elements.borrow().len();
-                let mut elements = Vec::with_capacity(len);
-                elements.extend_from_slice(&a.elements.borrow());
-                self.push(Rc::new(Object::Arr(Rc::new(Array::new(elements)))), line)?;
+                let mut e1 = a.elements.borrow().clone();
+                let e2 = b.elements.borrow().clone();
+                e1.extend_from_slice(&e2);
+                self.push(Rc::new(Object::Arr(Rc::new(Array::new(e1)))), line)?;
                 Ok(())
             }
             _ => Err(RTError::new("Invalid binary operation.", line)),

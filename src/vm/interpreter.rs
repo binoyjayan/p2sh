@@ -399,6 +399,13 @@ impl VM {
                     Err(RTError::new("Invalid operation on strings.", line))
                 }
             }
+            (Object::Arr(a), Object::Arr(b)) => {
+                let len = a.elements.borrow().len() + b.elements.borrow().len();
+                let mut elements = Vec::with_capacity(len);
+                elements.extend_from_slice(&a.elements.borrow());
+                self.push(Rc::new(Object::Arr(Rc::new(Array::new(elements)))), line)?;
+                Ok(())
+            }
             _ => Err(RTError::new("Invalid binary operation.", line)),
         }
     }

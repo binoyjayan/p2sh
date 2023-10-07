@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
@@ -198,24 +199,44 @@ impl PartialEq for BuiltinFunction {
 
 #[derive(Debug, Clone)]
 pub struct Array {
-    pub elements: Vec<Rc<Object>>,
+    pub elements: RefCell<Vec<Rc<Object>>>,
 }
 
 impl Array {
     pub fn new(elements: Vec<Rc<Object>>) -> Self {
-        Self { elements }
+        Self {
+            elements: RefCell::new(elements),
+        }
+    }
+    pub fn push(&self, obj: Rc<Object>) {
+        self.elements.borrow_mut().push(obj);
     }
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct HMap {
-    pub pairs: HashMap<Rc<Object>, Rc<Object>>,
+    pub pairs: RefCell<HashMap<Rc<Object>, Rc<Object>>>,
+}
+
+impl HMap {
+    pub fn new(pairs: HashMap<Rc<Object>, Rc<Object>>) -> Self {
+        Self {
+            pairs: RefCell::new(pairs),
+        }
+    }
+    pub fn insert(&self, key: Rc<Object>, val: Rc<Object>) -> Rc<Object> {
+        match self.pairs.borrow_mut().insert(key, val) {
+            Some(v) => v,
+            None => Rc::new(Object::Nil),
+        }
+    }
 }
 
 impl fmt::Display for Array {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let elements_str = self
             .elements
+            .borrow()
             .iter()
             .map(|p| format!("{}, ", p))
             .collect::<String>();
@@ -226,10 +247,14 @@ impl fmt::Display for Array {
 
 impl PartialEq for Array {
     fn eq(&self, other: &Self) -> bool {
-        if self.elements.len() != other.elements.len() {
+        let self_elements = self.elements.borrow();
+        let other_elements = other.elements.borrow();
+
+        if self_elements.len() != other_elements.len() {
             return false;
         }
-        for (a, b) in self.elements.iter().zip(&other.elements) {
+
+        for (a, b) in self_elements.iter().zip(other_elements.iter()) {
             if *a != *b {
                 return false;
             }
@@ -244,6 +269,7 @@ impl fmt::Display for HMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let pairs_str = self
             .pairs
+            .borrow()
             .iter()
             .map(|(k, v)| format!(r#""{}": {}, "#, k, v))
             .collect::<String>();
@@ -255,11 +281,15 @@ impl fmt::Display for HMap {
 // compare HMap objects without considering the order of key-value pairs
 impl PartialEq for HMap {
     fn eq(&self, other: &Self) -> bool {
-        if self.pairs.len() != other.pairs.len() {
+        let self_pairs = self.pairs.borrow();
+        let other_pairs = other.pairs.borrow();
+
+        if self_pairs.len() != other_pairs.len() {
             return false;
         }
-        for (key, value) in &self.pairs {
-            if let Some(other_value) = other.pairs.get(key) {
+
+        for (key, value) in self_pairs.iter() {
+            if let Some(other_value) = other_pairs.get(key) {
                 if value != other_value {
                     return false;
                 }
@@ -267,6 +297,7 @@ impl PartialEq for HMap {
                 return false;
             }
         }
+
         true
     }
 }

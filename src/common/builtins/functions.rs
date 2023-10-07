@@ -13,6 +13,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("last", builtin_last),
     BuiltinFunction::new("rest", builtin_rest),
     BuiltinFunction::new("push", builtin_push),
+    BuiltinFunction::new("insert", builtin_insert),
     BuiltinFunction::new("str", builtin_str),
     BuiltinFunction::new("int", builtin_int),
     BuiltinFunction::new("time", builtin_time),
@@ -32,7 +33,7 @@ fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
     match args[0].as_ref() {
         Object::Str(s) => Ok(Rc::new(Object::Number(s.len() as f64))),
-        Object::Arr(a) => Ok(Rc::new(Object::Number(a.elements.len() as f64))),
+        Object::Arr(a) => Ok(Rc::new(Object::Number(a.elements.borrow().len() as f64))),
         _ => Err(String::from("unsupported argument")),
     }
 }
@@ -65,7 +66,7 @@ fn builtin_first(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
     match args[0].as_ref() {
         Object::Arr(a) => {
-            if let Some(first_element) = a.elements.get(0) {
+            if let Some(first_element) = a.elements.borrow().get(0) {
                 Ok(Rc::clone(first_element))
             } else {
                 Ok(Rc::new(Object::Nil))
@@ -81,7 +82,7 @@ fn builtin_last(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
     match args[0].as_ref() {
         Object::Arr(a) => {
-            if let Some(last_element) = a.elements.last() {
+            if let Some(last_element) = a.elements.borrow().last() {
                 Ok(Rc::clone(last_element))
             } else {
                 Ok(Rc::new(Object::Nil))
@@ -97,29 +98,45 @@ fn builtin_rest(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
     match args[0].as_ref() {
         Object::Arr(a) => {
-            if a.elements.is_empty() {
+            if a.elements.borrow().is_empty() {
                 Ok(Rc::new(Object::Nil))
             } else {
-                Ok(Rc::new(Object::Arr(Rc::new(Array {
-                    elements: a.elements[1..].to_vec(),
-                }))))
+                let slice = a.elements.borrow()[1..].to_vec();
+                Ok(Rc::new(Object::Arr(Rc::new(Array::new(slice)))))
             }
         }
         _ => Err(String::from("unsupported argument")),
     }
 }
 
+// Insert a value to the end of an array
 fn builtin_push(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.len() != 2 {
         return Err(format!("takes two arguments. got={}", args.len()));
     }
+
     match args[0].as_ref() {
-        Object::Arr(a) => {
-            let mut new_array = a.clone();
-            // Use interior mutability of the Array
-            let new_array_mut = Rc::make_mut(&mut new_array);
-            new_array_mut.elements.push(args[1].clone());
-            Ok(Rc::new(Object::Arr(new_array)))
+        Object::Arr(arr) => {
+            arr.push(args[1].clone());
+            Ok(Rc::new(Object::Nil))
+        }
+        _ => Err(String::from("unsupported argument")),
+    }
+}
+
+// Insert a key-value pair into a map. If the key already exists,
+// the old value is returned, otherwise Nil is returned.
+fn builtin_insert(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 3 {
+        return Err(format!("takes three arguments. got={}", args.len()));
+    }
+
+    match args[0].as_ref() {
+        Object::Map(map) => {
+            let key = args[1].clone();
+            let val = args[2].clone();
+            let old = map.insert(key, val);
+            Ok(old)
         }
         _ => Err(String::from("unsupported argument")),
     }

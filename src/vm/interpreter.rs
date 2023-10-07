@@ -253,7 +253,7 @@ impl VM {
                     // pop 'num_elements' off the stack
                     self.sp -= num_elements;
                     // Push the array back onto the stack as an object
-                    self.push(Rc::new(Object::Arr(Rc::new(Array { elements }))), line)?;
+                    self.push(Rc::new(Object::Arr(Rc::new(Array::new(elements)))), line)?;
                     // skip over the two bytes of the operand in the next cycle
                     self.current_frame().ip += 2;
                 }
@@ -265,7 +265,7 @@ impl VM {
                     // pop 'num_elements' off the stack
                     self.sp -= num_elements;
                     // Push the array back onto the stack as an object
-                    self.push(Rc::new(Object::Map(Rc::new(HMap { pairs }))), line)?;
+                    self.push(Rc::new(Object::Map(Rc::new(HMap::new(pairs)))), line)?;
                     // skip over the two bytes of the operand in the next cycle
                     self.current_frame().ip += 2;
                 }
@@ -437,11 +437,11 @@ impl VM {
     }
 
     fn exec_array_index(&mut self, arr: &Array, idx: f64, line: usize) -> Result<(), RTError> {
-        if idx < 0. || idx >= arr.elements.len() as f64 {
+        if idx < 0. || idx >= arr.elements.borrow().len() as f64 {
             // Out of bounds
             self.push(Rc::new(Object::Nil), line)?;
         } else {
-            self.push(arr.elements[idx as usize].clone(), line)?;
+            self.push(arr.elements.borrow()[idx as usize].clone(), line)?;
         }
         Ok(())
     }
@@ -452,7 +452,7 @@ impl VM {
         key: &Rc<Object>,
         line: usize,
     ) -> Result<(), RTError> {
-        if let Some(obj) = map.pairs.get(key) {
+        if let Some(obj) = map.pairs.borrow().get(key) {
             self.push(obj.clone(), line)?;
         } else {
             // Not found

@@ -1,4 +1,5 @@
 #![allow(unused_imports)]
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::*;
@@ -42,23 +43,28 @@ fn test_expected_object(evaluated: Rc<Object>, expected: &Object) {
         }
         (Object::Arr(eval), Object::Arr(exp)) => {
             assert_eq!(
-                eval.elements.len(),
-                exp.elements.len(),
+                eval.elements.borrow().len(),
+                exp.elements.borrow().len(),
                 "array object has wrong length. got={}, want={}",
-                eval.elements.len(),
-                exp.elements.len()
+                eval.elements.borrow().len(),
+                exp.elements.borrow().len()
             );
-            for (ex, ev) in exp.elements.iter().zip(eval.elements.iter()) {
+            for (ex, ev) in exp
+                .elements
+                .borrow()
+                .iter()
+                .zip(eval.elements.borrow().iter())
+            {
                 assert_eq!(ex, ev);
             }
         }
         (Object::Map(eval), Object::Map(exp)) => {
             assert_eq!(
-                eval.pairs.len(),
-                exp.pairs.len(),
+                eval.pairs.borrow().len(),
+                exp.pairs.borrow().len(),
                 "map object has wrong length. got={}, want={}",
-                eval.pairs.len(),
-                exp.pairs.len()
+                eval.pairs.borrow().len(),
+                exp.pairs.borrow().len()
             );
             assert_eq!(eval, exp);
         }
@@ -416,27 +422,27 @@ fn test_array_literals() {
         VmTestCase {
             input: "[]",
             expected: Object::Arr(Rc::new(Array {
-                elements: Vec::new(),
+                elements: RefCell::new(Vec::new()),
             })),
         },
         VmTestCase {
             input: "[1, 2, 3]",
             expected: Object::Arr(Rc::new(Array {
-                elements: vec![
+                elements: RefCell::new(vec![
                     Rc::new(Object::Number(1.0)),
                     Rc::new(Object::Number(2.0)),
                     Rc::new(Object::Number(3.0)),
-                ],
+                ]),
             })),
         },
         VmTestCase {
             input: "[1 + 2, 3 * 4, 5 + 6]",
             expected: Object::Arr(Rc::new(Array {
-                elements: vec![
+                elements: RefCell::new(vec![
                     Rc::new(Object::Number(3.0)),
                     Rc::new(Object::Number(12.0)),
                     Rc::new(Object::Number(11.0)),
-                ],
+                ]),
             })),
         },
     ];
@@ -453,27 +459,21 @@ fn test_hash_literals() {
         VmTestCase {
             input: "{1: 2, 2: 3}",
             expected: Object::Map({
-                let mut map = HMap::default();
-                map.pairs.insert(
-                    Rc::new(Object::Number(1.into())),
-                    Rc::new(Object::Number(2.into())),
-                );
-                map.pairs.insert(
-                    Rc::new(Object::Number(2.into())),
-                    Rc::new(Object::Number(3.into())),
-                );
+                let map = HMap::default();
+                map.insert(Rc::new(Object::Number(1.)), Rc::new(Object::Number(2.)));
+                map.insert(Rc::new(Object::Number(2.)), Rc::new(Object::Number(3.)));
                 Rc::new(map)
             }),
         },
         VmTestCase {
             input: "{1 + 1: 2 * 2, 3 + 3: 4 * 4}",
             expected: Object::Map({
-                let mut map = HMap::default();
-                map.pairs.insert(
+                let map = HMap::default();
+                map.insert(
                     Rc::new(Object::Number(2.into())),
                     Rc::new(Object::Number(4.into())),
                 );
-                map.pairs.insert(
+                map.pairs.borrow_mut().insert(
                     Rc::new(Object::Number(6.into())),
                     Rc::new(Object::Number(16.into())),
                 );
@@ -806,7 +806,10 @@ fn test_builtin_functions() {
         VmTestCase {
             input: r#"rest([1, 2, 3])"#,
             expected: Object::Arr(Rc::new(Array {
-                elements: vec![Rc::new(Object::Number(2.0)), Rc::new(Object::Number(3.0))],
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Number(2.0)),
+                    Rc::new(Object::Number(3.0)),
+                ]),
             })),
         },
         VmTestCase {
@@ -814,17 +817,44 @@ fn test_builtin_functions() {
             expected: Object::Nil,
         },
         VmTestCase {
-            input: r#"push([], 1)"#,
+            input: r#"let a = []; push(a, 1); a"#,
             expected: Object::Arr(Rc::new(Array {
-                elements: vec![Rc::new(Object::Number(1.0))],
+                elements: RefCell::new(vec![Rc::new(Object::Number(1.0))]),
             })),
         },
         VmTestCase {
             input: r#"
                 let array = [1, 2, 3];
-                first(rest(push(array, 4)));
+                push(array, 4);
+                first(rest(array));
             "#,
             expected: Object::Number(2.0),
+        },
+        VmTestCase {
+            input: r#"let m = {}; insert(m, "k", 1)"#,
+            // insert returns Nil if key was not found already
+            expected: Object::Nil,
+        },
+        VmTestCase {
+            input: r#"let m = {"k1": 999, "k2": 888}; insert(m, "k3", 777)"#,
+            // insert returns Nil if key was not found already
+            expected: Object::Nil,
+        },
+        VmTestCase {
+            input: r#"let m = {"k1": 999, "k2": 888}; insert(m, "k2", 777)"#,
+            // insert returns the previous value if key was found
+            expected: Object::Number(888.),
+        },
+        VmTestCase {
+            input: r#"let m = {}; insert(m, "k", 1); m"#,
+            expected: Object::Map({
+                let map = HMap::default();
+                map.insert(
+                    Rc::new(Object::Str("k".to_string())),
+                    Rc::new(Object::Number(1.)),
+                );
+                Rc::new(map)
+            }),
         },
         VmTestCase {
             // rest([]) is Nil
@@ -967,7 +997,7 @@ fn test_builtin_variables() {
         VmTestCase {
             input: r#"argv"#,
             expected: Object::Arr(Rc::new(Array {
-                elements: Vec::new(),
+                elements: RefCell::new(Vec::new()),
             })),
         },
         VmTestCase {

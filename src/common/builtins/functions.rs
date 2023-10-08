@@ -13,6 +13,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("last", builtin_last),
     BuiltinFunction::new("rest", builtin_rest),
     BuiltinFunction::new("push", builtin_push),
+    BuiltinFunction::new("get", builtin_get),
     BuiltinFunction::new("contains", builtin_contains),
     BuiltinFunction::new("insert", builtin_insert),
     BuiltinFunction::new("str", builtin_str),
@@ -34,7 +35,8 @@ fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
     match args[0].as_ref() {
         Object::Str(s) => Ok(Rc::new(Object::Number(s.len() as f64))),
-        Object::Arr(a) => Ok(Rc::new(Object::Number(a.elements.borrow().len() as f64))),
+        Object::Arr(a) => Ok(Rc::new(Object::Number(a.len() as f64))),
+        Object::Map(m) => Ok(Rc::new(Object::Number(m.len() as f64))),
         _ => Err(String::from("unsupported argument")),
     }
 }
@@ -66,13 +68,7 @@ fn builtin_first(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         return Err(format!("takes one argument. got={}", args.len()));
     }
     match args[0].as_ref() {
-        Object::Arr(a) => {
-            if let Some(first_element) = a.elements.borrow().get(0) {
-                Ok(Rc::clone(first_element))
-            } else {
-                Ok(Rc::new(Object::Nil))
-            }
-        }
+        Object::Arr(a) => Ok(a.get(0)),
         _ => Err(String::from("unsupported argument")),
     }
 }
@@ -82,13 +78,7 @@ fn builtin_last(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         return Err(format!("takes one argument. got={}", args.len()));
     }
     match args[0].as_ref() {
-        Object::Arr(a) => {
-            if let Some(last_element) = a.elements.borrow().last() {
-                Ok(Rc::clone(last_element))
-            } else {
-                Ok(Rc::new(Object::Nil))
-            }
-        }
+        Object::Arr(a) => Ok(a.last()),
         _ => Err(String::from("unsupported argument")),
     }
 }
@@ -99,7 +89,7 @@ fn builtin_rest(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
     match args[0].as_ref() {
         Object::Arr(a) => {
-            if a.elements.borrow().is_empty() {
+            if a.is_empty() {
                 Ok(Rc::new(Object::Nil))
             } else {
                 let slice = a.elements.borrow()[1..].to_vec();
@@ -121,6 +111,27 @@ fn builtin_push(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             arr.push(args[1].clone());
             Ok(Rc::new(Object::Nil))
         }
+        _ => Err(String::from("unsupported argument")),
+    }
+}
+
+// Get an array item by index or a map value by key
+// Return Nil if index is out of bounds or if the key doesn't exist
+fn builtin_get(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 2 {
+        return Err(format!("takes two arguments. got={}", args.len()));
+    }
+
+    match args[0].as_ref() {
+        Object::Arr(arr) => {
+            if let Object::Number(index) = args[1].as_ref() {
+                let index = *index as usize;
+                Ok(arr.get(index))
+            } else {
+                Err(String::from("unsupported argument"))
+            }
+        }
+        Object::Map(map) => Ok(map.get(&args[1])),
         _ => Err(String::from("unsupported argument")),
     }
 }

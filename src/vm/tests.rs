@@ -43,11 +43,11 @@ fn test_expected_object(evaluated: Rc<Object>, expected: &Object) {
         }
         (Object::Arr(eval), Object::Arr(exp)) => {
             assert_eq!(
-                eval.elements.borrow().len(),
-                exp.elements.borrow().len(),
+                eval.len(),
+                exp.len(),
                 "array object has wrong length. got={}, want={}",
-                eval.elements.borrow().len(),
-                exp.elements.borrow().len()
+                eval.len(),
+                exp.len()
             );
             for (ex, ev) in exp
                 .elements
@@ -60,11 +60,11 @@ fn test_expected_object(evaluated: Rc<Object>, expected: &Object) {
         }
         (Object::Map(eval), Object::Map(exp)) => {
             assert_eq!(
-                eval.pairs.borrow().len(),
-                exp.pairs.borrow().len(),
+                eval.len(),
+                exp.len(),
                 "map object has wrong length. got={}, want={}",
-                eval.pairs.borrow().len(),
-                exp.pairs.borrow().len()
+                eval.len(),
+                exp.len()
             );
             assert_eq!(eval, exp);
         }
@@ -516,30 +516,6 @@ fn test_hash_literals() {
 fn test_index_expressions() {
     let tests = vec![
         VmTestCase {
-            input: "[1, 2, 3][1]",
-            expected: Object::Number(2.),
-        },
-        VmTestCase {
-            input: "[1, 2, 3][0 + 2]",
-            expected: Object::Number(3.),
-        },
-        VmTestCase {
-            input: "[[1, 1, 1]][0][0]",
-            expected: Object::Number(1.),
-        },
-        VmTestCase {
-            input: "[][0]",
-            expected: Object::Nil,
-        },
-        VmTestCase {
-            input: "[1, 2, 3][99]",
-            expected: Object::Nil,
-        },
-        VmTestCase {
-            input: "[1][-1]",
-            expected: Object::Nil,
-        },
-        VmTestCase {
             input: "{1: 1, 2: 2}[1]",
             expected: Object::Number(1.),
         },
@@ -548,19 +524,50 @@ fn test_index_expressions() {
             expected: Object::Number(2.),
         },
         VmTestCase {
-            input: "{1: 1}[0]",
-            expected: Object::Nil,
-        },
-        VmTestCase {
-            input: "{}[0]",
-            expected: Object::Nil,
-        },
-        VmTestCase {
             input: r#"{"one": 1, "two": 2, "three": 3}["o" + "ne"]"#,
             expected: Object::Number(1.),
         },
     ];
     run_vm_tests(&tests);
+}
+
+#[test]
+fn test_index_expressions_negative() {
+    let tests = vec![
+        VmTestCaseErr {
+            input: "[][0]",
+            expected: "IndexError: array index out of range.",
+        },
+        VmTestCaseErr {
+            input: "{1: 1}[0]",
+            expected: "KeyError: key not found.",
+        },
+        VmTestCaseErr {
+            input: "{}[0]",
+            expected: "KeyError: key not found.",
+        },
+        VmTestCaseErr {
+            input: "[1, 2, 3][99]",
+            expected: "IndexError: array index out of range.",
+        },
+        VmTestCaseErr {
+            input: "[1, 2, 3][1]",
+            expected: "IndexError: array index out of range.",
+        },
+        VmTestCaseErr {
+            input: "[1][-1]",
+            expected: "IndexError: index cannot be less than zero.",
+        },
+        VmTestCaseErr {
+            input: "[[1, 1, 1]][0][0]",
+            expected: "IndexError: array index out of range.",
+        },
+        VmTestCaseErr {
+            input: "[1, 2, 3][0 + 2]",
+            expected: "IndexError: array index out of range.",
+        },
+    ];
+    run_vm_negative_tests(&tests);
 }
 
 #[test]
@@ -816,6 +823,14 @@ fn test_builtin_functions() {
             expected: Object::Number(0.),
         },
         VmTestCase {
+            input: r#"len({})"#,
+            expected: Object::Number(0.),
+        },
+        VmTestCase {
+            input: r#"len({"a": 1, "b": 2})"#,
+            expected: Object::Number(2.),
+        },
+        VmTestCase {
             input: r#"first([1, 2, 3])"#,
             expected: Object::Number(1.0),
         },
@@ -865,6 +880,18 @@ fn test_builtin_functions() {
         VmTestCase {
             input: r#"let m = {"k1": 1, "k": 0, "k2": 2}; contains(m, "k")"#,
             expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: r#"get({}, "k")"#,
+            expected: Object::Nil,
+        },
+        VmTestCase {
+            input: r#"let m = {"k1": 999, "k2": 888, "k3": 777}; get(m, "k2")"#,
+            expected: Object::Number(888.),
+        },
+        VmTestCase {
+            input: r#"let m = {"k1": 999, "k2": 888, "k3": 777}; get(m, "k")"#,
+            expected: Object::Nil,
         },
         VmTestCase {
             input: r#"let m = {}; insert(m, "k", 1)"#,

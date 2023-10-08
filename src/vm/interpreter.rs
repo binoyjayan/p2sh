@@ -439,18 +439,22 @@ impl VM {
         match (&*left, &*index) {
             (Object::Arr(arr), Object::Number(idx)) => self.exec_array_index(arr, *idx, line),
             (Object::Map(map), _) => self.exec_hash_index(map, &index, line),
-            _ => Err(RTError::new("index operator not supported.", line)),
+            _ => Err(RTError::new("IndexError: operator not supported.", line)),
         }
     }
 
     fn exec_array_index(&mut self, arr: &Array, idx: f64, line: usize) -> Result<(), RTError> {
-        if idx < 0. || idx >= arr.elements.borrow().len() as f64 {
-            // Out of bounds
-            self.push(Rc::new(Object::Nil), line)?;
-        } else {
-            self.push(arr.elements.borrow()[idx as usize].clone(), line)?;
+        if idx < 0. {
+            return Err(RTError::new(
+                "IndexError: index cannot be less than zero.",
+                line,
+            ));
         }
-        Ok(())
+        let obj = arr.get(idx as usize);
+        if obj.is_nil() {
+            return Err(RTError::new("IndexError: array index out of range.", line));
+        }
+        self.push(obj, line)
     }
 
     fn exec_hash_index(
@@ -459,13 +463,11 @@ impl VM {
         key: &Rc<Object>,
         line: usize,
     ) -> Result<(), RTError> {
-        if let Some(obj) = map.pairs.borrow().get(key) {
-            self.push(obj.clone(), line)?;
-        } else {
-            // Not found
-            self.push(Rc::new(Object::Nil), line)?;
+        let obj = map.get(key);
+        if obj.is_nil() {
+            return Err(RTError::new("KeyError: key not found.", line));
         }
-        Ok(())
+        self.push(obj, line)
     }
 
     fn exec_call(&mut self, num_args: usize, line: usize) -> Result<(), RTError> {

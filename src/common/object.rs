@@ -208,6 +208,24 @@ impl Array {
             elements: RefCell::new(elements),
         }
     }
+    pub fn len(&self) -> usize {
+        self.elements.borrow().len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.elements.borrow().is_empty()
+    }
+    pub fn get(&self, idx: usize) -> Rc<Object> {
+        match self.elements.borrow().get(idx) {
+            Some(value) => value.clone(),
+            None => Rc::new(Object::Nil),
+        }
+    }
+    pub fn last(&self) -> Rc<Object> {
+        match self.elements.borrow().last() {
+            Some(value) => value.clone(),
+            None => Rc::new(Object::Nil),
+        }
+    }
     pub fn push(&self, obj: Rc<Object>) {
         self.elements.borrow_mut().push(obj);
     }
@@ -222,6 +240,15 @@ impl HMap {
     pub fn new(pairs: HashMap<Rc<Object>, Rc<Object>>) -> Self {
         Self {
             pairs: RefCell::new(pairs),
+        }
+    }
+    pub fn len(&self) -> usize {
+        self.pairs.borrow().len()
+    }
+    pub fn get(&self, key: &Rc<Object>) -> Rc<Object> {
+        match self.pairs.borrow().get(key) {
+            Some(value) => value.clone(),
+            None => Rc::new(Object::Nil),
         }
     }
     pub fn contains(&self, key: &Rc<Object>) -> bool {

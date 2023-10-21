@@ -18,6 +18,12 @@ struct CompilerTestCase {
 }
 
 #[cfg(test)]
+struct CompilerTestCaseErrors {
+    input: &'static str,
+    error: &'static str,
+}
+
+#[cfg(test)]
 fn parse_program(input: &str) -> Program {
     let scanner = Scanner::new(input);
     let mut parser = Parser::new(scanner);
@@ -147,10 +153,23 @@ fn run_compiler_tests(tests: &[CompilerTestCase]) {
         if let Err(err) = result {
             panic!("[{}] {}", n, err);
         }
-        // println!("[{}] Compiler Test", n);
+        println!("[{}] Compiler Test", n);
         let bytecode = compiler.bytecode();
         test_instructions(&t.expected_instructions, &bytecode.instructions);
         test_constants(&t.expected_constants, &bytecode.constants);
+    }
+}
+
+#[cfg(test)]
+fn run_compiler_failed_tests(tests: &[CompilerTestCaseErrors]) {
+    for t in tests.iter() {
+        let program = parse_program(&t.input);
+        let mut compiler = Compiler::new();
+        let result = compiler.compile(program);
+        if let Err(err) = result {
+            let serr = format!("{}", err);
+            assert_eq!(serr, t.error);
+        }
     }
 }
 
@@ -379,9 +398,9 @@ fn test_global_let_statements() {
             expected_constants: vec![Object::Number(1.), Object::Number(2.)],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
-                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
-                definitions::make(Opcode::SetGlobal, &[1], 1),
+                definitions::make(Opcode::DefineGlobal, &[1], 1),
             ],
         },
         CompilerTestCase {
@@ -389,7 +408,7 @@ fn test_global_let_statements() {
             expected_constants: vec![Object::Number(1.)],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
-                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
@@ -399,9 +418,9 @@ fn test_global_let_statements() {
             expected_constants: vec![Object::Number(1.)],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
-                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
-                definitions::make(Opcode::SetGlobal, &[1], 1),
+                definitions::make(Opcode::DefineGlobal, &[1], 1),
                 definitions::make(Opcode::GetGlobal, &[1], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
@@ -553,7 +572,7 @@ fn test_hash_literals() {
 }
 
 #[test]
-fn test_index_expressions() {
+fn test_get_index_expressions() {
     let tests = vec![
         CompilerTestCase {
             input: "[1, 2, 3][1 + 1]",
@@ -572,7 +591,7 @@ fn test_index_expressions() {
                 definitions::make(Opcode::Constant, &[3], 1),
                 definitions::make(Opcode::Constant, &[4], 1),
                 definitions::make(Opcode::Add, &[], 1),
-                definitions::make(Opcode::Index, &[], 1),
+                definitions::make(Opcode::GetIndex, &[], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -591,7 +610,92 @@ fn test_index_expressions() {
                 definitions::make(Opcode::Constant, &[2], 1),
                 definitions::make(Opcode::Constant, &[3], 1),
                 definitions::make(Opcode::Sub, &[], 1),
-                definitions::make(Opcode::Index, &[], 1),
+                definitions::make(Opcode::GetIndex, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_set_index_expressions() {
+    let tests = vec![
+        CompilerTestCase {
+            // The assignment expressions are right associative
+            input: "[1, 2, 3][1] = 42",
+            expected_constants: vec![
+                Object::Number(42.),
+                Object::Number(1.),
+                Object::Number(2.),
+                Object::Number(3.),
+                Object::Number(1.),
+            ],
+            expected_instructions: vec![
+                // RHS of the assignment
+                definitions::make(Opcode::Constant, &[0], 1),
+                // LHS of the assignment
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Constant, &[3], 1),
+                definitions::make(Opcode::Array, &[3], 1),
+                definitions::make(Opcode::Constant, &[4], 1),
+                definitions::make(Opcode::SetIndex, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "[1, 2, 3][1 + 1] = 2 * 3",
+            expected_constants: vec![
+                Object::Number(2.),
+                Object::Number(3.),
+                Object::Number(1.),
+                Object::Number(2.),
+                Object::Number(3.),
+                Object::Number(1.),
+                Object::Number(1.),
+            ],
+            expected_instructions: vec![
+                // RHS of the assignment
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Mul, &[], 1),
+                // LHS of the assignment
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Constant, &[3], 1),
+                definitions::make(Opcode::Constant, &[4], 1),
+                definitions::make(Opcode::Array, &[3], 1),
+                definitions::make(Opcode::Constant, &[5], 1),
+                definitions::make(Opcode::Constant, &[6], 1),
+                definitions::make(Opcode::Add, &[], 1),
+                definitions::make(Opcode::SetIndex, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "{1: 2}[2 - 1] = 2 * 3",
+            expected_constants: vec![
+                Object::Number(2.),
+                Object::Number(3.),
+                Object::Number(1.),
+                Object::Number(2.),
+                Object::Number(2.),
+                Object::Number(1.),
+            ],
+            expected_instructions: vec![
+                // RHS of the assignment
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Mul, &[], 1),
+                // LHS of the assignment
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Constant, &[3], 1),
+                definitions::make(Opcode::Map, &[2], 1),
+                definitions::make(Opcode::Constant, &[4], 1),
+                definitions::make(Opcode::Constant, &[5], 1),
+                definitions::make(Opcode::Sub, &[], 1),
+                definitions::make(Opcode::SetIndex, &[], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -777,7 +881,7 @@ fn test_function_calls() {
             expected_instructions: vec![
                 // The compiled function
                 definitions::make(Opcode::Closure, &[1, 0], 1),
-                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::Call, &[0], 1),
                 definitions::make(Opcode::Pop, &[], 1),
@@ -801,7 +905,7 @@ fn test_function_calls() {
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Closure, &[0, 0], 1),
-                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
                 definitions::make(Opcode::Call, &[1], 1),
@@ -834,7 +938,7 @@ fn test_function_calls() {
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Closure, &[0, 0], 1),
-                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
                 definitions::make(Opcode::Constant, &[2], 1),
@@ -868,7 +972,7 @@ fn test_let_statement_scopes() {
                 // constant - number 55
                 definitions::make(Opcode::Constant, &[0], 1),
                 // set the global variable 'num'
-                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
                 // constant - compiled function (closure)
                 definitions::make(Opcode::Closure, &[1, 0], 1),
                 definitions::make(Opcode::Pop, &[], 1),
@@ -883,7 +987,7 @@ fn test_let_statement_scopes() {
                         // constant - number 55
                         definitions::make(Opcode::Constant, &[0], 1),
                         // set the global variable 'num'
-                        definitions::make(Opcode::SetLocal, &[0], 1),
+                        definitions::make(Opcode::DefineLocal, &[0], 1),
                         // push the value of global variable 'num'
                         definitions::make(Opcode::GetLocal, &[0], 1),
                         definitions::make(Opcode::ReturnValue, &[], 1),
@@ -911,12 +1015,12 @@ fn test_let_statement_scopes() {
                 Object::Number(77.),
                 Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
-                        definitions::make(Opcode::Constant, &[0], 1), // 55
-                        definitions::make(Opcode::SetLocal, &[0], 1), // 'a'
-                        definitions::make(Opcode::Constant, &[1], 1), // 77
-                        definitions::make(Opcode::SetLocal, &[1], 1), // 'b'
-                        definitions::make(Opcode::GetLocal, &[0], 1), // 'a'
-                        definitions::make(Opcode::GetLocal, &[1], 1), // 'b'
+                        definitions::make(Opcode::Constant, &[0], 1),    // 55
+                        definitions::make(Opcode::DefineLocal, &[0], 1), // 'a'
+                        definitions::make(Opcode::Constant, &[1], 1),    // 77
+                        definitions::make(Opcode::DefineLocal, &[1], 1), // 'b'
+                        definitions::make(Opcode::GetLocal, &[0], 1),    // 'a'
+                        definitions::make(Opcode::GetLocal, &[1], 1),    // 'b'
                         definitions::make(Opcode::Add, &[], 1),
                         definitions::make(Opcode::ReturnValue, &[], 1),
                     ]),
@@ -1159,7 +1263,7 @@ fn test_closures_with_scopes() {
             Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
                     definitions::make(Opcode::Constant, &[3], 1),
-                    definitions::make(Opcode::SetLocal, &[0], 1),
+                    definitions::make(Opcode::DefineLocal, &[0], 1),
                     definitions::make(Opcode::GetGlobal, &[0], 1),
                     definitions::make(Opcode::GetFree, &[0], 1),
                     definitions::make(Opcode::Add, &[], 1),
@@ -1175,7 +1279,7 @@ fn test_closures_with_scopes() {
             Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
                     definitions::make(Opcode::Constant, &[2], 1),
-                    definitions::make(Opcode::SetLocal, &[0], 1),
+                    definitions::make(Opcode::DefineLocal, &[0], 1),
                     definitions::make(Opcode::GetFree, &[0], 1),
                     definitions::make(Opcode::GetLocal, &[0], 1),
                     definitions::make(Opcode::Closure, &[4, 2], 1),
@@ -1187,7 +1291,7 @@ fn test_closures_with_scopes() {
             Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
                     definitions::make(Opcode::Constant, &[1], 1),
-                    definitions::make(Opcode::SetLocal, &[0], 1),
+                    definitions::make(Opcode::DefineLocal, &[0], 1),
                     definitions::make(Opcode::GetLocal, &[0], 1),
                     definitions::make(Opcode::Closure, &[5, 1], 1),
                     definitions::make(Opcode::ReturnValue, &[], 1),
@@ -1198,7 +1302,7 @@ fn test_closures_with_scopes() {
         ],
         expected_instructions: vec![
             definitions::make(Opcode::Constant, &[0], 1),
-            definitions::make(Opcode::SetGlobal, &[0], 1),
+            definitions::make(Opcode::DefineGlobal, &[0], 1),
             definitions::make(Opcode::Closure, &[6, 0], 1),
             definitions::make(Opcode::Pop, &[], 1),
         ],
@@ -1211,9 +1315,9 @@ fn test_recursive_functions() {
     let tests = vec![
         CompilerTestCase {
             input: r#"
-            let countDown = fn(x) { countDown(x - 1); };
-            countDown(1);
-        "#,
+                let countDown = fn(x) { countDown(x - 1); };
+                countDown(1);
+            "#,
             expected_constants: vec![
                 Object::Number(1.0),
                 Object::Func(Rc::new(CompiledFunction::new(
@@ -1234,7 +1338,7 @@ fn test_recursive_functions() {
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Closure, &[1, 0], 1),
-                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::Constant, &[2], 1),
                 definitions::make(Opcode::Call, &[1], 1),
@@ -1267,7 +1371,7 @@ fn test_recursive_functions() {
                 Object::Func(Rc::new(CompiledFunction::new(
                     concat_instructions(&[
                         definitions::make(Opcode::Closure, &[1, 0], 1),
-                        definitions::make(Opcode::SetLocal, &[0], 1),
+                        definitions::make(Opcode::DefineLocal, &[0], 1),
                         definitions::make(Opcode::GetLocal, &[0], 1),
                         definitions::make(Opcode::Constant, &[2], 1),
                         definitions::make(Opcode::Call, &[1], 1),
@@ -1279,7 +1383,7 @@ fn test_recursive_functions() {
             ],
             expected_instructions: vec![
                 definitions::make(Opcode::Closure, &[3, 0], 1),
-                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
                 definitions::make(Opcode::GetGlobal, &[0], 1),
                 definitions::make(Opcode::Call, &[0], 1),
                 definitions::make(Opcode::Pop, &[], 1),
@@ -1288,4 +1392,97 @@ fn test_recursive_functions() {
     ];
 
     run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_assignment_expressions() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "let a = 123; a = 456",
+            expected_constants: vec![Object::Number(123.), Object::Number(456.)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "let a = [123]; a = [456, 789]",
+            expected_constants: vec![
+                Object::Number(123.),
+                Object::Number(456.),
+                Object::Number(789.),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Array, &[1], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Array, &[2], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "let a = [1, 2]; a = [3, 4]",
+            expected_constants: vec![
+                Object::Number(1.),
+                Object::Number(2.),
+                Object::Number(3.),
+                Object::Number(4.),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Array, &[2], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Constant, &[3], 1),
+                definitions::make(Opcode::Array, &[2], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"let m = {"a": 1}; m = {"a": 2}"#,
+            expected_constants: vec![
+                Object::Str("a".to_string()),
+                Object::Number(1.),
+                Object::Str("a".to_string()),
+                Object::Number(2.),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Map, &[2], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                definitions::make(Opcode::Constant, &[2], 1),
+                definitions::make(Opcode::Constant, &[3], 1),
+                definitions::make(Opcode::Map, &[2], 1),
+                definitions::make(Opcode::SetGlobal, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_assignment_expressions_negative() {
+    let tests = vec![
+        CompilerTestCaseErrors {
+            input: "puts = 1",
+            error: "[line 1] compile error: Invalid lvalue",
+        },
+        CompilerTestCaseErrors {
+            input: "argv = 1",
+            error: "[line 1] compile error: Invalid lvalue",
+        },
+    ];
+
+    run_compiler_failed_tests(&tests);
 }

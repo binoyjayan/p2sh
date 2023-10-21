@@ -81,8 +81,14 @@ impl Object {
         matches!(self, Object::Number(_))
     }
     pub fn is_falsey(&self) -> bool {
-        matches!(self, Object::Bool(false) | Object::Nil)
+        match self {
+            Object::Bool(false) | Object::Nil => true,
+            // floating point types cannot be used in patterns
+            Object::Number(v) => *v == 0.0,
+            _ => false,
+        }
     }
+
     pub fn is_a_valid_key(&self) -> bool {
         matches!(self, Object::Str(_) | Object::Number(_) | Object::Bool(_))
     }
@@ -228,6 +234,9 @@ impl Array {
     }
     pub fn push(&self, obj: Rc<Object>) {
         self.elements.borrow_mut().push(obj);
+    }
+    pub fn set(&self, idx: usize, obj: Rc<Object>) {
+        self.elements.borrow_mut()[idx] = obj;
     }
 }
 

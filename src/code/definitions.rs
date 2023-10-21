@@ -39,14 +39,17 @@ lazy_static! {
         map.insert(Opcode::Jump, Definition::new("OpJump", &[2]));
         map.insert(Opcode::JumpIfFalse, Definition::new("OpJumpIfFalse", &[2]));
         map.insert(Opcode::Nil, Definition::new("OpNil", &[]));
+        map.insert(Opcode::DefineGlobal, Definition::new("OpDefineGlobal", &[2]));
         map.insert(Opcode::GetGlobal, Definition::new("OpGetGlobal", &[2]));
         map.insert(Opcode::SetGlobal, Definition::new("OpSetGlobal", &[2]));
         map.insert(Opcode::Array, Definition::new("OpArray", &[2]));
         map.insert(Opcode::Map, Definition::new("OpMap", &[2]));
-        map.insert(Opcode::Index, Definition::new("OpIndex", &[]));
+        map.insert(Opcode::GetIndex, Definition::new("OpGetIndex", &[]));
+        map.insert(Opcode::SetIndex, Definition::new("OpSetIndex", &[]));
         map.insert(Opcode::Call, Definition::new("OpCall", &[1]));
         map.insert(Opcode::ReturnValue, Definition::new("OpReturnValue", &[]));
         map.insert(Opcode::Return, Definition::new("OpReturn", &[]));
+        map.insert(Opcode::DefineLocal, Definition::new("OpDefineLocal", &[1]));
         map.insert(Opcode::GetLocal, Definition::new("OpGetLocal", &[1]));
         map.insert(Opcode::SetLocal, Definition::new("OpSetLocal", &[1]));
         map.insert(Opcode::GetBuiltinFn, Definition::new("OpGetBuiltinFn", &[1]));

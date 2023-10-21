@@ -8,7 +8,6 @@ use crate::scanner::*;
 use ast::expr::*;
 use ast::stmt::*;
 use ast::*;
-use rules::*;
 
 use self::precedence::Precedence;
 
@@ -137,6 +136,7 @@ impl Parser {
         let identifier = Identifier {
             token: token_ident.clone(),
             value: token_ident.literal,
+            access: AccessType::Set,
         };
         let let_stmt = LetStmt {
             token: token_let,
@@ -162,13 +162,16 @@ impl Parser {
 
     fn parse_expr_statement(&mut self) -> Result<Statement, ParseError> {
         let token_expr = self.current.clone();
-        let expr = self.parse_expression(Precedence::Lowest);
+        let expr = self.parse_expression(Precedence::Assignment);
         if self.peek_token_is(&TokenType::Semicolon) {
             self.next_token();
         }
+        // Mark if the statement is an assignment expression statement
+        let is_assign = matches!(expr, Expression::Assign(_));
         Ok(Statement::Expr(ExpressionStmt {
             token: token_expr,
             value: expr,
+            is_assign,
         }))
     }
 
@@ -208,21 +211,20 @@ impl Parser {
     /// 'a + b + c' -->> ((a + b) + c) when 'precedence < self.peek_precedence()'
     /// 'a + b + c' -->> (a + (b + c)) when 'precedence <= self.peek_precedence()'
     ///
-    /// The call to 'peek_token_is(&TokenType::Semicolon)' is actually redundant.
-    /// peek_precedence() returns 'Lowest' as the default precedence for the
-    /// token type Semicolon. It only makes the code look more logical.
     fn parse_expression(&mut self, precedence: Precedence) -> Expression {
-        let ttype = self.current.ttype as usize;
-        if let Some(prefix) = &PARSE_RULES[ttype].prefix {
+        let can_assign = precedence <= Precedence::Assignment;
+        self.peek_invalid_assignment(can_assign);
+
+        // If there is a prefix parser for the current token
+        if let Some(prefix) = self.curr_prefix() {
             let mut left_expr = prefix(self);
-            while !self.peek_token_is(&TokenType::Semicolon) && precedence < self.peek_precedence()
-            {
-                let next_ttype = self.peek_next.ttype as usize;
-                if let Some(infix) = &PARSE_RULES[next_ttype].infix {
+
+            // Continue parsing if the next token is not a semi-colon and has
+            // a valid precedence for the current infix expression
+            while self.peek_valid_expression(precedence) {
+                if let Some(infix) = &self.peek_infix() {
                     self.next_token();
                     left_expr = infix(self, left_expr);
-                } else {
-                    return left_expr;
                 }
             }
             left_expr
@@ -245,5 +247,13 @@ impl Parser {
             eprintln!("{}", msg);
         }
         true
+    }
+
+    pub fn peek_invalid_assignment(&mut self, can_assign: bool) {
+        // Check if the precedence is low enough to allow assignment
+
+        if !can_assign && self.peek_token_is(&TokenType::Assign) {
+            self.push_error("Invalid assignment target");
+        }
     }
 }

@@ -4,11 +4,19 @@ use lazy_static::lazy_static;
 type PrefixParserFn = fn(&mut Parser) -> Expression;
 type InfixParserFn = fn(&mut Parser, Expression) -> Expression;
 
-#[derive(Copy, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct ParseRule {
     pub prefix: Option<PrefixParserFn>,
     pub infix: Option<InfixParserFn>,
     pub precedence: Precedence,
+    pub associativity: Associativity,
+}
+
+#[derive(Copy, Clone, Default, PartialEq, Eq)]
+pub enum Associativity {
+    #[default]
+    Left,
+    Right,
 }
 
 impl ParseRule {
@@ -21,6 +29,21 @@ impl ParseRule {
             infix,
             prefix,
             precedence,
+            associativity: Associativity::Left,
+        }
+    }
+
+    pub fn new_with_assoc(
+        prefix: Option<PrefixParserFn>,
+        infix: Option<InfixParserFn>,
+        precedence: Precedence,
+        associativity: Associativity,
+    ) -> Self {
+        Self {
+            infix,
+            prefix,
+            precedence,
+            associativity,
         }
     }
 }
@@ -98,26 +121,61 @@ lazy_static! {
             ParseRule::new(Some(Parser::parse_array_literal), Some(Parser::parse_index_expression), Precedence::Call);
         rules[TokenType::LeftBrace as usize] =
             ParseRule::new(Some(Parser::parse_hash_literal), None, Precedence::Lowest);
+        // Assignment
+        rules[TokenType::Assign as usize] = ParseRule::new_with_assoc(
+            None,
+            Some(Parser::parse_assignment_expression),
+            Precedence::Assignment,
+            Associativity::Right
+        );
         rules
     };
 }
 
 impl Parser {
-    pub fn peek_precedence(&self) -> Precedence {
-        PARSE_RULES[self.peek_next.ttype as usize].precedence
-    }
     pub fn curr_precedence(&self) -> Precedence {
         PARSE_RULES[self.current.ttype as usize].precedence
     }
+    pub fn curr_prefix(&self) -> Option<PrefixParserFn> {
+        PARSE_RULES[self.current.ttype as usize].prefix
+    }
+    pub fn peek_infix(&self) -> Option<InfixParserFn> {
+        PARSE_RULES[self.peek_next.ttype as usize].infix
+    }
+    pub fn peek_precedence(&self) -> Precedence {
+        PARSE_RULES[self.peek_next.ttype as usize].precedence
+    }
+    pub fn peek_associativity(&self) -> Associativity {
+        PARSE_RULES[self.peek_next.ttype as usize].associativity
+    }
+
+    // Return true if the next token is not semi-colon and also has a valid
+    // precedence for the current expression. Parse greedy if the operator is
+    // right associative. e.g. the assigmment. The calls to 'peek_token_is()'
+    /// with TokenType's Semicolon and Eof are actually redundant.
+    /// peek_precedence() returns 'Lowest' as the default precedence for the
+    /// token types Semicolon and Eof. It only makes the code look more logical.
+    pub fn peek_valid_expression(&self, precedence: Precedence) -> bool {
+        let precedence_cond = match self.peek_associativity() {
+            Associativity::Left => precedence < self.peek_precedence(),
+            Associativity::Right => precedence <= self.peek_precedence(),
+        };
+        precedence_cond
+            && !self.peek_token_is(&TokenType::Semicolon)
+            && !self.peek_token_is(&TokenType::Eof)
+    }
 
     fn parse_identifier(&mut self) -> Expression {
+        let access = self.peek_access_type();
         Expression::Ident(Identifier {
             token: self.current.clone(),
             value: self.current.literal.clone(),
+            access,
         })
     }
 
     fn parse_number(&mut self) -> Expression {
+        self.peek_invalid_assignment(false);
         if let Ok(value) = self.current.literal.parse() {
             Expression::Number(NumberLiteral {
                 token: self.current.clone(),
@@ -131,6 +189,7 @@ impl Parser {
     }
 
     fn parse_string(&mut self) -> Expression {
+        self.peek_invalid_assignment(false);
         if let Ok(value) = self.current.literal.parse() {
             Expression::Str(StringLiteral {
                 token: self.current.clone(),
@@ -147,7 +206,6 @@ impl Parser {
     fn parse_prefix_expression(&mut self) -> Expression {
         let operator = self.current.literal.clone();
         let token = self.current.clone();
-
         self.next_token();
         let right = self.parse_expression(Precedence::Unary);
 
@@ -163,10 +221,11 @@ impl Parser {
         let token = self.current.clone();
         // precedence of the operator
         let precedence = self.curr_precedence();
+
         // advance to the next token
         self.next_token();
-        let right = self.parse_expression(precedence);
 
+        let right = self.parse_expression(precedence);
         Expression::Binary(BinaryExpr {
             token,
             operator,
@@ -176,6 +235,7 @@ impl Parser {
     }
 
     fn parse_boolean(&mut self) -> Expression {
+        self.peek_invalid_assignment(false);
         Expression::Bool(BooleanExpr {
             token: self.current.clone(),
             value: self.curr_token_is(&TokenType::True),
@@ -185,8 +245,10 @@ impl Parser {
     // Override operator precedence using grouped expression
     fn parse_grouped(&mut self) -> Expression {
         self.next_token();
-        let expr = self.parse_expression(Precedence::Lowest);
+        let expr = self.parse_expression(Precedence::Assignment);
         if self.expect_peek(&TokenType::RightParen) {
+            // check for cases such as '(a) = b'
+            self.peek_invalid_assignment(false);
             expr
         } else {
             Expression::Nil
@@ -199,7 +261,7 @@ impl Parser {
             return Expression::Nil;
         }
         self.next_token();
-        let condition = self.parse_expression(Precedence::Lowest);
+        let condition = self.parse_expression(Precedence::Assignment);
         if !self.expect_peek(&TokenType::RightParen) {
             return Expression::Nil;
         }
@@ -274,6 +336,7 @@ impl Parser {
         identifiers.push(Identifier {
             token: token_ident,
             value: ident_value,
+            access: AccessType::Get,
         });
 
         while self.peek_token_is(&TokenType::Comma) {
@@ -284,6 +347,7 @@ impl Parser {
             identifiers.push(Identifier {
                 token: token_ident,
                 value: ident_value,
+                access: AccessType::Get,
             });
         }
 
@@ -320,11 +384,11 @@ impl Parser {
             return args;
         }
         self.next_token();
-        args.push(self.parse_expression(Precedence::Lowest));
+        args.push(self.parse_expression(Precedence::Assignment));
         while self.peek_token_is(&TokenType::Comma) {
             self.next_token();
             self.next_token();
-            args.push(self.parse_expression(Precedence::Lowest));
+            args.push(self.parse_expression(Precedence::Assignment));
         }
 
         if !self.expect_peek(&ttype_end) {
@@ -347,18 +411,22 @@ impl Parser {
     // they do. The index expression 'a[0]' is treated as an infix expression
     // with an expression 'a' on the left and an index '0' on the right.
     fn parse_index_expression(&mut self, left: Expression) -> Expression {
+        // The left bracket ('[') token
         let token = self.current.clone();
-        // advance to the next token
+        // advance to the index token
         self.next_token();
-        let index = self.parse_expression(Precedence::Lowest);
+        let index = self.parse_expression(Precedence::Assignment);
         if !self.expect_peek(&TokenType::RightBracket) {
             return Expression::Nil;
         }
+
+        let access = self.peek_access_type();
 
         Expression::Index(IndexExpr {
             token,
             left: Box::new(left),
             index: Box::new(index),
+            access,
         })
     }
 
@@ -369,14 +437,14 @@ impl Parser {
         while !self.peek_token_is(&TokenType::RightBrace) {
             // consume the first '{' or a ',' in each iteration
             self.next_token();
-            let key = self.parse_expression(Precedence::Lowest);
+            let key: Expression = self.parse_expression(Precedence::Assignment);
 
             if !self.expect_peek(&TokenType::Colon) {
                 return Expression::Nil;
             }
             // consume the colon (':') character
             self.next_token();
-            let value = self.parse_expression(Precedence::Lowest);
+            let value = self.parse_expression(Precedence::Assignment);
             pairs.push((key, value));
 
             if !self.peek_token_is(&TokenType::RightBrace) && !self.expect_peek(&TokenType::Comma) {
@@ -388,5 +456,29 @@ impl Parser {
             return Expression::Nil;
         }
         Expression::Hash(HashLiteral { token, pairs })
+    }
+
+    fn parse_assignment_expression(&mut self, left: Expression) -> Expression {
+        // The assignment operator ('=') token
+        let token = self.current.clone();
+
+        // precedence of the operator
+        let precedence = self.curr_precedence();
+        // advance to the next token
+        self.next_token();
+        let right = self.parse_expression(precedence);
+
+        Expression::Assign(AssignExpr {
+            token,
+            left: Box::new(left),
+            right: Box::new(right),
+        })
+    }
+    fn peek_access_type(&self) -> AccessType {
+        if self.peek_token_is(&TokenType::Assign) {
+            AccessType::Set
+        } else {
+            AccessType::Get
+        }
     }
 }

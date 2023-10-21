@@ -1230,3 +1230,106 @@ fn test_recursive_fibonacci() {
 
     run_vm_tests(&tests);
 }
+
+#[test]
+fn test_assignment_expressions() {
+    let tests: Vec<VmTestCase> = vec![
+        VmTestCase {
+            input: "let a = 1; a = 2;",
+            expected: Object::Number(2.),
+        },
+        VmTestCase {
+            input: "let a = 1; a = 2; a",
+            expected: Object::Number(2.),
+        },
+        VmTestCase {
+            input: "let a = true; a = false; a",
+            expected: Object::Bool(false),
+        },
+        // Assignment expressions evaluate to the value assigned
+        VmTestCase {
+            input: r#" let a = 0; if (a = 1) { "then" } else { "else" } "#,
+            expected: Object::Str("then".to_string()),
+        },
+        // If expression evaluates to falsey, since 0 is falsey.
+        VmTestCase {
+            input: r#" let a = 1; if (a = 0) { "then" } else { "else" } "#,
+            expected: Object::Str("else".to_string()),
+        },
+        VmTestCase {
+            input: "let a = [1]; a = [2]; a",
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![Rc::new(Object::Number(2.0))]),
+            })),
+        },
+        VmTestCase {
+            input: r#"let m = {"a": 1}; m = {"a": 2}; m"#,
+            expected: Object::Map({
+                let map = HMap::default();
+                map.insert(
+                    Rc::new(Object::Str("a".into())),
+                    Rc::new(Object::Number(2.)),
+                );
+                Rc::new(map)
+            }),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_set_index_assignment_expressions() {
+    let tests: Vec<VmTestCase> = vec![
+        VmTestCase {
+            input: "let a = [1, 2, 3]; a[0] = 111; a[1] = 222; a[2] = 333; a",
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Number(111.0)),
+                    Rc::new(Object::Number(222.0)),
+                    Rc::new(Object::Number(333.0)),
+                ]),
+            })),
+        },
+        VmTestCase {
+            input: r#"let m = {}; m["a"] = 1; m"#,
+            expected: Object::Map({
+                let map = HMap::default();
+                map.insert(
+                    Rc::new(Object::Str("a".into())),
+                    Rc::new(Object::Number(1.)),
+                );
+                Rc::new(map)
+            }),
+        },
+        VmTestCase {
+            input: r#"let m = {"a": 1}; m["a"] = 111; m"#,
+            expected: Object::Map({
+                let map = HMap::default();
+                map.insert(
+                    Rc::new(Object::Str("a".into())),
+                    Rc::new(Object::Number(111.)),
+                );
+                Rc::new(map)
+            }),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_set_index_assignment_expressions_negative() {
+    let tests: Vec<VmTestCaseErr> = vec![
+        VmTestCaseErr {
+            input: "let a = []; a[0] = 1;",
+            expected: "IndexError: array index out of range.",
+        },
+        VmTestCaseErr {
+            input: "let a = [1, 2, 3]; a[4] = 4;",
+            expected: "IndexError: array index out of range.",
+        },
+    ];
+
+    run_vm_negative_tests(&tests);
+}

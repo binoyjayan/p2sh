@@ -72,11 +72,21 @@ impl VM {
         vm
     }
 
+    // peek element from the top and return nil if underflow
     pub fn peek(&self, distance: usize) -> Rc<Object> {
         if self.sp - distance == 0 {
             Rc::new(Object::Nil)
         } else {
             Rc::clone(&self.stack[self.sp - distance - 1])
+        }
+    }
+
+    // peek element from the top and return error if underflow
+    pub fn top(&self, distance: usize, line: usize) -> Result<Rc<Object>, RTError> {
+        if self.sp - distance == 0 {
+            Err(RTError::new("Stack overflow!", line))
+        } else {
+            Ok(Rc::clone(&self.stack[self.sp - distance - 1]))
         }
     }
 
@@ -232,6 +242,13 @@ impl VM {
                 Opcode::Nil => {
                     self.push(Rc::new(Object::Nil), line)?;
                 }
+                Opcode::DefineGlobal => {
+                    let bytes = &instructions.code[ip + 1..ip + 3];
+                    // decode the operand (index to globals)
+                    let globals_index: usize = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
+                    self.current_frame().ip += 2;
+                    self.globals[globals_index] = self.pop(line)?;
+                }
                 Opcode::GetGlobal => {
                     let bytes = &instructions.code[ip + 1..ip + 3];
                     // decode the operand (index to globals)
@@ -244,7 +261,10 @@ impl VM {
                     // decode the operand (index to globals)
                     let globals_index: usize = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
                     self.current_frame().ip += 2;
-                    self.globals[globals_index] = self.pop(line)?;
+                    // Use the element on top of the stack for the assignment
+                    // but do not pop the element off the stack since the assigment
+                    // expression also evaluates to the value that is assigned
+                    self.globals[globals_index] = self.top(0, line)?;
                 }
                 Opcode::Array => {
                     // Read the first operand i.e. the number of array elements
@@ -298,11 +318,29 @@ impl VM {
                     // continue for the same reason as that of 'OpReturnValue'
                     continue;
                 }
-                Opcode::Index => {
-                    // Top most element is the index, the expression being indexed is below
+                Opcode::GetIndex => {
+                    // The top most element on the stack is the index expression
+                    // The next element is the expression itself.
                     let index = self.pop(line)?;
                     let left = self.pop(line)?;
-                    self.exec_index_expr(left, index, line)?;
+                    self.exec_index_expr(left, index, None, line)?;
+                }
+                Opcode::SetIndex => {
+                    // The top most element on the stack is the index expression
+                    // The next element is the expression itself. The value to be
+                    // set is further down the stack.
+                    let index = self.pop(line)?;
+                    let left = self.pop(line)?;
+                    let setval = Some(self.pop(line)?);
+                    self.exec_index_expr(left, index, setval, line)?;
+                }
+                Opcode::DefineLocal => {
+                    // decode the operand (index to locals)
+                    let locals_index = instructions.code[ip + 1] as usize;
+                    self.current_frame().ip += 1;
+                    let bp = self.current_frame().bp;
+                    // Create the local binding
+                    self.stack[bp + locals_index] = self.pop(line)?;
                 }
                 Opcode::GetLocal => {
                     // decode the operand (index to locals)
@@ -317,8 +355,10 @@ impl VM {
                     let locals_index = instructions.code[ip + 1] as usize;
                     self.current_frame().ip += 1;
                     let bp = self.current_frame().bp;
-                    // Create the local binding
-                    self.stack[bp + locals_index] = self.pop(line)?;
+                    // Use the element on top of the stack for the assignment
+                    // but do not pop the element off the stack since the assigment
+                    // expression also evaluates to the value that is assigned
+                    self.stack[bp + locals_index] = self.top(0, line)?;
                 }
                 Opcode::GetBuiltinFn => {
                     // decode the operand (index to built-in functions)
@@ -350,6 +390,7 @@ impl VM {
                     let curr_closure = self.current_frame().closure.clone();
                     self.push(curr_closure.free[free_idx].clone(), line)?;
                 }
+                Opcode::SetFree => {}
                 Opcode::CurrClosure => {
                     let curr_closure = self.current_frame().closure.clone();
                     // push the current closure on stack
@@ -430,20 +471,30 @@ impl VM {
         elements
     }
 
+    // Common code for indexing into arrays and maps
     fn exec_index_expr(
         &mut self,
         left: Rc<Object>,
         index: Rc<Object>,
+        setval: Option<Rc<Object>>,
         line: usize,
     ) -> Result<(), RTError> {
         match (&*left, &*index) {
-            (Object::Arr(arr), Object::Number(idx)) => self.exec_array_index(arr, *idx, line),
-            (Object::Map(map), _) => self.exec_hash_index(map, &index, line),
+            (Object::Arr(arr), Object::Number(idx)) => {
+                self.exec_array_index(arr, *idx, setval, line)
+            }
+            (Object::Map(map), _) => self.exec_hash_index(map, &index, setval, line),
             _ => Err(RTError::new("IndexError: operator not supported.", line)),
         }
     }
 
-    fn exec_array_index(&mut self, arr: &Array, idx: f64, line: usize) -> Result<(), RTError> {
+    fn exec_array_index(
+        &mut self,
+        arr: &Array,
+        idx: f64,
+        setval: Option<Rc<Object>>,
+        line: usize,
+    ) -> Result<(), RTError> {
         if idx < 0. {
             return Err(RTError::new(
                 "IndexError: index cannot be less than zero.",
@@ -454,6 +505,10 @@ impl VM {
         if obj.is_nil() {
             return Err(RTError::new("IndexError: array index out of range.", line));
         }
+        // If it is a SetIndex operation, then set the value at the index
+        if let Some(val) = setval {
+            arr.set(idx as usize, val);
+        }
         self.push(obj, line)
     }
 
@@ -461,12 +516,22 @@ impl VM {
         &mut self,
         map: &HMap,
         key: &Rc<Object>,
+        setval: Option<Rc<Object>>,
         line: usize,
     ) -> Result<(), RTError> {
-        let obj = map.get(key);
-        if obj.is_nil() {
-            return Err(RTError::new("KeyError: key not found.", line));
-        }
+        // If it is a SetIndex operation, then set the value at the index
+        // SetIndex operation for a map does ntot require that the key
+        // if present in the map already.
+        let obj = if let Some(val) = setval {
+            map.insert(key.clone(), val)
+        } else {
+            let obj = map.get(key);
+            if obj.is_nil() {
+                return Err(RTError::new("KeyError: key not found.", line));
+            }
+            obj
+        };
+
         self.push(obj, line)
     }
 

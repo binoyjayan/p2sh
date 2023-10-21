@@ -28,6 +28,7 @@ pub struct ReturnStmt {
 pub struct ExpressionStmt {
     pub token: Token,
     pub value: Expression,
+    pub is_assign: bool,
 }
 
 #[derive(Clone, Debug)]

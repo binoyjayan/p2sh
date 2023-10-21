@@ -70,7 +70,7 @@ pub fn run_prompt(args: Vec<String>) {
 
                 let mut compiler = Compiler::new_with_state(symtab, constants);
                 if let Err(e) = compiler.compile(program) {
-                    eprintln!("Compilation error: {}", e);
+                    eprintln!("{}", e);
                     return;
                 }
                 let bytecode = compiler.bytecode();
@@ -113,7 +113,7 @@ pub fn run_file(path: &str, args: Vec<String>) {
 
         let mut compiler = Compiler::new();
         if let Err(e) = compiler.compile(program) {
-            eprintln!("Compilation error: {}", e);
+            eprintln!("{}", e);
             return;
         }
         let bytecode = compiler.bytecode();

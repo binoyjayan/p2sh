@@ -184,6 +184,20 @@ impl Compiler {
         };
     }
 
+    // Save symbol as part of an assignment. Note that these operations are
+    // different from the ones used to define a symbol's value.
+    fn save_symbol(&mut self, sym: Rc<Symbol>, line: usize) -> Result<(), CompileError> {
+        match sym.scope {
+            SymbolScope::Global => self.emit(Opcode::SetGlobal, &[sym.index], line),
+            SymbolScope::Local => self.emit(Opcode::SetLocal, &[sym.index], line),
+            SymbolScope::Free => self.emit(Opcode::SetFree, &[sym.index], line),
+            _ => {
+                return Err(CompileError::new("Invalid lvalue", line));
+            }
+        };
+        Ok(())
+    }
+
     // Save the last and the previous instructions
     fn set_last_instruction(&mut self, op: Opcode, pos: usize) {
         let prev_ins = self.scopes[self.scope_index].last_ins.clone();
@@ -273,6 +287,9 @@ impl Compiler {
         match stmt {
             Statement::Expr(stmt) => {
                 self.compile_expression(stmt.value)?;
+                // Unlike the 'let' and the 'return' statments, expression
+                // statements do not consume the result of the expression
+                // So emit a Pop instruction to cleanup the stack.
                 self.emit(Opcode::Pop, &[0], stmt.token.line);
             }
             Statement::Let(stmt) => {
@@ -283,9 +300,9 @@ impl Compiler {
 
                 // Use a Symbol's scope to emit the right instruction
                 if symbol.scope == SymbolScope::Global {
-                    self.emit(Opcode::SetGlobal, &[symbol.index], stmt.token.line);
+                    self.emit(Opcode::DefineGlobal, &[symbol.index], stmt.token.line);
                 } else {
-                    self.emit(Opcode::SetLocal, &[symbol.index], stmt.token.line);
+                    self.emit(Opcode::DefineLocal, &[symbol.index], stmt.token.line);
                 }
             }
             Statement::Return(stmt) => {
@@ -299,6 +316,7 @@ impl Compiler {
 
     fn compile_expression(&mut self, expr: Expression) -> Result<(), CompileError> {
         match expr {
+            Expression::Nil => {}
             Expression::Number(num) => {
                 let obj = Object::Number(num.value);
                 let idx = self.add_constant(obj);
@@ -398,22 +416,15 @@ impl Compiler {
                 self.change_operand(jump_pos, after_else_pos);
             }
             Expression::Ident(expr) => {
-                if let Some(symbol) = self.symtab.resolve(&expr.token.literal) {
-                    self.load_symbol(symbol, expr.token.line);
-                } else {
-                    return Err(CompileError::new(
-                        &format!("undefined variable {}", expr.token.literal),
-                        expr.token.line,
-                    ));
-                }
+                self.compile_identifier(expr)?;
             }
             Expression::Index(expr) => {
-                // Compile the expression being indexed
+                self.compile_index_expression(expr)?;
+            }
+            Expression::Assign(expr) => {
+                // compile the expression on the right side of the assignment
+                self.compile_expression(*expr.right)?;
                 self.compile_expression(*expr.left)?;
-                // Compile the index expression
-                self.compile_expression(*expr.index)?;
-                // Emit the index operator
-                self.emit(Opcode::Index, &[0], expr.token.line);
             }
             Expression::Function(func) => {
                 // enter scope of a function
@@ -477,7 +488,6 @@ impl Compiler {
                 // First operand to OpCall is the number of arguments
                 self.emit(Opcode::Call, &[num_args], call.token.line);
             }
-            _ => {}
         }
         Ok(())
     }
@@ -513,5 +523,41 @@ impl Compiler {
     fn compile_let_stmt(&mut self, expr: Expression) -> Result<Object, CompileError> {
         self.compile_expression(expr)?;
         Ok(Object::Nil)
+    }
+
+    fn compile_identifier(&mut self, expr: Identifier) -> Result<(), CompileError> {
+        if let Some(symbol) = self.symtab.resolve(&expr.token.literal) {
+            match expr.access {
+                AccessType::Get => {
+                    self.load_symbol(symbol, expr.token.line);
+                }
+                AccessType::Set => {
+                    self.save_symbol(symbol, expr.token.line)?;
+                }
+            }
+        } else {
+            return Err(CompileError::new(
+                &format!("undefined variable {}", expr.token.literal),
+                expr.token.line,
+            ));
+        }
+        Ok(())
+    }
+
+    fn compile_index_expression(&mut self, expr: IndexExpr) -> Result<(), CompileError> {
+        // Compile the expression being indexed
+        self.compile_expression(*expr.left)?;
+        // Compile the index expression
+        self.compile_expression(*expr.index)?;
+        // Emit the index operator
+        match expr.access {
+            AccessType::Get => {
+                self.emit(Opcode::GetIndex, &[], expr.token.line);
+            }
+            AccessType::Set => {
+                self.emit(Opcode::SetIndex, &[], expr.token.line);
+            }
+        }
+        Ok(())
     }
 }

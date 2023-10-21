@@ -16,13 +16,22 @@ pub enum Expression {
     Array(ArrayLiteral),
     Hash(HashLiteral),
     Index(IndexExpr),
+    Assign(AssignExpr),
     Nil,
+}
+
+// Type of access to a symbol or expresion
+#[derive(Clone, Debug)]
+pub enum AccessType {
+    Get,
+    Set,
 }
 
 #[derive(Clone, Debug)]
 pub struct Identifier {
     pub token: Token,
     pub value: String,
+    pub access: AccessType,
 }
 
 impl fmt::Display for Identifier {
@@ -196,11 +205,25 @@ pub struct IndexExpr {
     pub token: Token, // [
     pub left: Box<Expression>,
     pub index: Box<Expression>,
+    pub access: AccessType,
 }
 
 impl fmt::Display for IndexExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({}[{}])", self.left, self.index)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct AssignExpr {
+    pub token: Token, //operator token
+    pub left: Box<Expression>,
+    pub right: Box<Expression>,
+}
+
+impl fmt::Display for AssignExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({} {} {})", self.left, self.token, self.right)
     }
 }
 
@@ -220,6 +243,7 @@ impl Expression {
             Expression::Array(s) => s.token.literal.clone(),
             Expression::Hash(h) => h.token.literal.clone(),
             Expression::Index(idx) => idx.token.literal.clone(),
+            Expression::Assign(asn) => asn.token.literal.clone(),
             Expression::Nil => "nil".to_string(),
         }
     }
@@ -240,6 +264,7 @@ impl fmt::Display for Expression {
             Expression::Array(s) => write!(f, "{}", s),
             Expression::Hash(h) => write!(f, "{}", h),
             Expression::Index(idx) => write!(f, "{}", idx),
+            Expression::Assign(asn) => write!(f, "{}", asn),
             Expression::Nil => write!(f, "nil"),
         }
     }

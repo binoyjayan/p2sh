@@ -5,9 +5,10 @@ use std::collections::HashMap;
 #[cfg(test)]
 #[derive(Clone)]
 enum Literal {
-    Str(&'static str),
+    Ident(&'static str),
     Numeric(f64),
     Bool(bool),
+    Str(&'static str),
 }
 
 #[cfg(test)]
@@ -27,6 +28,14 @@ fn parse_test_program(input: &str, num_stmts: usize) -> Program {
         );
     }
     program
+}
+
+#[cfg(test)]
+fn parse_test_program_failures(input: &str) -> Vec<String> {
+    let scanner = Scanner::new(input);
+    let mut parser = Parser::new(scanner);
+    let _program = parser.parse_program();
+    parser.parse_errors().to_vec()
 }
 
 #[cfg(test)]
@@ -95,7 +104,7 @@ fn test_identifier(expression: &Expression, value: &str) {
 #[cfg(test)]
 fn test_literal(expression: &Expression, value: Literal) {
     match value {
-        Literal::Str(value) => {
+        Literal::Ident(value) => {
             test_identifier(expression, value);
         }
         Literal::Numeric(value) => {
@@ -103,6 +112,9 @@ fn test_literal(expression: &Expression, value: Literal) {
         }
         Literal::Bool(value) => {
             test_boolean_literal(expression, value);
+        }
+        Literal::Str(value) => {
+            test_string_literal(expression, value);
         }
     }
 }
@@ -140,6 +152,17 @@ fn test_infix_expression(expression: &Expression, left: Literal, operator: &str,
     }
 }
 
+// Assignment expression
+#[cfg(test)]
+fn test_assign_expression(expression: &Expression, left: Literal, right: Literal) {
+    if let Expression::Assign(expr) = expression {
+        test_literal(&*expr.left, left);
+        test_literal(&*expr.right, right);
+    } else {
+        panic!("expr not an Assign expression. got={:?}", expression);
+    }
+}
+
 #[test]
 fn test_let_statements() {
     struct TestLet {
@@ -161,7 +184,7 @@ fn test_let_statements() {
         TestLet {
             input: "let foobar = y;",
             expected_id: "foobar",
-            expected_val: Literal::Str("y"),
+            expected_val: Literal::Ident("y"),
         },
     ];
 
@@ -229,12 +252,14 @@ fn test_string_formatting() {
     let ident_myvar1 = Identifier {
         token: token_myvar1,
         value: "myvar1".to_string(),
+        access: AccessType::Get,
     };
 
     let token_myvar2 = Token::new(TokenType::Identifier, "myvar2", 2);
     let ident_myvar2 = Identifier {
         token: token_myvar2,
         value: "myvar2".to_string(),
+        access: AccessType::Get,
     };
 
     let program = Program {
@@ -589,12 +614,32 @@ fn test_parsing_operator_precedence() {
             expected: "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
             num_stmts: 1,
         },
+        PrecedenceTest {
+            input: "a = true",
+            expected: "(a = true)",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a = true",
+            expected: "(a = true)",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a = b = 1",
+            expected: "(a = (b = 1))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "s = a + b - c",
+            expected: "(s = ((a + b) - c))",
+            num_stmts: 1,
+        },
     ];
 
-    for test in precedence_tests {
+    for (i, test) in precedence_tests.iter().enumerate() {
         let program = parse_test_program(test.input, test.num_stmts);
         let actual = format!("{}", program);
-        assert_eq!(actual, test.expected);
+        assert_eq!(actual, test.expected, "Test {}", i);
     }
 }
 
@@ -632,7 +677,12 @@ fn test_if_then_expression() {
     let stmt = &program.statements[0];
     if let Statement::Expr(stmt) = stmt {
         if let Expression::If(expr) = &stmt.value {
-            test_infix_expression(&expr.condition, Literal::Str("x"), "<", Literal::Str("y"));
+            test_infix_expression(
+                &expr.condition,
+                Literal::Ident("x"),
+                "<",
+                Literal::Ident("y"),
+            );
             let num_stmts = expr.then_stmt.statements.len();
             assert_eq!(num_stmts, 1, "then_stmt count not 1. got={}", num_stmts);
             if let Statement::Expr(expr) = &expr.then_stmt.statements[0] {
@@ -665,7 +715,12 @@ fn test_if_then_else_expression() {
     let stmt = &program.statements[0];
     if let Statement::Expr(stmt) = stmt {
         if let Expression::If(expr) = &stmt.value {
-            test_infix_expression(&expr.condition, Literal::Str("x"), "<", Literal::Str("y"));
+            test_infix_expression(
+                &expr.condition,
+                Literal::Ident("x"),
+                "<",
+                Literal::Ident("y"),
+            );
             let num_stmts = expr.then_stmt.statements.len();
             assert_eq!(num_stmts, 1, "then_stmt count not 1. got={}", num_stmts);
             if let Statement::Expr(expr) = &expr.then_stmt.statements[0] {
@@ -723,7 +778,7 @@ fn test_parsing_function_literal() {
             );
 
             if let Statement::Expr(expr) = &expr.body.statements[0] {
-                test_infix_expression(&expr.value, Literal::Str("x"), "+", Literal::Str("y"));
+                test_infix_expression(&expr.value, Literal::Ident("x"), "+", Literal::Ident("y"));
             } else {
                 panic!(
                     "function.body.statements[0] is not an expression statement. got={}",
@@ -1035,4 +1090,69 @@ fn test_function_literal_with_name() {
             stmt
         );
     }
+}
+
+#[test]
+fn test_parsing_assignment_expressions() {
+    struct AssignTest {
+        input: &'static str,
+        left: Literal,
+        right: Literal,
+    }
+    let infix_tests = vec![
+        AssignTest {
+            input: "a = 10;",
+            left: Literal::Ident("a"),
+            right: Literal::Numeric(10.),
+        },
+        AssignTest {
+            input: "a = true;",
+            left: Literal::Ident("a"),
+            right: Literal::Bool(true),
+        },
+        AssignTest {
+            input: r#"a = "hello";"#,
+            left: Literal::Ident("a"),
+            right: Literal::Str("hello"),
+        },
+    ];
+
+    for test in infix_tests {
+        let program = parse_test_program(test.input, 1);
+        let stmt = &program.statements[0];
+        if let Statement::Expr(stmt) = stmt {
+            test_assign_expression(&stmt.value, test.left, test.right);
+        } else {
+            panic!(
+                "program.statements[0] is not an expression statement. got={}",
+                stmt
+            );
+        }
+    }
+}
+
+#[test]
+fn test_parsing_assignment_expressions_negative() {
+    let mut count = 0;
+    let error_str = "[line 1] Invalid assignment target";
+    let tests = vec![
+        "1 = 1",
+        r#""a" = 1"#,
+        "true = 1",
+        "-a = 1",
+        "a + b = 1",
+        "a * b = 1",
+        "(a) = 1",
+    ];
+
+    for (i, &test_input) in tests.iter().enumerate() {
+        let errors = parse_test_program_failures(test_input);
+        if errors.len() == 0 {
+            eprintln!("[{}]: Expected error. Got none", i);
+            count += 1;
+        } else {
+            assert_eq!(errors[0], error_str, "[{}]: Unexpected Error", i);
+        }
+    }
+    assert_eq!(0, count, "tests failed");
 }

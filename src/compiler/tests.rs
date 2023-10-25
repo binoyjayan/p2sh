@@ -1486,3 +1486,161 @@ fn test_assignment_expressions_negative() {
 
     run_compiler_failed_tests(&tests);
 }
+
+#[test]
+fn test_assignment_expression_scopes() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "let num = 55; fn() { num = 66; num }",
+            expected_constants: vec![
+                Object::Number(55.),
+                Object::Number(66.),
+                Object::Func(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
+                        // num = 66
+                        definitions::make(Opcode::Constant, &[1], 1),
+                        definitions::make(Opcode::SetGlobal, &[0], 1),
+                        definitions::make(Opcode::Pop, &[], 1),
+                        // push the value of global variable 'num'
+                        definitions::make(Opcode::GetGlobal, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
+                    ]),
+                    0,
+                    0,
+                ))),
+            ],
+            expected_instructions: vec![
+                // constant - number 55
+                definitions::make(Opcode::Constant, &[0], 1),
+                // set the global variable 'num'
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                // constant - compiled function (closure)
+                definitions::make(Opcode::Closure, &[2, 0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "fn() { let num = 55; num = 66; num }",
+            expected_constants: vec![
+                Object::Number(55.),
+                Object::Number(66.),
+                Object::Func(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
+                        // constant - number 55
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        // define the global variable 'num'
+                        definitions::make(Opcode::DefineLocal, &[0], 1),
+                        // num = 66
+                        definitions::make(Opcode::Constant, &[1], 1),
+                        definitions::make(Opcode::SetLocal, &[0], 1),
+                        definitions::make(Opcode::Pop, &[], 1),
+                        // push the value of global variable 'num'
+                        definitions::make(Opcode::GetLocal, &[0], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
+                    ]),
+                    1,
+                    0,
+                ))),
+            ],
+            expected_instructions: vec![
+                // constant - compiled function (closure)
+                definitions::make(Opcode::Closure, &[2, 0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "
+                fn() {
+                    let a = 55;
+                    let b = 77;
+                    a = 66;
+                    b = 88;
+                    a + b
+                }
+            ",
+            expected_constants: vec![
+                Object::Number(55.),
+                Object::Number(77.),
+                Object::Number(66.),
+                Object::Number(88.),
+                Object::Func(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
+                        definitions::make(Opcode::Constant, &[0], 1),    // 55
+                        definitions::make(Opcode::DefineLocal, &[0], 1), // 'a'
+                        definitions::make(Opcode::Constant, &[1], 1),    // 77
+                        definitions::make(Opcode::DefineLocal, &[1], 1), // 'b'
+                        // a = 66
+                        definitions::make(Opcode::Constant, &[2], 1), // 66
+                        definitions::make(Opcode::SetLocal, &[0], 1), // 'a'
+                        definitions::make(Opcode::Pop, &[], 1),
+                        // b = 88
+                        definitions::make(Opcode::Constant, &[3], 1), // 88
+                        definitions::make(Opcode::SetLocal, &[1], 1), // 'b'
+                        definitions::make(Opcode::Pop, &[], 1),
+                        definitions::make(Opcode::GetLocal, &[0], 1), // 'a'
+                        definitions::make(Opcode::GetLocal, &[1], 1), // 'b'
+                        definitions::make(Opcode::Add, &[], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
+                    ]),
+                    2,
+                    0,
+                ))),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Closure, &[4, 0], 1), // compiled fn (closure)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_assignment_expressions_free_variables() {
+    let tests = vec![CompilerTestCase {
+        input: "
+                fn(a) {
+                    fn(b) {
+                        a = 99;
+                        a + b
+                    }
+                }
+            ",
+
+        expected_constants: vec![
+            Object::Number(99.),
+            Object::Func(Rc::new(CompiledFunction::new(
+                // the real closure
+                concat_instructions(&[
+                    // a = 66
+                    definitions::make(Opcode::Constant, &[0], 1), // 99
+                    definitions::make(Opcode::SetFree, &[0], 1),  // 'a'
+                    definitions::make(Opcode::Pop, &[], 1),
+                    definitions::make(Opcode::GetFree, &[0], 1), // 'a'
+                    definitions::make(Opcode::GetLocal, &[0], 1), // 'b'
+                    definitions::make(Opcode::Add, &[], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+            Object::Func(Rc::new(CompiledFunction::new(
+                concat_instructions(&[
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    // #free-vars is 1 as there is one free variable on the stack
+                    // that needs to be saved into the free field of the closure
+                    definitions::make(Opcode::Closure, &[1, 1], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+        ],
+
+        expected_instructions: vec![
+            definitions::make(Opcode::Closure, &[2, 0], 1),
+            definitions::make(Opcode::Pop, &[], 1),
+        ],
+    }];
+    run_compiler_tests(&tests);
+}

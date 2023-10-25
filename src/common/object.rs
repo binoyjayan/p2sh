@@ -392,12 +392,15 @@ impl Eq for CompiledFunction {}
 #[derive(Debug, Clone, Default)]
 pub struct Closure {
     pub func: Rc<CompiledFunction>,
-    pub free: Vec<Rc<Object>>,
+    pub free: RefCell<Vec<Rc<Object>>>,
 }
 
 impl Closure {
     pub fn new(func: Rc<CompiledFunction>, free: Vec<Rc<Object>>) -> Self {
-        Self { func, free }
+        Self {
+            func,
+            free: RefCell::new(free),
+        }
     }
 }
 

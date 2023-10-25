@@ -1292,6 +1292,25 @@ fn test_set_index_assignment_expressions() {
             })),
         },
         VmTestCase {
+            input: r#"
+                let mul = fn(a, idx, val) {
+                    a[idx] = a[idx] * val
+                }
+                let a = [1, 2, 3];
+                mul(a, 0, 10);
+                mul(a, 1, 100);
+                mul(a, 2, 1000);
+                a
+            "#,
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Number(10.0)),
+                    Rc::new(Object::Number(200.0)),
+                    Rc::new(Object::Number(3000.0)),
+                ]),
+            })),
+        },
+        VmTestCase {
             input: r#"let m = {}; m["a"] = 1; m"#,
             expected: Object::Map({
                 let map = HMap::default();
@@ -1332,4 +1351,37 @@ fn test_set_index_assignment_expressions_negative() {
     ];
 
     run_vm_negative_tests(&tests);
+}
+
+#[test]
+fn test_set_index_assignment_expressions_free_variables() {
+    let tests: Vec<VmTestCase> = vec![
+        // newClosure returns a closure that closes over a free variable,
+        // the parameter 'a' of newClosure
+        VmTestCase {
+            input: r#"
+                let newClosure = fn(a) {
+                    fn() { a = 99; a; }
+                }
+                let closure = newClosure(88);
+                closure();
+                "#,
+            expected: Object::Number(99.),
+        },
+        VmTestCase {
+            input: r#"
+                let newAdder = fn(a, b) {
+                    fn(c) {
+                        a = a + 10; b = b + 20;
+                        a + b + c;
+                    }
+                }
+                let adder = newAdder(1, 2);
+                adder(7);
+                "#,
+            expected: Object::Number(40.),
+        },
+    ];
+
+    run_vm_tests(&tests);
 }

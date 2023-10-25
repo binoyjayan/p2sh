@@ -388,9 +388,17 @@ impl VM {
                     let free_idx = instructions.code[ip + 1] as usize;
                     self.current_frame().ip += 1;
                     let curr_closure = self.current_frame().closure.clone();
-                    self.push(curr_closure.free[free_idx].clone(), line)?;
+                    self.push(curr_closure.free.borrow()[free_idx].clone(), line)?;
                 }
-                Opcode::SetFree => {}
+                Opcode::SetFree => {
+                    let free_idx = instructions.code[ip + 1] as usize;
+                    self.current_frame().ip += 1;
+                    let curr_closure = self.current_frame().closure.clone();
+                    // Use the element on top of the stack for the assignment
+                    // but do not pop the element off the stack since the assigment
+                    // expression also evaluates to the value that is assigned
+                    curr_closure.free.borrow_mut()[free_idx] = self.top(0, line)?;
+                }
                 Opcode::CurrClosure => {
                     let curr_closure = self.current_frame().closure.clone();
                     // push the current closure on stack

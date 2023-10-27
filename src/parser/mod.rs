@@ -40,6 +40,10 @@ impl Parser {
         self.peek_next = self.scanner.next_token();
     }
 
+    fn prev_token_is(&self, ttype: &TokenType) -> bool {
+        self.previous.ttype == *ttype
+    }
+
     fn curr_token_is(&self, ttype: &TokenType) -> bool {
         self.current.ttype == *ttype
     }
@@ -58,15 +62,10 @@ impl Parser {
         }
     }
 
-    // check if we have run out of tokens
-    #[allow(dead_code)]
-    fn is_at_end(&self) -> bool {
-        self.peek_next.ttype == TokenType::Eof
-    }
-
     pub fn push_error(&mut self, err: &str) {
         self.errors
             .push(format!("[line {}] {}", self.scanner.get_line(), err));
+        self.synchronize();
     }
 
     pub fn parse_errors(&self) -> &Vec<String> {
@@ -79,6 +78,22 @@ impl Parser {
             ttype, self.peek_next.ttype
         );
         self.push_error(&msg);
+    }
+
+    // Synchronize parser upon encountering error
+    fn synchronize(&mut self) {
+        while !self.peek_token_is(&TokenType::Eof) {
+            if self.prev_token_is(&TokenType::Semicolon) {
+                return;
+            }
+            if matches!(
+                self.peek_next.ttype,
+                TokenType::Function | TokenType::Let | TokenType::If | TokenType::Return
+            ) {
+                return;
+            }
+            self.next_token();
+        }
     }
 
     pub fn parse_program(&mut self) -> Program {
@@ -235,7 +250,7 @@ impl Parser {
     }
 
     fn no_prefix_parse_error(&mut self) {
-        let msg = format!("no prefix parser is available for token '{}'", self.current);
+        let msg = format!("failed to parse token '{}'", self.current);
         self.push_error(&msg);
     }
 

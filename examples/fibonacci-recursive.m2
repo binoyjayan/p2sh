@@ -1,8 +1,8 @@
 let fibonacci = fn(x) {
-    if (x == 0) {
+    if x == 0 {
         return 0;
     } else {
-        if (x == 1) {
+        if x == 1 {
             return 1;
         } else {
             fibonacci(x - 1) + fibonacci(x - 2);
@@ -10,7 +10,7 @@ let fibonacci = fn(x) {
     }
 };
 
-let n = if (len(argv) > 1) {
+let n = if len(argv) > 1 {
   int(argv[1])
 } else {
  30

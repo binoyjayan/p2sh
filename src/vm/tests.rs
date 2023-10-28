@@ -384,7 +384,7 @@ fn test_boolean_expressions() {
             expected: Object::Bool(true),
         },
         VmTestCase {
-            input: "!(if (false) { 5; })",
+            input: "!(if false { 5; })",
             expected: Object::Bool(true),
         },
     ];
@@ -396,43 +396,49 @@ fn test_boolean_expressions() {
 fn test_conditionals() {
     let tests = vec![
         VmTestCase {
+            input: "if true { 10 }",
+            expected: Object::Integer(10),
+        },
+        // condition enclosed in parentheses
+        VmTestCase {
             input: "if (true) { 10 }",
             expected: Object::Integer(10),
         },
         VmTestCase {
-            input: "if (true) { 10 } else { 20 }",
+            input: "if true { 10 } else { 20 }",
             expected: Object::Integer(10),
         },
         VmTestCase {
-            input: "if (false) { 10 } else { 20 } ",
+            input: "if false { 10 } else { 20 } ",
             expected: Object::Integer(20),
         },
         VmTestCase {
-            input: "if (1) { 10 }",
+            input: "if 1 { 10 }",
             expected: Object::Integer(10),
         },
         VmTestCase {
-            input: "if (1 < 2) { 10 }",
+            input: "if 1 < 2 { 10 }",
             expected: Object::Integer(10),
         },
         VmTestCase {
-            input: "if (1 < 2) { 10 } else { 20 }",
+            input: "if 1 < 2 { 10 } else { 20 }",
             expected: Object::Integer(10),
         },
         VmTestCase {
-            input: "if (1 > 2) { 10 } else { 20 }",
+            input: "if 1 > 2 { 10 } else { 20 }",
             expected: Object::Integer(20),
         },
         VmTestCase {
-            input: "if (1 > 2) { 10 }",
+            input: "if 1 > 2 { 10 }",
             expected: Object::Nil,
         },
         VmTestCase {
-            input: "if (false) { 10 }",
+            input: "if false { 10 }",
             expected: Object::Nil,
         },
+        // nested conditionals
         VmTestCase {
-            input: "if ((if (false) { 10 })) { 10 } else { 20 }",
+            input: "if (if (false) { 10 }) { 10 } else { 20 }",
             expected: Object::Integer(20),
         },
     ];
@@ -1261,7 +1267,7 @@ fn test_recursive_functions() {
         VmTestCase {
             input: r#"
                 let countDown = fn(x) {
-                    if (x == 0) {
+                    if x == 0 {
                         return 0;
                     } else {
                         countDown(x - 1);
@@ -1274,7 +1280,7 @@ fn test_recursive_functions() {
         VmTestCase {
             input: r#"
                 let countDown = fn(x) {
-                    if (x == 0) {
+                    if x == 0 {
                         return 0;
                     } else {
                         countDown(x - 1);
@@ -1293,7 +1299,7 @@ fn test_recursive_functions() {
             input: r#"
                 let wrapper = fn() {
                     let countDown = fn(x) {
-                        if (x == 0) {
+                        if x == 0 {
                             return 0;
                         } else {
                             countDown(x - 1);
@@ -1315,10 +1321,10 @@ fn test_recursive_fibonacci() {
     let tests: Vec<VmTestCase> = vec![VmTestCase {
         input: r#"
                 let fibonacci = fn(x) {
-                    if (x == 0) {
+                    if x == 0 {
                         return 0;
                     } else {
-                        if (x == 1) {
+                        if x == 1 {
                             return 1;
                         } else {
                             fibonacci(x - 1) + fibonacci(x - 2);
@@ -1349,6 +1355,7 @@ fn test_assignment_expressions() {
             expected: Object::Bool(false),
         },
         // Assignment expressions evaluate to the value assigned
+        // Use assignment expression enclosed in parantheses to avoid ambiguity
         VmTestCase {
             input: r#" let a = 0; if (a = 1) { "then" } else { "else" } "#,
             expected: Object::Str("then".to_string()),

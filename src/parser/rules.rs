@@ -273,20 +273,13 @@ impl Parser {
 
     fn parse_if_expr(&mut self) -> Expression {
         let token = self.current.clone();
-        if !self.expect_peek(&TokenType::LeftParen) {
-            return Expression::Nil;
-        }
+        // advance to the condition expression
         self.next_token();
         let condition = self.parse_expression(Precedence::Assignment);
-        if !self.expect_peek(&TokenType::RightParen) {
-            return Expression::Nil;
-        }
         if !self.expect_peek(&TokenType::LeftBrace) {
             return Expression::Nil;
         }
-
         let then_stmt = self.parse_block_statement();
-
         // Check if an else branch exists
         let else_stmt = if self.peek_token_is(&TokenType::Else) {
             self.next_token();

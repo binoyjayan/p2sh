@@ -372,7 +372,7 @@ fn test_boolean_expressions() {
 fn test_conditional() {
     let tests = vec![
         CompilerTestCase {
-            input: "if (true) { 10 }; 3333;",
+            input: "if true { 10 }; 3333;",
             expected_constants: vec![Object::Integer(10), Object::Integer(3333)],
             expected_instructions: vec![
                 // 0000 : The condition
@@ -394,7 +394,7 @@ fn test_conditional() {
             ],
         },
         CompilerTestCase {
-            input: "if (true) { 10 } else { 20 } ; 3333;",
+            input: "if true { 10 } else { 20 } ; 3333;",
             expected_constants: vec![
                 Object::Integer(10),
                 Object::Integer(20),

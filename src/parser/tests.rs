@@ -697,7 +697,7 @@ fn test_boolean_expressions() {
 
 #[test]
 fn test_if_then_expression() {
-    let input = "if (x < y) { x }";
+    let input = "if x < y { x }";
     let program = parse_test_program(input, 1);
 
     let stmt = &program.statements[0];
@@ -735,7 +735,7 @@ fn test_if_then_expression() {
 
 #[test]
 fn test_if_then_else_expression() {
-    let input = "if (x < y) { x } else { y }";
+    let input = "if x < y { x } else { y }";
     let program = parse_test_program(input, 1);
 
     let stmt = &program.statements[0];

@@ -87,10 +87,26 @@ impl Scanner {
             '-' => self.make_token_ch(TokenType::Minus),
             '*' => self.make_token_ch(TokenType::Asterisk),
             '/' => self.make_token_ch(TokenType::Slash),
-            '=' => self.make_token_twin('=', TokenType::Assign, TokenType::Equal),
-            '!' => self.make_token_twin('=', TokenType::Bang, TokenType::BangEqual),
-            '<' => self.make_token_twin('=', TokenType::Less, TokenType::LessEqual),
-            '>' => self.make_token_twin('=', TokenType::Greater, TokenType::GreaterEqual),
+            '^' => self.make_token_ch(TokenType::BitwiseXor),
+            '~' => self.make_token_ch(TokenType::BitwiseNot),
+            '=' => self.make_token_twin(TokenType::Assign, &[('=', TokenType::Equal)]),
+            '!' => self.make_token_twin(TokenType::Bang, &[('=', TokenType::BangEqual)]),
+            '&' => self.make_token_twin(TokenType::BitwiseAnd, &[('&', TokenType::LogicalAnd)]),
+            '|' => self.make_token_twin(TokenType::BitwiseOr, &[('|', TokenType::LogicalOr)]),
+            '<' => self.make_token_twin(
+                TokenType::Less,
+                &[
+                    ('=', TokenType::LessEqual),
+                    ('<', TokenType::BitwiseLeftShift),
+                ],
+            ),
+            '>' => self.make_token_twin(
+                TokenType::Greater,
+                &[
+                    ('=', TokenType::GreaterEqual),
+                    ('>', TokenType::BitwiseRightShift),
+                ],
+            ),
             '"' => self.read_string(),
             _ => {
                 if Self::is_identifier_first(self.ch) {
@@ -115,13 +131,17 @@ impl Scanner {
     }
 
     // Handle two character tokens by looking ahead one more character.
-    // If the next character in the input matches 'next', then it is a token
-    // of type 'twin', otherwise it is a token of type 'single'
-    fn make_token_twin(&mut self, next: char, single: TokenType, twin: TokenType) -> Token {
+    // If the next character in the input matches the characters in 'next'
+    // then make a token with the two characters (single, next[n].0), otherwise
+    // make a token of type 'single' with the first character.
+    fn make_token_twin(&mut self, single: TokenType, next: &[(char, TokenType)]) -> Token {
         let curr = self.ch;
-        if self.peek_char() == next {
+        if self.peek_char() == next[0].0 {
             self.read_char();
-            self.make_token(twin, &format!("{}{}", curr, next))
+            self.make_token(next[0].1, &format!("{}{}", curr, next[0].0))
+        } else if next.len() > 1 && self.peek_char() == next[1].0 {
+            self.read_char();
+            self.make_token(next[1].1, &format!("{}{}", curr, next[1].0))
         } else {
             self.make_token_ch(single)
         }

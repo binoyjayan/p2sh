@@ -74,7 +74,7 @@ impl Parser {
 
     pub fn peek_error(&mut self, ttype: &TokenType) {
         let msg = format!(
-            "expected next token to be {}, got {} instead",
+            "expected token {}, got {} instead",
             ttype, self.peek_next.ttype
         );
         self.push_error(&msg);

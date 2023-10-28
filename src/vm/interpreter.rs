@@ -518,19 +518,18 @@ impl VM {
         line: usize,
     ) -> Result<Rc<Object>, RTError> {
         if idx < 0 {
-            return Err(RTError::new(
-                "IndexError: index cannot be less than zero.",
-                line,
-            ));
-        }
-        let obj = arr.get(idx as usize);
-        if obj.is_nil() {
+            return Err(RTError::new("IndexError: index cannot be negative.", line));
+        } else if idx as usize >= arr.len() {
             return Err(RTError::new("IndexError: array index out of range.", line));
         }
+
         // If it is a SetIndex operation, then set the value at the index
-        if let Some(val) = setval {
-            arr.set(idx as usize, val);
-        }
+        let obj = if let Some(obj) = setval {
+            arr.set(idx as usize, obj.clone());
+            obj
+        } else {
+            arr.get(idx as usize)
+        };
         // return the value being 'set' or 'get'
         Ok(obj)
     }

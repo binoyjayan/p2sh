@@ -642,7 +642,7 @@ fn test_index_expressions_negative() {
         },
         VmTestCaseErr {
             input: "[1][-1]",
-            expected: "IndexError: index cannot be less than zero.",
+            expected: "IndexError: index cannot be negative.",
         },
         VmTestCaseErr {
             input: "[[1, 1, 1]][0][0]",
@@ -1365,15 +1365,51 @@ fn test_assignment_expressions() {
             })),
         },
         VmTestCase {
-            input: r#"let m = {"a": 1}; m = {"a": 2}; m"#,
+            input: r#"let m = {"a": 1}; m = {"a": 222}; m"#,
             expected: Object::Map({
                 let map = HMap::default();
                 map.insert(
                     Rc::new(Object::Str("a".into())),
-                    Rc::new(Object::Integer(2)),
+                    Rc::new(Object::Integer(222)),
                 );
                 Rc::new(map)
             }),
+        },
+        VmTestCase {
+            input: "let a = 0; let b = 0; a = b = 222; [a, b]",
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Integer(222)),
+                    Rc::new(Object::Integer(222)),
+                ]),
+            })),
+        },
+        VmTestCase {
+            input: "let a = [0]; let b = [0]; a[0] = b[0] = 222; [a[0], b[0]]",
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Integer(222)),
+                    Rc::new(Object::Integer(222)),
+                ]),
+            })),
+        },
+        VmTestCase {
+            input: "let a = [0, 0]; a[0] = a[1] = 222; [a[0], a[0]]",
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Integer(222)),
+                    Rc::new(Object::Integer(222)),
+                ]),
+            })),
+        },
+        VmTestCase {
+            input: r#"let m = {}; m[0] = m[1] = 222; [m[0], m[1]]"#,
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Integer(222)),
+                    Rc::new(Object::Integer(222)),
+                ]),
+            })),
         },
     ];
 
@@ -1445,6 +1481,10 @@ fn test_set_index_assignment_expressions_negative() {
         VmTestCaseErr {
             input: "let a = []; a[0] = 1;",
             expected: "IndexError: array index out of range.",
+        },
+        VmTestCaseErr {
+            input: "let a = [0]; a[-1] = 1;",
+            expected: "IndexError: index cannot be negative.",
         },
         VmTestCaseErr {
             input: "let a = [1, 2, 3]; a[4] = 4;",

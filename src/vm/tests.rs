@@ -20,10 +20,17 @@ fn check_parse_errors(parser: &Parser) {
 #[cfg(test)]
 fn test_expected_object(evaluated: Rc<Object>, expected: &Object) {
     match (evaluated.as_ref(), expected) {
-        (Object::Number(eval), Object::Number(exp)) => {
+        (Object::Integer(eval), Object::Integer(exp)) => {
             assert_eq!(
                 eval, exp,
-                "object has wrong numeric value. got={}, want={}",
+                "object has wrong integer value. got={}, want={}",
+                eval, exp
+            );
+        }
+        (Object::Float(eval), Object::Float(exp)) => {
+            assert_eq!(
+                eval, exp,
+                "object has wrong floating value. got={}, want={}",
                 eval, exp
             );
         }
@@ -146,67 +153,107 @@ fn test_integer_arithmetic() {
     let tests = vec![
         VmTestCase {
             input: "1",
-            expected: Object::Number(1.),
+            expected: Object::Integer(1),
         },
         VmTestCase {
             input: "2",
-            expected: Object::Number(2.),
+            expected: Object::Integer(2),
         },
         VmTestCase {
             input: "1 + 2",
-            expected: Object::Number(3.),
+            expected: Object::Integer(3),
         },
         VmTestCase {
             input: "1 - 2",
-            expected: Object::Number(-1.),
+            expected: Object::Integer(-1),
         },
         VmTestCase {
             input: "1 * 2",
-            expected: Object::Number(2.),
+            expected: Object::Integer(2),
         },
         VmTestCase {
             input: "4 / 2",
-            expected: Object::Number(2.),
+            expected: Object::Integer(2),
         },
         VmTestCase {
             input: "50 / 2 * 2 + 10 - 5",
-            expected: Object::Number(55.),
+            expected: Object::Integer(55),
         },
         VmTestCase {
             input: "5 + 5 + 5 + 5 - 10",
-            expected: Object::Number(10.),
+            expected: Object::Integer(10),
         },
         VmTestCase {
             input: "2 * 2 * 2 * 2 * 2",
-            expected: Object::Number(32.),
+            expected: Object::Integer(32),
         },
         VmTestCase {
             input: "5 * 2 + 10",
-            expected: Object::Number(20.),
+            expected: Object::Integer(20),
         },
         VmTestCase {
             input: "5 + 2 * 10",
-            expected: Object::Number(25.),
+            expected: Object::Integer(25),
         },
         VmTestCase {
             input: "5 * (2 + 10)",
-            expected: Object::Number(60.),
+            expected: Object::Integer(60),
         },
         VmTestCase {
             input: "-5",
-            expected: Object::Number(-5.),
+            expected: Object::Integer(-5),
         },
         VmTestCase {
             input: "-10",
-            expected: Object::Number(-10.),
+            expected: Object::Integer(-10),
         },
         VmTestCase {
             input: "-50 + 100 + -50",
-            expected: Object::Number(0.),
+            expected: Object::Integer(0),
         },
         VmTestCase {
             input: "(5 + 10 * 2 + 15 / 3) * 2 + -10",
-            expected: Object::Number(50.),
+            expected: Object::Integer(50),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_floating_arithmetic() {
+    let tests = vec![
+        VmTestCase {
+            input: "1.",
+            expected: Object::Float(1.),
+        },
+        VmTestCase {
+            input: "int(1.5 + 2.5)",
+            expected: Object::Integer(4),
+        },
+        VmTestCase {
+            input: "int(1.5 - 2.5)",
+            expected: Object::Integer(-1),
+        },
+        VmTestCase {
+            input: "int(1.5 * 2.5)",
+            expected: Object::Integer(3),
+        },
+        VmTestCase {
+            input: "int(1.5 / 2.5)",
+            expected: Object::Integer(0),
+        },
+        VmTestCase {
+            input: "int(50. / 2. * 2. + 10. - 5.)",
+            expected: Object::Integer(55),
+        },
+        VmTestCase {
+            input: "int(5. + 5. + 5. + 5. - 10.)",
+            expected: Object::Integer(10),
+        },
+        VmTestCase {
+            input: "int(2. * 2. * 2. * 2. * 2.)",
+            expected: Object::Integer(32),
         },
     ];
 
@@ -238,6 +285,22 @@ fn test_boolean_expressions() {
         },
         VmTestCase {
             input: "1 > 1",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1.1 < 2.2",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "1.1 > 2.2",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1.1 < 1.1",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1.1 > 1.1",
             expected: Object::Bool(false),
         },
         VmTestCase {
@@ -334,31 +397,31 @@ fn test_conditionals() {
     let tests = vec![
         VmTestCase {
             input: "if (true) { 10 }",
-            expected: Object::Number(10.),
+            expected: Object::Integer(10),
         },
         VmTestCase {
             input: "if (true) { 10 } else { 20 }",
-            expected: Object::Number(10.),
+            expected: Object::Integer(10),
         },
         VmTestCase {
             input: "if (false) { 10 } else { 20 } ",
-            expected: Object::Number(20.),
+            expected: Object::Integer(20),
         },
         VmTestCase {
             input: "if (1) { 10 }",
-            expected: Object::Number(10.),
+            expected: Object::Integer(10),
         },
         VmTestCase {
             input: "if (1 < 2) { 10 }",
-            expected: Object::Number(10.),
+            expected: Object::Integer(10),
         },
         VmTestCase {
             input: "if (1 < 2) { 10 } else { 20 }",
-            expected: Object::Number(10.),
+            expected: Object::Integer(10),
         },
         VmTestCase {
             input: "if (1 > 2) { 10 } else { 20 }",
-            expected: Object::Number(20.),
+            expected: Object::Integer(20),
         },
         VmTestCase {
             input: "if (1 > 2) { 10 }",
@@ -370,7 +433,7 @@ fn test_conditionals() {
         },
         VmTestCase {
             input: "if ((if (false) { 10 })) { 10 } else { 20 }",
-            expected: Object::Number(20.),
+            expected: Object::Integer(20),
         },
     ];
 
@@ -382,15 +445,15 @@ fn test_global_let_statements() {
     let tests = vec![
         VmTestCase {
             input: "let one = 1; one",
-            expected: Object::Number(1.),
+            expected: Object::Integer(1),
         },
         VmTestCase {
             input: "let one = 1; let two = 2; one + two",
-            expected: Object::Number(3.),
+            expected: Object::Integer(3),
         },
         VmTestCase {
             input: "let one = 1; let two = one + one; one + two",
-            expected: Object::Number(3.),
+            expected: Object::Integer(3),
         },
     ];
 
@@ -429,9 +492,9 @@ fn test_array_literals() {
             input: "[1, 2, 3]",
             expected: Object::Arr(Rc::new(Array {
                 elements: RefCell::new(vec![
-                    Rc::new(Object::Number(1.0)),
-                    Rc::new(Object::Number(2.0)),
-                    Rc::new(Object::Number(3.0)),
+                    Rc::new(Object::Integer(1)),
+                    Rc::new(Object::Integer(2)),
+                    Rc::new(Object::Integer(3)),
                 ]),
             })),
         },
@@ -439,9 +502,9 @@ fn test_array_literals() {
             input: "[1 + 2, 3 * 4, 5 + 6]",
             expected: Object::Arr(Rc::new(Array {
                 elements: RefCell::new(vec![
-                    Rc::new(Object::Number(3.0)),
-                    Rc::new(Object::Number(12.0)),
-                    Rc::new(Object::Number(11.0)),
+                    Rc::new(Object::Integer(3)),
+                    Rc::new(Object::Integer(12)),
+                    Rc::new(Object::Integer(11)),
                 ]),
             })),
         },
@@ -461,15 +524,15 @@ fn test_array_operations() {
         VmTestCase {
             input: "[] + [1]",
             expected: Object::Arr(Rc::new(Array {
-                elements: RefCell::new(vec![Rc::new(Object::Number(1.0))]),
+                elements: RefCell::new(vec![Rc::new(Object::Integer(1))]),
             })),
         },
         VmTestCase {
             input: "[1] + [2]",
             expected: Object::Arr(Rc::new(Array {
                 elements: RefCell::new(vec![
-                    Rc::new(Object::Number(1.0)),
-                    Rc::new(Object::Number(2.0)),
+                    Rc::new(Object::Integer(1)),
+                    Rc::new(Object::Integer(2)),
                 ]),
             })),
         },
@@ -488,8 +551,8 @@ fn test_hash_literals() {
             input: "{1: 2, 2: 3}",
             expected: Object::Map({
                 let map = HMap::default();
-                map.insert(Rc::new(Object::Number(1.)), Rc::new(Object::Number(2.)));
-                map.insert(Rc::new(Object::Number(2.)), Rc::new(Object::Number(3.)));
+                map.insert(Rc::new(Object::Integer(1)), Rc::new(Object::Integer(2)));
+                map.insert(Rc::new(Object::Integer(2)), Rc::new(Object::Integer(3)));
                 Rc::new(map)
             }),
         },
@@ -498,12 +561,12 @@ fn test_hash_literals() {
             expected: Object::Map({
                 let map = HMap::default();
                 map.insert(
-                    Rc::new(Object::Number(2.into())),
-                    Rc::new(Object::Number(4.into())),
+                    Rc::new(Object::Integer(2.into())),
+                    Rc::new(Object::Integer(4.into())),
                 );
                 map.pairs.borrow_mut().insert(
-                    Rc::new(Object::Number(6.into())),
-                    Rc::new(Object::Number(16.into())),
+                    Rc::new(Object::Integer(6.into())),
+                    Rc::new(Object::Integer(16.into())),
                 );
                 Rc::new(map)
             }),
@@ -513,19 +576,38 @@ fn test_hash_literals() {
 }
 
 #[test]
+fn test_hash_literals_expressions_negative() {
+    let tests = vec![
+        VmTestCaseErr {
+            input: "{fn() {}: 2}",
+            expected: "KeyError: not a valid key: <closure>.",
+        },
+        VmTestCaseErr {
+            input: "{fn() {}: fn() {}}",
+            expected: "KeyError: not a valid key: <closure>.",
+        },
+    ];
+    run_vm_negative_tests(&tests);
+}
+
+#[test]
 fn test_index_expressions() {
     let tests = vec![
         VmTestCase {
             input: "{1: 1, 2: 2}[1]",
-            expected: Object::Number(1.),
+            expected: Object::Integer(1),
         },
         VmTestCase {
             input: "{1: 1, 2: 2}[2]",
-            expected: Object::Number(2.),
+            expected: Object::Integer(2),
+        },
+        VmTestCase {
+            input: "{1.1: 1, 2.2: 2}[2.2]",
+            expected: Object::Integer(2),
         },
         VmTestCase {
             input: r#"{"one": 1, "two": 2, "three": 3}["o" + "ne"]"#,
-            expected: Object::Number(1.),
+            expected: Object::Integer(1),
         },
     ];
     run_vm_tests(&tests);
@@ -541,6 +623,10 @@ fn test_index_expressions_negative() {
         VmTestCaseErr {
             input: "{1: 1}[0]",
             expected: "KeyError: key not found.",
+        },
+        VmTestCaseErr {
+            input: "{}[fn(){}]",
+            expected: "KeyError: not a valid key: <closure>.",
         },
         VmTestCaseErr {
             input: "{}[0]",
@@ -566,6 +652,10 @@ fn test_index_expressions_negative() {
             input: "[1, 2, 3][0 + 2]",
             expected: "IndexError: array index out of range.",
         },
+        VmTestCaseErr {
+            input: "[][fn(){}]",
+            expected: "IndexError: unsupported operation.",
+        },
     ];
     run_vm_negative_tests(&tests);
 }
@@ -578,7 +668,7 @@ fn test_calling_functions_without_args() {
             let fivePlusTen = fn() { 5 + 10; };
             fivePlusTen();
             "#,
-            expected: Object::Number(15.),
+            expected: Object::Integer(15),
         },
         VmTestCase {
             input: r#"
@@ -586,7 +676,7 @@ fn test_calling_functions_without_args() {
             let f2 = fn() { 2 };
             f1() + f2()
             "#,
-            expected: Object::Number(3.),
+            expected: Object::Integer(3),
         },
         VmTestCase {
             input: r#"
@@ -595,7 +685,7 @@ fn test_calling_functions_without_args() {
             let f3 = fn() { f2() + 1 };
             f3()
             "#,
-            expected: Object::Number(3.),
+            expected: Object::Integer(3),
         },
     ];
     run_vm_tests(&tests);
@@ -609,14 +699,14 @@ fn test_calling_functions_with_return() {
             let earlyExit = fn() { return 99; 100; };
             earlyExit();
             "#,
-            expected: Object::Number(99.),
+            expected: Object::Integer(99),
         },
         VmTestCase {
             input: r#"
             let earlyExit = fn() { return 99; return 100; };
             earlyExit();
             "#,
-            expected: Object::Number(99.),
+            expected: Object::Integer(99),
         },
     ];
     run_vm_tests(&tests);
@@ -654,7 +744,7 @@ fn test_first_class_functions_() {
                 let returnsOneReturner = fn() { returnsOne; };
                 returnsOneReturner()();
             "#,
-            expected: Object::Number(1.),
+            expected: Object::Integer(1),
         },
         VmTestCase {
             input: r#"
@@ -664,7 +754,7 @@ fn test_first_class_functions_() {
                 };
                 returnsOneReturner()();
             "#,
-            expected: Object::Number(1.),
+            expected: Object::Integer(1),
         },
     ];
     run_vm_tests(&tests);
@@ -678,14 +768,14 @@ fn test_calling_functions_with_bindings() {
                 let one = fn() { let one = 1; one };
                 one();
             "#,
-            expected: Object::Number(1.),
+            expected: Object::Integer(1),
         },
         VmTestCase {
             input: r#"
                 let one_and_two = fn() { let one = 1; let two = 2; one + two; };
                 one_and_two();
             "#,
-            expected: Object::Number(3.),
+            expected: Object::Integer(3),
         },
         VmTestCase {
             input: r#"
@@ -693,7 +783,7 @@ fn test_calling_functions_with_bindings() {
                 let three_and_four = fn() { let three = 3; let four = 4; three + four; };
                 one_and_two() + three_and_four();
             "#,
-            expected: Object::Number(10.),
+            expected: Object::Integer(10),
         },
         VmTestCase {
             input: r#"
@@ -701,7 +791,7 @@ fn test_calling_functions_with_bindings() {
                 let second_foobar = fn() { let foobar = 100; foobar; };
                 first_foobar() + second_foobar();
             "#,
-            expected: Object::Number(150.),
+            expected: Object::Integer(150),
         },
         VmTestCase {
             input: r#"
@@ -716,7 +806,7 @@ fn test_calling_functions_with_bindings() {
                 };
                 minus_one() + minus_two();
             "#,
-            expected: Object::Number(97.),
+            expected: Object::Integer(97),
         },
     ];
     run_vm_tests(&tests);
@@ -730,28 +820,28 @@ fn test_calling_functions_with_args_and_bindings() {
                 let identity = fn(a) { a; };
                 identity(4);
             "#,
-            expected: Object::Number(4.),
+            expected: Object::Integer(4),
         },
         VmTestCase {
             input: r#"
                 let sum = fn(a, b) { a + b; };
                 sum(1, 2);
             "#,
-            expected: Object::Number(3.),
+            expected: Object::Integer(3),
         },
         VmTestCase {
             input: r#"
                 let sum = fn(a, b) { let c = a + b; c; };
                 sum(1, 2);
             "#,
-            expected: Object::Number(3.),
+            expected: Object::Integer(3),
         },
         VmTestCase {
             input: r#"
                 let sum = fn(a, b) { let c = a + b; c; };
                 sum(1, 2) + sum(3, 4);
             "#,
-            expected: Object::Number(10.),
+            expected: Object::Integer(10),
         },
         VmTestCase {
             input: r#"
@@ -759,7 +849,7 @@ fn test_calling_functions_with_args_and_bindings() {
                 let outer = fn() { sum(1, 2) + sum(3, 4); };
                 outer();
             "#,
-            expected: Object::Number(10.),
+            expected: Object::Integer(10),
         },
         VmTestCase {
             input: r#"
@@ -773,7 +863,7 @@ fn test_calling_functions_with_args_and_bindings() {
                 };
                 outer() + globalNum;
             "#,
-            expected: Object::Number(50.),
+            expected: Object::Integer(50),
         },
     ];
     run_vm_tests(&tests);
@@ -804,35 +894,35 @@ fn test_builtin_functions() {
     let tests = vec![
         VmTestCase {
             input: r#"len("")"#,
-            expected: Object::Number(0.),
+            expected: Object::Integer(0),
         },
         VmTestCase {
             input: r#"len("four")"#,
-            expected: Object::Number(4.0),
+            expected: Object::Integer(4),
         },
         VmTestCase {
             input: r#"len("hello world")"#,
-            expected: Object::Number(11.0),
+            expected: Object::Integer(11),
         },
         VmTestCase {
             input: r#"len([1, 2, 3])"#,
-            expected: Object::Number(3.0),
+            expected: Object::Integer(3),
         },
         VmTestCase {
             input: r#"len([])"#,
-            expected: Object::Number(0.),
+            expected: Object::Integer(0),
         },
         VmTestCase {
             input: r#"len({})"#,
-            expected: Object::Number(0.),
+            expected: Object::Integer(0),
         },
         VmTestCase {
             input: r#"len({"a": 1, "b": 2})"#,
-            expected: Object::Number(2.),
+            expected: Object::Integer(2),
         },
         VmTestCase {
             input: r#"first([1, 2, 3])"#,
-            expected: Object::Number(1.0),
+            expected: Object::Integer(1),
         },
         VmTestCase {
             input: r#"first([])"#,
@@ -840,7 +930,7 @@ fn test_builtin_functions() {
         },
         VmTestCase {
             input: r#"last([1, 2, 3])"#,
-            expected: Object::Number(3.0),
+            expected: Object::Integer(3),
         },
         VmTestCase {
             input: r#"last([])"#,
@@ -850,8 +940,8 @@ fn test_builtin_functions() {
             input: r#"rest([1, 2, 3])"#,
             expected: Object::Arr(Rc::new(Array {
                 elements: RefCell::new(vec![
-                    Rc::new(Object::Number(2.0)),
-                    Rc::new(Object::Number(3.0)),
+                    Rc::new(Object::Integer(2)),
+                    Rc::new(Object::Integer(3)),
                 ]),
             })),
         },
@@ -862,7 +952,7 @@ fn test_builtin_functions() {
         VmTestCase {
             input: r#"let a = []; push(a, 1); a"#,
             expected: Object::Arr(Rc::new(Array {
-                elements: RefCell::new(vec![Rc::new(Object::Number(1.0))]),
+                elements: RefCell::new(vec![Rc::new(Object::Integer(1))]),
             })),
         },
         VmTestCase {
@@ -871,7 +961,7 @@ fn test_builtin_functions() {
                 push(array, 4);
                 first(rest(array));
             "#,
-            expected: Object::Number(2.0),
+            expected: Object::Integer(2),
         },
         VmTestCase {
             input: r#"contains({}, "k")"#,
@@ -887,7 +977,7 @@ fn test_builtin_functions() {
         },
         VmTestCase {
             input: r#"let m = {"k1": 999, "k2": 888, "k3": 777}; get(m, "k2")"#,
-            expected: Object::Number(888.),
+            expected: Object::Integer(888),
         },
         VmTestCase {
             input: r#"let m = {"k1": 999, "k2": 888, "k3": 777}; get(m, "k")"#,
@@ -906,7 +996,7 @@ fn test_builtin_functions() {
         VmTestCase {
             input: r#"let m = {"k1": 999, "k2": 888}; insert(m, "k2", 777)"#,
             // insert returns the previous value if key was found
-            expected: Object::Number(888.),
+            expected: Object::Integer(888),
         },
         VmTestCase {
             input: r#"let m = {}; insert(m, "k", 1); m"#,
@@ -914,7 +1004,7 @@ fn test_builtin_functions() {
                 let map = HMap::default();
                 map.insert(
                     Rc::new(Object::Str("k".to_string())),
-                    Rc::new(Object::Number(1.)),
+                    Rc::new(Object::Integer(1)),
                 );
                 Rc::new(map)
             }),
@@ -955,19 +1045,23 @@ fn test_builtin_functions() {
         },
         VmTestCase {
             input: r#"int("999")"#,
-            expected: Object::Number(999.),
+            expected: Object::Integer(999),
+        },
+        VmTestCase {
+            input: r#"int(999.99)"#,
+            expected: Object::Integer(999),
         },
         VmTestCase {
             input: "int(str(999))",
-            expected: Object::Number(999.),
+            expected: Object::Integer(999),
         },
         VmTestCase {
             input: "int(true)",
-            expected: Object::Number(1.),
+            expected: Object::Integer(1),
         },
         VmTestCase {
             input: "int(false)",
-            expected: Object::Number(0.),
+            expected: Object::Integer(0),
         },
     ];
     run_vm_tests(&tests);
@@ -982,11 +1076,11 @@ fn test_builtin_functions_display() {
         },
         VmTestCase {
             input: r#"print("Hello, World!")"#,
-            expected: Object::Number(13.0),
+            expected: Object::Integer(13),
         },
         VmTestCase {
             input: r#"println("Hello, World!")"#,
-            expected: Object::Number(14.0),
+            expected: Object::Integer(14),
         },
         VmTestCase {
             input: r#"
@@ -1000,14 +1094,14 @@ fn test_builtin_functions_display() {
                 print("{0:<10},{1:0>5},{2},{3:b},{3:o},{4:x},{4:X}",
                 "Hello", 1, true, 10, 65535
             )"#,
-            expected: Object::Number(39.0),
+            expected: Object::Integer(39),
         },
         VmTestCase {
             input: r#"
                 println("{0:<10},{1:0>5},{2},{3:b},{3:o},{4:x},{4:X}",
                 "Hello", 1, true, 10, 65535
             )"#,
-            expected: Object::Number(40.0),
+            expected: Object::Integer(40),
         },
     ];
     run_vm_tests(&tests);
@@ -1048,6 +1142,14 @@ fn test_builtin_function_failures() {
             input: "int({})",
             expected: "int: unsupported argument",
         },
+        VmTestCaseErr {
+            input: r#"int("1.11")"#,
+            expected: "int: failed to parse string into an int",
+        },
+        VmTestCaseErr {
+            input: r#"float("a")"#,
+            expected: "float: failed to parse string into a float",
+        },
     ];
 
     run_vm_negative_tests(&tests);
@@ -1065,7 +1167,7 @@ fn test_builtin_variables() {
         },
         VmTestCase {
             input: r#"len(argv)"#,
-            expected: Object::Number(0.),
+            expected: Object::Integer(0),
         },
     ];
     run_vm_tests(&tests);
@@ -1084,7 +1186,7 @@ fn test_closures() {
                 let closure = newClosure(99);
                 closure();
                 "#,
-            expected: Object::Number(99.),
+            expected: Object::Integer(99),
         },
         VmTestCase {
             input: r#"
@@ -1094,7 +1196,7 @@ fn test_closures() {
                 let adder = newAdder(1, 2);
                 adder(8);
                 "#,
-            expected: Object::Number(11.),
+            expected: Object::Integer(11),
         },
         VmTestCase {
             input: r#"
@@ -1105,7 +1207,7 @@ fn test_closures() {
                 let adder = newAdder(1, 2);
                 adder(8);
                 "#,
-            expected: Object::Number(11.),
+            expected: Object::Integer(11),
         },
         VmTestCase {
             input: r#"
@@ -1120,7 +1222,7 @@ fn test_closures() {
                 let adder = newAdderInner(3);
                 adder(8);
                 "#,
-            expected: Object::Number(14.),
+            expected: Object::Integer(14),
         },
         VmTestCase {
             input: r#"
@@ -1134,7 +1236,7 @@ fn test_closures() {
                 let adder = newAdderInner(3);
                 adder(8);
                 "#,
-            expected: Object::Number(14.),
+            expected: Object::Integer(14),
         },
         VmTestCase {
             input: r#"
@@ -1146,7 +1248,7 @@ fn test_closures() {
                 let closure = newClosure(9, 90);
                 closure();
                 "#,
-            expected: Object::Number(99.),
+            expected: Object::Integer(99),
         },
     ];
 
@@ -1167,7 +1269,7 @@ fn test_recursive_functions() {
                 };
                 countDown(1);
                 "#,
-            expected: Object::Number(0.),
+            expected: Object::Integer(0),
         },
         VmTestCase {
             input: r#"
@@ -1183,7 +1285,7 @@ fn test_recursive_functions() {
                 };
                 wrapper();
             "#,
-            expected: Object::Number(0.),
+            expected: Object::Integer(0),
         },
         // define a recursive function inside another function and also
         // call it inside this other function.
@@ -1201,7 +1303,7 @@ fn test_recursive_functions() {
                 };
                 wrapper();
             "#,
-            expected: Object::Number(0.),
+            expected: Object::Integer(0),
         },
     ];
 
@@ -1225,7 +1327,7 @@ fn test_recursive_fibonacci() {
                 };
                 fibonacci(15);
                 "#,
-        expected: Object::Number(610.),
+        expected: Object::Integer(610),
     }];
 
     run_vm_tests(&tests);
@@ -1236,11 +1338,11 @@ fn test_assignment_expressions() {
     let tests: Vec<VmTestCase> = vec![
         VmTestCase {
             input: "let a = 1; a = 2;",
-            expected: Object::Number(2.),
+            expected: Object::Integer(2),
         },
         VmTestCase {
             input: "let a = 1; a = 2; a",
-            expected: Object::Number(2.),
+            expected: Object::Integer(2),
         },
         VmTestCase {
             input: "let a = true; a = false; a",
@@ -1259,7 +1361,7 @@ fn test_assignment_expressions() {
         VmTestCase {
             input: "let a = [1]; a = [2]; a",
             expected: Object::Arr(Rc::new(Array {
-                elements: RefCell::new(vec![Rc::new(Object::Number(2.0))]),
+                elements: RefCell::new(vec![Rc::new(Object::Integer(2))]),
             })),
         },
         VmTestCase {
@@ -1268,7 +1370,7 @@ fn test_assignment_expressions() {
                 let map = HMap::default();
                 map.insert(
                     Rc::new(Object::Str("a".into())),
-                    Rc::new(Object::Number(2.)),
+                    Rc::new(Object::Integer(2)),
                 );
                 Rc::new(map)
             }),
@@ -1285,9 +1387,9 @@ fn test_set_index_assignment_expressions() {
             input: "let a = [1, 2, 3]; a[0] = 111; a[1] = 222; a[2] = 333; a",
             expected: Object::Arr(Rc::new(Array {
                 elements: RefCell::new(vec![
-                    Rc::new(Object::Number(111.0)),
-                    Rc::new(Object::Number(222.0)),
-                    Rc::new(Object::Number(333.0)),
+                    Rc::new(Object::Integer(111)),
+                    Rc::new(Object::Integer(222)),
+                    Rc::new(Object::Integer(333)),
                 ]),
             })),
         },
@@ -1304,9 +1406,9 @@ fn test_set_index_assignment_expressions() {
             "#,
             expected: Object::Arr(Rc::new(Array {
                 elements: RefCell::new(vec![
-                    Rc::new(Object::Number(10.0)),
-                    Rc::new(Object::Number(200.0)),
-                    Rc::new(Object::Number(3000.0)),
+                    Rc::new(Object::Integer(10)),
+                    Rc::new(Object::Integer(200)),
+                    Rc::new(Object::Integer(3000)),
                 ]),
             })),
         },
@@ -1316,7 +1418,7 @@ fn test_set_index_assignment_expressions() {
                 let map = HMap::default();
                 map.insert(
                     Rc::new(Object::Str("a".into())),
-                    Rc::new(Object::Number(1.)),
+                    Rc::new(Object::Integer(1)),
                 );
                 Rc::new(map)
             }),
@@ -1327,7 +1429,7 @@ fn test_set_index_assignment_expressions() {
                 let map = HMap::default();
                 map.insert(
                     Rc::new(Object::Str("a".into())),
-                    Rc::new(Object::Number(111.)),
+                    Rc::new(Object::Integer(111)),
                 );
                 Rc::new(map)
             }),
@@ -1366,7 +1468,7 @@ fn test_set_index_assignment_expressions_free_variables() {
                 let closure = newClosure(88);
                 closure();
                 "#,
-            expected: Object::Number(99.),
+            expected: Object::Integer(99),
         },
         VmTestCase {
             input: r#"
@@ -1379,7 +1481,7 @@ fn test_set_index_assignment_expressions_free_variables() {
                 let adder = newAdder(1, 2);
                 adder(7);
                 "#,
-            expected: Object::Number(40.),
+            expected: Object::Integer(40),
         },
     ];
 

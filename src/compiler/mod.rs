@@ -317,8 +317,13 @@ impl Compiler {
     fn compile_expression(&mut self, expr: Expression) -> Result<(), CompileError> {
         match expr {
             Expression::Nil => {}
-            Expression::Number(num) => {
-                let obj = Object::Number(num.value);
+            Expression::Integer(num) => {
+                let obj = Object::Integer(num.value);
+                let idx = self.add_constant(obj);
+                self.emit(Opcode::Constant, &[idx], num.token.line);
+            }
+            Expression::Float(num) => {
+                let obj = Object::Float(num.value);
                 let idx = self.add_constant(obj);
                 self.emit(Opcode::Constant, &[idx], num.token.line);
             }

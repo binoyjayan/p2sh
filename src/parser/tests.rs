@@ -6,7 +6,8 @@ use std::collections::HashMap;
 #[derive(Clone)]
 enum Literal {
     Ident(&'static str),
-    Numeric(f64),
+    Integer(i64),
+    Float(f64),
     Bool(bool),
     Str(&'static str),
 }
@@ -46,13 +47,24 @@ fn check_parse_errors(parser: &Parser) {
 }
 
 #[cfg(test)]
-fn test_numeric_literal(expr: &Expression, expected: f64) {
-    if let Expression::Number(num) = expr {
+fn test_integer_literal(expr: &Expression, expected: i64) {
+    if let Expression::Integer(num) = expr {
         if num.value != expected {
             panic!("number.value not '{}'. got='{}'", expected, num.value);
         }
     } else {
-        panic!("expr not an Number. got={:?}", expr);
+        panic!("expr not an Integer. got={:?}", expr);
+    }
+}
+
+#[cfg(test)]
+fn test_float_literal(expr: &Expression, expected: f64) {
+    if let Expression::Float(num) = expr {
+        if num.value != expected {
+            panic!("number.value not '{}'. got='{}'", expected, num.value);
+        }
+    } else {
+        panic!("expr not an Float. got={:?}", expr);
     }
 }
 
@@ -107,8 +119,11 @@ fn test_literal(expression: &Expression, value: Literal) {
         Literal::Ident(value) => {
             test_identifier(expression, value);
         }
-        Literal::Numeric(value) => {
-            test_numeric_literal(expression, value);
+        Literal::Integer(value) => {
+            test_integer_literal(expression, value);
+        }
+        Literal::Float(value) => {
+            test_float_literal(expression, value);
         }
         Literal::Bool(value) => {
             test_boolean_literal(expression, value);
@@ -174,7 +189,7 @@ fn test_let_statements() {
         TestLet {
             input: "let x = 5;",
             expected_id: "x",
-            expected_val: Literal::Numeric(5.),
+            expected_val: Literal::Integer(5),
         },
         TestLet {
             input: "let y = true;",
@@ -305,7 +320,7 @@ fn test_numeric_literal_expression() {
 
     let stmt = &program.statements[0];
     if let Statement::Expr(stmt) = stmt {
-        test_numeric_literal(&stmt.value, 5.);
+        test_integer_literal(&stmt.value, 5);
     } else {
         panic!(
             "program.statements[0] is not an expression statement. got={}",
@@ -341,12 +356,17 @@ fn test_parsing_prefix_expressions() {
         PrefixTest {
             input: "!5",
             operator: "!",
-            number: Literal::Numeric(5.),
+            number: Literal::Integer(5),
         },
         PrefixTest {
             input: "-15",
             operator: "-",
-            number: Literal::Numeric(15.),
+            number: Literal::Integer(15),
+        },
+        PrefixTest {
+            input: "!5.0",
+            operator: "!",
+            number: Literal::Float(5.),
         },
         PrefixTest {
             input: "!true",
@@ -387,50 +407,56 @@ fn test_parsing_infix_expressions() {
         InfixTest {
             input: "5 + 5;",
             operator: "+",
-            left: Literal::Numeric(5.),
-            right: Literal::Numeric(5.),
+            left: Literal::Integer(5),
+            right: Literal::Integer(5),
+        },
+        InfixTest {
+            input: "5.1 + 5.2;",
+            operator: "+",
+            left: Literal::Float(5.1),
+            right: Literal::Float(5.2),
         },
         InfixTest {
             input: "5 - 5;",
             operator: "-",
-            left: Literal::Numeric(5.),
-            right: Literal::Numeric(5.),
+            left: Literal::Integer(5),
+            right: Literal::Integer(5),
         },
         InfixTest {
             input: "5 * 5;",
             operator: "*",
-            left: Literal::Numeric(5.),
-            right: Literal::Numeric(5.),
+            left: Literal::Integer(5),
+            right: Literal::Integer(5),
         },
         InfixTest {
             input: "5 / 5;",
             operator: "/",
-            left: Literal::Numeric(5.),
-            right: Literal::Numeric(5.),
+            left: Literal::Integer(5),
+            right: Literal::Integer(5),
         },
         InfixTest {
             input: "5 > 5;",
             operator: ">",
-            left: Literal::Numeric(5.),
-            right: Literal::Numeric(5.),
+            left: Literal::Integer(5),
+            right: Literal::Integer(5),
         },
         InfixTest {
             input: "5 < 5;",
             operator: "<",
-            left: Literal::Numeric(5.),
-            right: Literal::Numeric(5.),
+            left: Literal::Integer(5),
+            right: Literal::Integer(5),
         },
         InfixTest {
             input: "5 == 5;",
             operator: "==",
-            left: Literal::Numeric(5.),
-            right: Literal::Numeric(5.),
+            left: Literal::Integer(5),
+            right: Literal::Integer(5),
         },
         InfixTest {
             input: "5 != 5;",
             operator: "!=",
-            left: Literal::Numeric(5.),
-            right: Literal::Numeric(5.),
+            left: Literal::Integer(5),
+            right: Literal::Integer(5),
         },
         InfixTest {
             input: "true == true",
@@ -814,13 +840,8 @@ fn test_parsing_call_expression() {
                 "wrong length of arguments. got={}",
                 expr.args.len()
             );
-            test_literal(&expr.args[0], Literal::Numeric(1.));
-            test_infix_expression(
-                &expr.args[1],
-                Literal::Numeric(2.),
-                "*",
-                Literal::Numeric(3.),
-            );
+            test_literal(&expr.args[0], Literal::Integer(1));
+            test_infix_expression(&expr.args[1], Literal::Integer(2), "*", Literal::Integer(3));
         } else {
             panic!("stmt.expr is not a CallExpr expression. got={}", stmt.value);
         }
@@ -847,20 +868,20 @@ fn test_parsing_array_literal_expression() {
                 expr.elements.len()
             );
             // array element at index 0
-            test_literal(&expr.elements[0], Literal::Numeric(1.));
+            test_literal(&expr.elements[0], Literal::Integer(1));
             // array element at index 1
             test_infix_expression(
                 &expr.elements[1],
-                Literal::Numeric(2.),
+                Literal::Integer(2),
                 "*",
-                Literal::Numeric(2.),
+                Literal::Integer(2),
             );
             // array element at index 2
             test_infix_expression(
                 &expr.elements[2],
-                Literal::Numeric(3.),
+                Literal::Integer(3),
                 "+",
-                Literal::Numeric(3.),
+                Literal::Integer(3),
             );
         } else {
             panic!(
@@ -886,7 +907,7 @@ fn test_parsing_array_index_expression() {
         if let Expression::Index(expr) = &stmt.value {
             test_identifier(&expr.left, "myArray");
             // array element at index 1
-            test_infix_expression(&expr.index, Literal::Numeric(1.), "+", Literal::Numeric(1.));
+            test_infix_expression(&expr.index, Literal::Integer(1), "+", Literal::Integer(1));
         } else {
             panic!("stmt.expr is not an Array IndexExpr. got={}", stmt.value);
         }
@@ -912,15 +933,15 @@ fn test_parsing_hash_literals_strings_keys() {
                 "hash.pairs has wrong length. wants=3 got={}",
                 map_expr.pairs.len()
             );
-            let mut map_expected: HashMap<&str, f64> = HashMap::new();
-            map_expected.insert("one", 1.);
-            map_expected.insert("two", 2.);
-            map_expected.insert("three", 3.);
+            let mut map_expected: HashMap<&str, i64> = HashMap::new();
+            map_expected.insert("one", 1);
+            map_expected.insert("two", 2);
+            map_expected.insert("three", 3);
 
             for (key, value) in map_expr.pairs.iter() {
                 if let Expression::Str(k) = key {
                     if let Some(val) = map_expected.get(k.value.as_str()) {
-                        test_numeric_literal(value, *val);
+                        test_integer_literal(value, *val);
                     } else {
                         panic!("key {} not found in hash", key);
                     }
@@ -998,8 +1019,8 @@ fn test_parsing_hash_literals_with_exprs() {
                 "one",
                 InfixTest {
                     operator: "+",
-                    left: Literal::Numeric(0.),
-                    right: Literal::Numeric(1.),
+                    left: Literal::Integer(0),
+                    right: Literal::Integer(1),
                 },
             );
             // "two" = Infix(10 - 8)
@@ -1007,8 +1028,8 @@ fn test_parsing_hash_literals_with_exprs() {
                 "two",
                 InfixTest {
                     operator: "-",
-                    left: Literal::Numeric(10.),
-                    right: Literal::Numeric(8.),
+                    left: Literal::Integer(10),
+                    right: Literal::Integer(8),
                 },
             );
             // "three" = Infix(15 / 5)
@@ -1016,8 +1037,8 @@ fn test_parsing_hash_literals_with_exprs() {
                 "three",
                 InfixTest {
                     operator: "/",
-                    left: Literal::Numeric(15.),
-                    right: Literal::Numeric(5.),
+                    left: Literal::Integer(15),
+                    right: Literal::Integer(5),
                 },
             );
 
@@ -1103,7 +1124,12 @@ fn test_parsing_assignment_expressions() {
         AssignTest {
             input: "a = 10;",
             left: Literal::Ident("a"),
-            right: Literal::Numeric(10.),
+            right: Literal::Integer(10),
+        },
+        AssignTest {
+            input: "a = 10.2;",
+            left: Literal::Ident("a"),
+            right: Literal::Float(10.2),
         },
         AssignTest {
             input: "a = true;",
@@ -1137,6 +1163,7 @@ fn test_parsing_assignment_expressions_negative() {
     let error_str = "[line 1] Invalid assignment target";
     let tests = vec![
         "1 = 1",
+        "1.1 = 2.2",
         r#""a" = 1"#,
         "true = 1",
         "-a = 1",

@@ -16,35 +16,35 @@ fn test_builtin_function_format() {
         FormatTest {
             args: vec![
                 Rc::new(Object::Str("{}".to_string())),
-                Rc::new(Object::Number(69420.)),
+                Rc::new(Object::Integer(69420)),
             ],
             expected: "69420",
         },
         FormatTest {
             args: vec![
                 Rc::new(Object::Str("{:b}".to_string())),
-                Rc::new(Object::Number(69420.)),
+                Rc::new(Object::Integer(69420)),
             ],
             expected: "10000111100101100",
         },
         FormatTest {
             args: vec![
                 Rc::new(Object::Str("{:o}".to_string())),
-                Rc::new(Object::Number(69420.)),
+                Rc::new(Object::Integer(69420)),
             ],
             expected: "207454",
         },
         FormatTest {
             args: vec![
                 Rc::new(Object::Str("{:x}".to_string())),
-                Rc::new(Object::Number(69420.)),
+                Rc::new(Object::Integer(69420)),
             ],
             expected: "10f2c",
         },
         FormatTest {
             args: vec![
                 Rc::new(Object::Str("{:X}".to_string())),
-                Rc::new(Object::Number(69420.)),
+                Rc::new(Object::Integer(69420)),
             ],
             expected: "10F2C",
         },
@@ -52,7 +52,7 @@ fn test_builtin_function_format() {
         FormatTest {
             args: vec![
                 Rc::new(Object::Str("{:5}".to_string())),
-                Rc::new(Object::Number(1.)),
+                Rc::new(Object::Integer(1)),
             ],
             expected: "    1",
         },
@@ -60,7 +60,7 @@ fn test_builtin_function_format() {
         FormatTest {
             args: vec![
                 Rc::new(Object::Str("{:>5}".to_string())),
-                Rc::new(Object::Number(1.)),
+                Rc::new(Object::Integer(1)),
             ],
             expected: "    1",
         },
@@ -68,7 +68,7 @@ fn test_builtin_function_format() {
         FormatTest {
             args: vec![
                 Rc::new(Object::Str("{:<5}".to_string())),
-                Rc::new(Object::Number(1.)),
+                Rc::new(Object::Integer(1)),
             ],
             expected: "1    ",
         },
@@ -76,7 +76,7 @@ fn test_builtin_function_format() {
         FormatTest {
             args: vec![
                 Rc::new(Object::Str("{:0>5}".to_string())),
-                Rc::new(Object::Number(1.)),
+                Rc::new(Object::Integer(1)),
             ],
             expected: "00001",
         },
@@ -84,7 +84,7 @@ fn test_builtin_function_format() {
         FormatTest {
             args: vec![
                 Rc::new(Object::Str("{:0<5}".to_string())),
-                Rc::new(Object::Number(1.)),
+                Rc::new(Object::Integer(1)),
             ],
             expected: "10000",
         },
@@ -103,10 +103,10 @@ fn test_builtin_function_format() {
                     "{0:<10},{1:0<05},{2},{3:b},{3:o},{4:x},{4:X}".to_string(),
                 )),
                 Rc::new(Object::Str("Hello".to_string())),
-                Rc::new(Object::Number(1.)),
+                Rc::new(Object::Integer(1)),
                 Rc::new(Object::Bool(true)),
-                Rc::new(Object::Number(10.)),
-                Rc::new(Object::Number(65535.)),
+                Rc::new(Object::Integer(10)),
+                Rc::new(Object::Integer(65535)),
             ],
             expected: "Hello     ,10000,true,1010,12,ffff,FFFF",
         },
@@ -144,7 +144,7 @@ fn test_builtin_function_format_failures() {
     let format_tests = vec![
         FormatTest {
             args: vec![
-                Rc::new(Object::Number(69420.)),
+                Rc::new(Object::Integer(69420)),
                 Rc::new(Object::Str("{:b}".to_string())),
             ],
             expected: "Expected a string or format specifier",

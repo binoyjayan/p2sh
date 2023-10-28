@@ -281,7 +281,7 @@ impl VM {
                     // Read the first operand i.e. the number of pairs
                     let num_elements =
                         BigEndian::read_u16(&instructions.code[ip + 1..ip + 3]) as usize;
-                    let pairs = self.build_map(self.sp - num_elements, self.sp);
+                    let pairs = self.build_map(self.sp - num_elements, self.sp, line)?;
                     // pop 'num_elements' off the stack
                     self.sp -= num_elements;
                     // Push the array back onto the stack as an object
@@ -428,7 +428,7 @@ impl VM {
         let left = self.pop(line)?;
 
         match (&*left, &*right) {
-            (Object::Number(_), Object::Number(_)) => {
+            (Object::Integer(_) | Object::Float(_), Object::Integer(_) | Object::Float(_)) => {
                 self.push(Rc::new(op(&left, &right)), line)?;
                 Ok(())
             }
@@ -440,7 +440,7 @@ impl VM {
                     Err(RTError::new("Invalid operation on strings.", line))
                 }
             }
-            (Object::Str(s), Object::Number(n)) | (Object::Number(n), Object::Str(s)) => {
+            (Object::Str(s), Object::Integer(n)) | (Object::Integer(n), Object::Str(s)) => {
                 if matches!(optype, BinaryOperation::Mul) {
                     self.push(Rc::new(Object::Str(s.repeat(*n as usize))), line)?;
                     Ok(())
@@ -469,14 +469,25 @@ impl VM {
     }
 
     // Build map from objects on stack
-    fn build_map(&self, start_index: usize, end_index: usize) -> HashMap<Rc<Object>, Rc<Object>> {
+    fn build_map(
+        &self,
+        start_index: usize,
+        end_index: usize,
+        line: usize,
+    ) -> Result<HashMap<Rc<Object>, Rc<Object>>, RTError> {
         let mut elements = HashMap::with_capacity(end_index - start_index);
         for i in (start_index..end_index).step_by(2) {
             let key = self.stack[i].clone();
+            if !key.is_a_valid_key() {
+                return Err(RTError::new(
+                    &format!("KeyError: not a valid key: {}.", key),
+                    line,
+                ));
+            }
             let val = self.stack[i + 1].clone();
             elements.insert(key, val);
         }
-        elements
+        Ok(elements)
     }
 
     // Common code for indexing into arrays and maps
@@ -487,23 +498,26 @@ impl VM {
         setval: Option<Rc<Object>>,
         line: usize,
     ) -> Result<(), RTError> {
-        match (&*left, &*index) {
-            (Object::Arr(arr), Object::Number(idx)) => {
+        let obj = match (&*left, &*index) {
+            (Object::Arr(arr), Object::Integer(idx)) => {
                 self.exec_array_index(arr, *idx, setval, line)
             }
             (Object::Map(map), _) => self.exec_hash_index(map, &index, setval, line),
-            _ => Err(RTError::new("IndexError: operator not supported.", line)),
-        }
+            _ => Err(RTError::new("IndexError: unsupported operation.", line)),
+        };
+        // Push the value onto the stack so it is available to
+        // the expression statement that uses the index expression
+        self.push(obj?, line)
     }
 
     fn exec_array_index(
         &mut self,
         arr: &Array,
-        idx: f64,
+        idx: i64,
         setval: Option<Rc<Object>>,
         line: usize,
-    ) -> Result<(), RTError> {
-        if idx < 0. {
+    ) -> Result<Rc<Object>, RTError> {
+        if idx < 0 {
             return Err(RTError::new(
                 "IndexError: index cannot be less than zero.",
                 line,
@@ -517,7 +531,8 @@ impl VM {
         if let Some(val) = setval {
             arr.set(idx as usize, val);
         }
-        self.push(obj, line)
+        // return the value being 'set' or 'get'
+        Ok(obj)
     }
 
     fn exec_hash_index(
@@ -526,12 +541,19 @@ impl VM {
         key: &Rc<Object>,
         setval: Option<Rc<Object>>,
         line: usize,
-    ) -> Result<(), RTError> {
+    ) -> Result<Rc<Object>, RTError> {
+        if !key.is_a_valid_key() {
+            return Err(RTError::new(
+                &format!("KeyError: not a valid key: {}.", key),
+                line,
+            ));
+        }
         // If it is a SetIndex operation, then set the value at the index
         // SetIndex operation for a map does ntot require that the key
         // if present in the map already.
-        let obj = if let Some(val) = setval {
-            map.insert(key.clone(), val)
+        let obj = if let Some(obj) = setval {
+            map.insert(key.clone(), obj.clone());
+            obj
         } else {
             let obj = map.get(key);
             if obj.is_nil() {
@@ -539,8 +561,8 @@ impl VM {
             }
             obj
         };
-
-        self.push(obj, line)
+        // return the value being 'set' or 'get'
+        Ok(obj)
     }
 
     fn exec_call(&mut self, num_args: usize, line: usize) -> Result<(), RTError> {

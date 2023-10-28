@@ -47,28 +47,28 @@ fn format_obj(
     // Format based on NumberFormat
     let formatted = match num_fmt {
         NumberFormat::Boolean => {
-            if let Object::Number(num) = obj {
+            if let Object::Integer(num) = obj {
                 format!("{:b}", *num as usize)
             } else {
                 Err(String::from("Can't format non-number as binary"))?
             }
         }
         NumberFormat::Octal => {
-            if let Object::Number(num) = obj {
+            if let Object::Integer(num) = obj {
                 format!("{:o}", *num as usize)
             } else {
                 Err(String::from("Can't format non-number as octal"))?
             }
         }
         NumberFormat::Hex => {
-            if let Object::Number(num) = obj {
+            if let Object::Integer(num) = obj {
                 format!("{:x}", *num as usize)
             } else {
                 Err(String::from("Can't format non-number as hex"))?
             }
         }
         NumberFormat::HexaDecimal => {
-            if let Object::Number(num) = obj {
+            if let Object::Integer(num) = obj {
                 format!("{:X}", *num as usize)
             } else {
                 Err(String::from("Can't format non-number as hex"))?
@@ -86,7 +86,7 @@ fn format_obj(
     // Use default justification as right for number and left for everything else
     let justify = match justify {
         SpecJustify::Default => {
-            if let Object::Number(_) = obj {
+            if let Object::Integer(_) = obj {
                 SpecJustify::Right
             } else {
                 SpecJustify::Left
@@ -98,7 +98,7 @@ fn format_obj(
     // Handle justification and padding
     let justify = match justify {
         SpecJustify::Default => {
-            if let Object::Number(_) = obj {
+            if let Object::Integer(_) = obj {
                 SpecJustify::Right
             } else {
                 SpecJustify::Left

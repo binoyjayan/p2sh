@@ -12,7 +12,8 @@ use crate::code::definitions::Instructions;
 pub enum Object {
     Nil,
     Str(String),
-    Number(f64),
+    Integer(i64),
+    Float(f64),
     Bool(bool),
     Return(Rc<Object>),
     Builtin(Rc<BuiltinFunction>),
@@ -27,7 +28,8 @@ impl PartialEq for Object {
         match (self, other) {
             (Object::Nil, Object::Nil) => true,
             (Object::Str(a), Object::Str(b)) => a.eq(b),
-            (Object::Number(a), Object::Number(b)) => a.eq(b),
+            (Object::Integer(a), Object::Integer(b)) => a.eq(b),
+            (Object::Float(a), Object::Float(b)) => a.eq(b),
             (Object::Bool(a), Object::Bool(b)) => a.eq(b),
             (Object::Arr(a), Object::Arr(b)) => a.eq(b),
             (Object::Map(a), Object::Map(b)) => a.eq(b),
@@ -46,7 +48,8 @@ impl PartialOrd for Object {
         match (self, other) {
             (Object::Nil, Object::Nil) => None,
             (Object::Str(a), Object::Str(b)) => a.partial_cmp(b),
-            (Object::Number(a), Object::Number(b)) => a.partial_cmp(b),
+            (Object::Integer(a), Object::Integer(b)) => a.partial_cmp(b),
+            (Object::Float(a), Object::Float(b)) => a.partial_cmp(b),
             (Object::Bool(a), Object::Bool(b)) => a.partial_cmp(b),
             _ => None,
         }
@@ -58,7 +61,8 @@ impl Clone for Object {
         match self {
             Object::Nil => Object::Nil,
             Object::Str(s) => Object::Str(s.clone()),
-            Object::Number(n) => Object::Number(*n),
+            Object::Integer(n) => Object::Integer(*n),
+            Object::Float(n) => Object::Float(*n),
             Object::Bool(b) => Object::Bool(*b),
             Object::Return(r) => Object::Return(r.clone()),
             Object::Builtin(f) => Object::Builtin(f.clone()),
@@ -78,19 +82,27 @@ impl Object {
         matches!(self, Object::Str(_))
     }
     pub fn is_number(&self) -> bool {
-        matches!(self, Object::Number(_))
+        matches!(self, Object::Integer(_))
     }
     pub fn is_falsey(&self) -> bool {
         match self {
-            Object::Bool(false) | Object::Nil => true,
+            Object::Bool(false) | Object::Integer(0) | Object::Nil => true,
             // floating point types cannot be used in patterns
-            Object::Number(v) => *v == 0.0,
+            Object::Float(v) => *v == 0.,
             _ => false,
         }
     }
 
     pub fn is_a_valid_key(&self) -> bool {
-        matches!(self, Object::Str(_) | Object::Number(_) | Object::Bool(_))
+        matches!(
+            self,
+            Object::Str(_)
+                | Object::Integer(_)
+                | Object::Float(_)
+                | Object::Bool(_)
+                | Object::Nil
+                | Object::Builtin(_)
+        )
     }
 }
 
@@ -99,7 +111,8 @@ impl fmt::Display for Object {
         match self {
             Self::Nil => write!(f, "nil"),
             Self::Str(s) => write!(f, "{}", s),
-            Self::Number(val) => write!(f, "{}", val),
+            Self::Integer(val) => write!(f, "{}", val),
+            Self::Float(val) => write!(f, "{}", val),
             Self::Bool(val) => write!(f, "{}", val),
             Self::Return(val) => write!(f, "{}", val),
             Self::Builtin(val) => write!(f, "{}", val),
@@ -116,7 +129,10 @@ impl ops::Add for &Object {
 
     fn add(self, other: &Object) -> Object {
         match (self, other) {
-            (&Object::Number(a), &Object::Number(b)) => Object::Number(a + b),
+            (&Object::Integer(a), &Object::Integer(b)) => Object::Integer(a + b),
+            (&Object::Float(a), &Object::Float(b)) => Object::Float(a + b),
+            (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 + b),
+            (&Object::Float(a), &Object::Integer(b)) => Object::Float(a + b as f64),
             _ => panic!("Invalid operation"),
         }
     }
@@ -126,7 +142,10 @@ impl ops::Sub for &Object {
     type Output = Object;
     fn sub(self, other: &Object) -> Object {
         match (self, other) {
-            (&Object::Number(a), &Object::Number(b)) => Object::Number(a - b),
+            (&Object::Integer(a), &Object::Integer(b)) => Object::Integer(a - b),
+            (&Object::Float(a), &Object::Float(b)) => Object::Float(a - b),
+            (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 - b),
+            (&Object::Float(a), &Object::Integer(b)) => Object::Float(a - b as f64),
             _ => panic!("Invalid operation"),
         }
     }
@@ -136,7 +155,10 @@ impl ops::Mul for &Object {
     type Output = Object;
     fn mul(self, other: &Object) -> Object {
         match (self, other) {
-            (&Object::Number(a), &Object::Number(b)) => Object::Number(a * b),
+            (&Object::Integer(a), &Object::Integer(b)) => Object::Integer(a * b),
+            (&Object::Float(a), &Object::Float(b)) => Object::Float(a * b),
+            (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 * b),
+            (&Object::Float(a), &Object::Integer(b)) => Object::Float(a * b as f64),
             _ => panic!("Invalid operation"),
         }
     }
@@ -146,7 +168,10 @@ impl ops::Div for &Object {
     type Output = Object;
     fn div(self, other: &Object) -> Object {
         match (self, other) {
-            (&Object::Number(a), &Object::Number(b)) => Object::Number(a / b),
+            (&Object::Integer(a), &Object::Integer(b)) => Object::Integer(a / b),
+            (&Object::Float(a), &Object::Float(b)) => Object::Float(a / b),
+            (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 / b),
+            (&Object::Float(a), &Object::Integer(b)) => Object::Float(a / b as f64),
             _ => panic!("Invalid operation"),
         }
     }
@@ -156,7 +181,7 @@ impl ops::Neg for &Object {
     type Output = Object;
     fn neg(self) -> Object {
         match self {
-            &Object::Number(a) => Object::Number(-a),
+            &Object::Integer(a) => Object::Integer(-a),
             _ => panic!("Invalid operation"),
         }
     }
@@ -165,12 +190,14 @@ impl ops::Neg for &Object {
 impl Hash for Object {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            Object::Number(ref n) => {
+            Object::Integer(ref n) => n.hash(state),
+            Object::Float(ref f) => {
                 // Use the built-in hash function for f64
-                state.write_u64(n.to_bits());
+                state.write_u64(f.to_bits());
             }
             Object::Bool(ref b) => b.hash(state),
             Object::Str(ref s) => s.hash(state),
+            Object::Builtin(f) => f.name.hash(state),
             _ => "".hash(state),
         }
     }
@@ -180,7 +207,6 @@ pub type BuiltinFunctionProto = fn(Vec<Rc<Object>>) -> Result<Rc<Object>, String
 
 #[derive(Debug, Clone)]
 pub struct BuiltinFunction {
-    // pub name: String,
     pub name: &'static str,
     pub func: BuiltinFunctionProto,
 }

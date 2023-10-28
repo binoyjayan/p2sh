@@ -5,7 +5,8 @@ use std::fmt;
 #[derive(Clone, Debug)]
 pub enum Expression {
     Ident(Identifier),
-    Number(NumberLiteral),
+    Integer(IntegerLiteral),
+    Float(FloatLiteral),
     Str(StringLiteral),
     Unary(UnaryExpr),
     Binary(BinaryExpr),
@@ -53,12 +54,24 @@ impl fmt::Display for StringLiteral {
 }
 
 #[derive(Clone, Debug)]
-pub struct NumberLiteral {
+pub struct IntegerLiteral {
+    pub token: Token,
+    pub value: i64,
+}
+
+impl fmt::Display for IntegerLiteral {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.token)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct FloatLiteral {
     pub token: Token,
     pub value: f64,
 }
 
-impl fmt::Display for NumberLiteral {
+impl fmt::Display for FloatLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.token)
     }
@@ -232,7 +245,8 @@ impl Expression {
     fn token_literal(&self) -> String {
         match &self {
             Expression::Ident(ident) => ident.token.literal.clone(),
-            Expression::Number(num) => num.token.literal.clone(),
+            Expression::Integer(num) => num.token.literal.clone(),
+            Expression::Float(num) => num.token.literal.clone(),
             Expression::Str(s) => s.token.literal.clone(),
             Expression::Unary(unary) => unary.token.literal.clone(),
             Expression::Binary(binary) => binary.token.literal.clone(),
@@ -253,7 +267,8 @@ impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             Expression::Ident(ident) => write!(f, "{}", ident),
-            Expression::Number(num) => write!(f, "{}", num),
+            Expression::Integer(num) => write!(f, "{}", num),
+            Expression::Float(num) => write!(f, "{}", num),
             Expression::Str(s) => write!(f, "{}", s),
             Expression::Unary(prefix) => write!(f, "{}", prefix),
             Expression::Binary(binary) => write!(f, "{}", binary),

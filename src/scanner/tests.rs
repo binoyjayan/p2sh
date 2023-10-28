@@ -28,18 +28,21 @@ fn test_next_token() {
             "foo bar"
             [1, 2];
             {"foo": "bar"}
+            5. + .1;
+            10.0 - 30e1;
+            40e+1 * 50e-1;
         "#;
 
     let tests = vec![
         ExpectedToken(TokenType::Let, "let"),
         ExpectedToken(TokenType::Identifier, "five"),
         ExpectedToken(TokenType::Assign, "="),
-        ExpectedToken(TokenType::Number, "5"),
+        ExpectedToken(TokenType::Integer, "5"),
         ExpectedToken(TokenType::Semicolon, ";"),
         ExpectedToken(TokenType::Let, "let"),
         ExpectedToken(TokenType::Identifier, "ten"),
         ExpectedToken(TokenType::Assign, "="),
-        ExpectedToken(TokenType::Number, "10"),
+        ExpectedToken(TokenType::Integer, "10"),
         ExpectedToken(TokenType::Semicolon, ";"),
         ExpectedToken(TokenType::Let, "let"),
         ExpectedToken(TokenType::Identifier, "add"),
@@ -70,19 +73,19 @@ fn test_next_token() {
         ExpectedToken(TokenType::Minus, "-"),
         ExpectedToken(TokenType::Slash, "/"),
         ExpectedToken(TokenType::Asterisk, "*"),
-        ExpectedToken(TokenType::Number, "5"),
+        ExpectedToken(TokenType::Integer, "5"),
         ExpectedToken(TokenType::Semicolon, ";"),
-        ExpectedToken(TokenType::Number, "5"),
+        ExpectedToken(TokenType::Integer, "5"),
         ExpectedToken(TokenType::Less, "<"),
-        ExpectedToken(TokenType::Number, "10"),
+        ExpectedToken(TokenType::Integer, "10"),
         ExpectedToken(TokenType::Greater, ">"),
-        ExpectedToken(TokenType::Number, "5"),
+        ExpectedToken(TokenType::Integer, "5"),
         ExpectedToken(TokenType::Semicolon, ";"),
         ExpectedToken(TokenType::If, "if"),
         ExpectedToken(TokenType::LeftParen, "("),
-        ExpectedToken(TokenType::Number, "5"),
+        ExpectedToken(TokenType::Integer, "5"),
         ExpectedToken(TokenType::Less, "<"),
-        ExpectedToken(TokenType::Number, "10"),
+        ExpectedToken(TokenType::Integer, "10"),
         ExpectedToken(TokenType::RightParen, ")"),
         ExpectedToken(TokenType::LeftBrace, "{"),
         ExpectedToken(TokenType::Return, "return"),
@@ -95,20 +98,20 @@ fn test_next_token() {
         ExpectedToken(TokenType::False, "false"),
         ExpectedToken(TokenType::Semicolon, ";"),
         ExpectedToken(TokenType::RightBrace, "}"),
-        ExpectedToken(TokenType::Number, "10"),
+        ExpectedToken(TokenType::Integer, "10"),
         ExpectedToken(TokenType::Equal, "=="),
-        ExpectedToken(TokenType::Number, "10"),
+        ExpectedToken(TokenType::Integer, "10"),
         ExpectedToken(TokenType::Semicolon, ";"),
-        ExpectedToken(TokenType::Number, "10"),
+        ExpectedToken(TokenType::Integer, "10"),
         ExpectedToken(TokenType::BangEqual, "!="),
-        ExpectedToken(TokenType::Number, "9"),
+        ExpectedToken(TokenType::Integer, "9"),
         ExpectedToken(TokenType::Semicolon, ";"),
         ExpectedToken(TokenType::Str, "foobar"),
         ExpectedToken(TokenType::Str, "foo bar"),
         ExpectedToken(TokenType::LeftBracket, "["),
-        ExpectedToken(TokenType::Number, "1"),
+        ExpectedToken(TokenType::Integer, "1"),
         ExpectedToken(TokenType::Comma, ","),
-        ExpectedToken(TokenType::Number, "2"),
+        ExpectedToken(TokenType::Integer, "2"),
         ExpectedToken(TokenType::RightBracket, "]"),
         ExpectedToken(TokenType::Semicolon, ";"),
         ExpectedToken(TokenType::LeftBrace, "{"),
@@ -116,6 +119,18 @@ fn test_next_token() {
         ExpectedToken(TokenType::Colon, ":"),
         ExpectedToken(TokenType::Str, "bar"),
         ExpectedToken(TokenType::RightBrace, "}"),
+        ExpectedToken(TokenType::Float, "5."),
+        ExpectedToken(TokenType::Plus, "+"),
+        ExpectedToken(TokenType::Float, ".1"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::Float, "10.0"),
+        ExpectedToken(TokenType::Minus, "-"),
+        ExpectedToken(TokenType::Float, "30e1"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::Float, "40e+1"),
+        ExpectedToken(TokenType::Asterisk, "*"),
+        ExpectedToken(TokenType::Float, "50e-1"),
+        ExpectedToken(TokenType::Semicolon, ";"),
         ExpectedToken(TokenType::Eof, ""),
     ];
 
@@ -125,8 +140,8 @@ fn test_next_token() {
         let token = scanner.next_token();
         if token.ttype != tt.0 {
             panic!(
-                "tests[{}] - tokentype wrong. expected='{}', got='{}'",
-                i, tt.0, token.ttype
+                "tests[{}] - tokentype wrong. expected='{}', got='{}({})'",
+                i, tt.0, token.ttype, token.literal
             );
         }
         if token.literal != tt.1 {

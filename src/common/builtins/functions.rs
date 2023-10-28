@@ -18,6 +18,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("insert", builtin_insert),
     BuiltinFunction::new("str", builtin_str),
     BuiltinFunction::new("int", builtin_int),
+    BuiltinFunction::new("float", builtin_float),
     BuiltinFunction::new("time", builtin_time),
     BuiltinFunction::new("exit", builtin_exit),
     BuiltinFunction::new("flush_stdout", flush_stdout),
@@ -34,9 +35,9 @@ fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         return Err(format!("takes one argument. got={}", args.len()));
     }
     match args[0].as_ref() {
-        Object::Str(s) => Ok(Rc::new(Object::Number(s.len() as f64))),
-        Object::Arr(a) => Ok(Rc::new(Object::Number(a.len() as f64))),
-        Object::Map(m) => Ok(Rc::new(Object::Number(m.len() as f64))),
+        Object::Str(s) => Ok(Rc::new(Object::Integer(s.len() as i64))),
+        Object::Arr(a) => Ok(Rc::new(Object::Integer(a.len() as i64))),
+        Object::Map(m) => Ok(Rc::new(Object::Integer(m.len() as i64))),
         _ => Err(String::from("unsupported argument")),
     }
 }
@@ -124,7 +125,7 @@ fn builtin_get(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 
     match args[0].as_ref() {
         Object::Arr(arr) => {
-            if let Object::Number(index) = args[1].as_ref() {
+            if let Object::Integer(index) = args[1].as_ref() {
                 let index = *index as usize;
                 Ok(arr.get(index))
             } else {
@@ -179,7 +180,7 @@ fn builtin_str(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         obj,
         Object::Nil
             | Object::Str(_)
-            | Object::Number(_)
+            | Object::Integer(_)
             | Object::Bool(_)
             | Object::Arr(_)
             | Object::Map(_)
@@ -197,18 +198,46 @@ fn builtin_int(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     let obj = args[0].as_ref();
     match obj {
         Object::Str(s) => {
-            if let Ok(num) = s.parse::<f64>() {
-                Ok(Rc::new(Object::Number(num)))
+            if let Ok(num) = s.parse::<i64>() {
+                Ok(Rc::new(Object::Integer(num)))
             } else {
                 Err(String::from("failed to parse string into an int"))
             }
         }
-        Object::Number(_) => Ok(Rc::clone(&args[0])),
+        Object::Integer(_) => Ok(Rc::clone(&args[0])),
+        Object::Float(n) => Ok(Rc::new(Object::Integer(*n as i64))),
         Object::Bool(b) => {
             if *b {
-                Ok(Rc::new(Object::Number(1.0)))
+                Ok(Rc::new(Object::Integer(1)))
             } else {
-                Ok(Rc::new(Object::Number(0.0)))
+                Ok(Rc::new(Object::Integer(0)))
+            }
+        }
+        _ => Err(String::from("unsupported argument")),
+    }
+}
+
+fn builtin_float(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+
+    let obj = args[0].as_ref();
+    match obj {
+        Object::Str(s) => {
+            if let Ok(num) = s.parse::<f64>() {
+                Ok(Rc::new(Object::Float(num)))
+            } else {
+                Err(String::from("failed to parse string into a float"))
+            }
+        }
+        Object::Float(_) => Ok(Rc::clone(&args[0])),
+        Object::Integer(n) => Ok(Rc::new(Object::Float(*n as f64))),
+        Object::Bool(b) => {
+            if *b {
+                Ok(Rc::new(Object::Float(1.)))
+            } else {
+                Ok(Rc::new(Object::Float(0.)))
             }
         }
         _ => Err(String::from("unsupported argument")),
@@ -223,8 +252,8 @@ fn builtin_time(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     let duration = current_time
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
-    let seconds = duration.as_secs();
-    Ok(Rc::new(Object::Number(seconds as f64)))
+    let seconds = duration.as_secs() as i64;
+    Ok(Rc::new(Object::Integer(seconds)))
 }
 
 #[allow(unreachable_code)]
@@ -233,7 +262,7 @@ fn builtin_exit(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         return Err(format!("takes one argument. got={}", args.len()));
     }
     match args[0].as_ref() {
-        Object::Number(code) => {
+        Object::Integer(code) => {
             process::exit(*code as i32);
         }
         _ => return Err(String::from("unsupported argument")),
@@ -278,9 +307,9 @@ fn builtin_print(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     // Print the collected formatted output
     for s in &collector.0 {
         print!("{}", s);
-        len += s.len();
+        len += s.len() as i64;
     }
-    Ok(Rc::new(Object::Number(len as f64)))
+    Ok(Rc::new(Object::Integer(len)))
 }
 
 fn builtin_println(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -292,12 +321,12 @@ fn builtin_println(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     // Print the collected formatted output
     for s in &collector.0 {
         print!("{}", s);
-        len += s.len();
+        len += s.len() as i64;
     }
     // Newline at the end
     println!();
     len += 1;
-    Ok(Rc::new(Object::Number(len as f64)))
+    Ok(Rc::new(Object::Integer(len)))
 }
 
 fn builtin_eprint(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -309,9 +338,9 @@ fn builtin_eprint(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     // Print the collected formatted output
     for s in &collector.0 {
         eprint!("{}", s);
-        len += s.len();
+        len += s.len() as i64;
     }
-    Ok(Rc::new(Object::Number(len as f64)))
+    Ok(Rc::new(Object::Integer(len)))
 }
 
 fn builtin_eprintln(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -323,10 +352,10 @@ fn builtin_eprintln(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     // Print the collected formatted output
     for s in &collector.0 {
         eprint!("{}", s);
-        len += s.len();
+        len += s.len() as i64;
     }
     // Newline at the end
     eprintln!();
     len += 1;
-    Ok(Rc::new(Object::Number(len as f64)))
+    Ok(Rc::new(Object::Integer(len)))
 }

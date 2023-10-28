@@ -95,7 +95,7 @@ impl Scanner {
             _ => {
                 if Self::is_identifier_first(self.ch) {
                     return self.read_identifier();
-                } else if self.ch.is_ascii_digit() {
+                } else if self.ch == '.' || self.ch.is_ascii_digit() {
                     return self.read_number();
                 }
                 self.make_token(TokenType::Illegal, &self.ch.to_string())
@@ -138,12 +138,49 @@ impl Scanner {
     }
 
     fn read_number(&mut self) -> Token {
+        let mut is_float = false;
         let position = self.position;
+
+        // digits before the period(.)
         while self.ch.is_ascii_digit() {
             self.read_char();
         }
+
+        // Check for a decimal point without any digits
+        if self.ch == '.' {
+            is_float = true;
+            self.read_char(); // Consume the '.'
+            while self.ch.is_ascii_digit() {
+                self.read_char();
+            }
+        }
+        // Check for an exponent (scientific notation)
+        if self.ch == 'e' || self.ch == 'E' {
+            is_float = true;
+            self.read_char(); // Consume 'e' or 'E'
+
+            // 'e' without an exponent is illegal
+            if self.ch != '-' && self.ch != '+' && !self.ch.is_ascii_digit() {
+                let number: String = self.input[position..self.position].iter().collect();
+                return self.make_token(TokenType::Illegal, &number);
+            }
+
+            if self.ch == '-' || self.ch == '+' {
+                self.read_char(); // Consume '-' or '+'
+            }
+            while self.ch.is_ascii_digit() {
+                self.read_char();
+            }
+        }
+
         let number: String = self.input[position..self.position].iter().collect();
-        self.make_token(TokenType::Number, &number)
+        let token_type = if is_float {
+            TokenType::Float
+        } else {
+            TokenType::Integer
+        };
+
+        self.make_token(token_type, &number)
     }
 
     fn read_string(&mut self) -> Token {

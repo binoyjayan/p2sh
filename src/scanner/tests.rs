@@ -179,9 +179,9 @@ fn test_next_token() {
         ExpectedToken(TokenType::Identifier, "a"),
         ExpectedToken(TokenType::BitwiseOr, "|"),
         ExpectedToken(TokenType::Identifier, "b"),
-        ExpectedToken(TokenType::BitwiseLeftShift, "<<"),
+        ExpectedToken(TokenType::LeftShift, "<<"),
         ExpectedToken(TokenType::Integer, "1"),
-        ExpectedToken(TokenType::BitwiseRightShift, ">>"),
+        ExpectedToken(TokenType::RightShift, ">>"),
         ExpectedToken(TokenType::Integer, "2"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // EOF

@@ -60,33 +60,40 @@ lazy_static! {
             ParseRule::new(Some(Parser::parse_float), None, Precedence::Lowest);
         rules[TokenType::Str as usize] =
             ParseRule::new(Some(Parser::parse_string), None, Precedence::Lowest);
-        // Logical
+        // Unary - Logical '!'
         rules[TokenType::Bang as usize] = ParseRule::new(
             Some(Parser::parse_prefix_expression),
             None,
             Precedence::Lowest,
         );
-        // Binary
+        // Unary - Bitwise '~'
+        rules[TokenType::BitwiseNot as usize] = ParseRule::new(
+            Some(Parser::parse_prefix_expression),
+            None,
+            Precedence::Lowest,
+        );
+        // Binary - Relational
         rules[TokenType::Equal as usize] = ParseRule::new(
             None,
             Some(Parser::parse_infix_expression),
-            Precedence::Equality,
+            Precedence::Relational,
         );
         rules[TokenType::BangEqual as usize] = ParseRule::new(
             None,
             Some(Parser::parse_infix_expression),
-            Precedence::Equality,
+            Precedence::Relational,
         );
         rules[TokenType::Less as usize] = ParseRule::new(
             None,
             Some(Parser::parse_infix_expression),
-            Precedence::Comparison,
+            Precedence::Relational,
         );
         rules[TokenType::Greater as usize] = ParseRule::new(
             None,
             Some(Parser::parse_infix_expression),
-            Precedence::Comparison,
+            Precedence::Relational,
         );
+        // Binary - Arithmetic
         rules[TokenType::Plus as usize] =
             ParseRule::new(None, Some(Parser::parse_infix_expression), Precedence::Term);
         rules[TokenType::Minus as usize] = ParseRule::new(
@@ -103,6 +110,49 @@ lazy_static! {
             None,
             Some(Parser::parse_infix_expression),
             Precedence::Factor,
+        );
+        rules[TokenType::Modulo as usize] = ParseRule::new(
+            None,
+            Some(Parser::parse_infix_expression),
+            Precedence::Factor,
+        );
+        // Binary - Bitwise
+        rules[TokenType::BitwiseAnd as usize] = ParseRule::new(
+            None,
+            Some(Parser::parse_infix_expression),
+            Precedence::BitwiseAnd,
+        );
+        rules[TokenType::BitwiseXor as usize] = ParseRule::new(
+            None,
+            Some(Parser::parse_infix_expression),
+            Precedence::BitwiseXor,
+        );
+        rules[TokenType::BitwiseOr as usize] = ParseRule::new(
+            None,
+            Some(Parser::parse_infix_expression),
+            Precedence::BitwiseOr,
+        );
+        // Binary - Shift
+        rules[TokenType::LeftShift as usize] = ParseRule::new(
+            None,
+            Some(Parser::parse_infix_expression),
+            Precedence::Shift,
+        );
+        rules[TokenType::RightShift as usize] = ParseRule::new(
+            None,
+            Some(Parser::parse_infix_expression),
+            Precedence::Shift,
+        );
+        // Binary - Logical
+        rules[TokenType::LogicalAnd as usize] = ParseRule::new(
+            None,
+            Some(Parser::parse_infix_expression),
+            Precedence::LogicalAnd,
+        );
+        rules[TokenType::LogicalOr as usize] = ParseRule::new(
+            None,
+            Some(Parser::parse_infix_expression),
+            Precedence::LogicalOr,
         );
         // Boolean
         rules[TokenType::True as usize] =

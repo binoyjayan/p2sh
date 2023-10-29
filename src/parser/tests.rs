@@ -378,6 +378,11 @@ fn test_parsing_prefix_expressions() {
             operator: "!",
             number: Literal::Bool(false),
         },
+        PrefixTest {
+            input: "~5",
+            operator: "~",
+            number: Literal::Integer(5),
+        },
     ];
 
     for test in prefix_tests {
@@ -435,6 +440,12 @@ fn test_parsing_infix_expressions() {
             right: Literal::Integer(5),
         },
         InfixTest {
+            input: "5 % 5;",
+            operator: "%",
+            left: Literal::Integer(5),
+            right: Literal::Integer(5),
+        },
+        InfixTest {
             input: "5 > 5;",
             operator: ">",
             left: Literal::Integer(5),
@@ -475,6 +486,48 @@ fn test_parsing_infix_expressions() {
             operator: "==",
             left: Literal::Bool(false),
             right: Literal::Bool(false),
+        },
+        InfixTest {
+            input: "5 && 2;",
+            operator: "&&",
+            left: Literal::Integer(5),
+            right: Literal::Integer(2),
+        },
+        InfixTest {
+            input: "5 || 2;",
+            operator: "||",
+            left: Literal::Integer(5),
+            right: Literal::Integer(2),
+        },
+        InfixTest {
+            input: "5 & 2;",
+            operator: "&",
+            left: Literal::Integer(5),
+            right: Literal::Integer(2),
+        },
+        InfixTest {
+            input: "5 | 2;",
+            operator: "|",
+            left: Literal::Integer(5),
+            right: Literal::Integer(2),
+        },
+        InfixTest {
+            input: "5 ^ 2;",
+            operator: "^",
+            left: Literal::Integer(5),
+            right: Literal::Integer(2),
+        },
+        InfixTest {
+            input: "5 << 2;",
+            operator: "<<",
+            left: Literal::Integer(5),
+            right: Literal::Integer(2),
+        },
+        InfixTest {
+            input: "5 >> 2;",
+            operator: ">>",
+            left: Literal::Integer(5),
+            right: Literal::Integer(2),
         },
     ];
 
@@ -526,6 +579,11 @@ fn test_parsing_operator_precedence() {
             num_stmts: 1,
         },
         PrecedenceTest {
+            input: "~a ^ b & c",
+            expected: "((~a) ^ (b & c))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
             input: "a + b + c",
             expected: "((a + b) + c)",
             num_stmts: 1,
@@ -557,12 +615,12 @@ fn test_parsing_operator_precedence() {
         },
         PrecedenceTest {
             input: "5 > 4 == 3 < 4",
-            expected: "((5 > 4) == (3 < 4))",
+            expected: "(((5 > 4) == 3) < 4)",
             num_stmts: 1,
         },
         PrecedenceTest {
             input: "5 < 4 != 3 > 4",
-            expected: "((5 < 4) != (3 > 4))",
+            expected: "(((5 < 4) != 3) > 4)",
             num_stmts: 1,
         },
         PrecedenceTest {
@@ -603,6 +661,11 @@ fn test_parsing_operator_precedence() {
         PrecedenceTest {
             input: "2 / (5 + 5)",
             expected: "(2 / (5 + 5))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "20 / 2 % (5 + 5)",
+            expected: "((20 / 2) % (5 + 5))",
             num_stmts: 1,
         },
         PrecedenceTest {
@@ -658,6 +721,56 @@ fn test_parsing_operator_precedence() {
         PrecedenceTest {
             input: "s = a + b - c",
             expected: "(s = ((a + b) - c))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a & b && c & d",
+            expected: "((a & b) && (c & d))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a | b || c | d",
+            expected: "((a | b) || (c | d))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a && b || c && d",
+            expected: "((a && b) || (c && d))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a || b && c || d",
+            expected: "((a || (b && c)) || d)",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a & b ^ c | d & e",
+            expected: "(((a & b) ^ c) | (d & e))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a ^ b & c | d ^ e",
+            expected: "((a ^ (b & c)) | (d ^ e))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a << b >> c",
+            expected: "((a << b) >> c)",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a & b << c",
+            expected: "(a & (b << c))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a << b + c",
+            expected: "(a << (b + c))",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "a && b == c || d",
+            expected: "((a && (b == c)) || d)",
             num_stmts: 1,
         },
     ];

@@ -96,17 +96,11 @@ impl Scanner {
             '|' => self.make_token_twin(TokenType::BitwiseOr, &[('|', TokenType::LogicalOr)]),
             '<' => self.make_token_twin(
                 TokenType::Less,
-                &[
-                    ('=', TokenType::LessEqual),
-                    ('<', TokenType::BitwiseLeftShift),
-                ],
+                &[('=', TokenType::LessEqual), ('<', TokenType::LeftShift)],
             ),
             '>' => self.make_token_twin(
                 TokenType::Greater,
-                &[
-                    ('=', TokenType::GreaterEqual),
-                    ('>', TokenType::BitwiseRightShift),
-                ],
+                &[('=', TokenType::GreaterEqual), ('>', TokenType::RightShift)],
             ),
             '"' => self.read_string(),
             _ => {

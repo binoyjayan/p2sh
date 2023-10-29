@@ -217,13 +217,14 @@ impl VM {
                 }
                 Opcode::Minus => {
                     if !self.peek(0).is_number() {
-                        return Err(RTError::new("Operand must be a number", line));
+                        return Err(RTError::new("bad operand type for unary '-'", line));
                     }
                     let obj = self.pop(line)?.clone();
                     let val = -&*obj;
                     self.push(Rc::new(val), line)?;
                 }
                 Opcode::Bang => {
+                    // Logical not (!)
                     let obj = self.pop(line)?;
                     self.push(Rc::new(Object::Bool(obj.is_falsey())), line)?;
                 }
@@ -407,6 +408,15 @@ impl VM {
                     let curr_closure = self.current_frame().closure.clone();
                     // push the current closure on stack
                     self.push(Rc::new(Object::Clos(curr_closure)), line)?;
+                }
+                Opcode::Not => {
+                    // Bitwise not (~)
+                    let obj = self.pop(line)?.clone();
+                    if let Object::Integer(n) = &*obj {
+                        self.push(Rc::new(Object::Integer(!n)), line)?;
+                    } else {
+                        return Err(RTError::new("bad operand type for unary '~'", line));
+                    }
                 }
                 Opcode::Invalid => {
                     return Err(RTError::new(

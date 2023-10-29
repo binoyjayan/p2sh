@@ -250,12 +250,38 @@ fn test_integer_arithmetic() {
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
+    ];
+
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_unary_expressions() {
+    let tests = vec![
         CompilerTestCase {
             input: "-1",
             expected_constants: vec![Object::Integer(1)],
             expected_instructions: vec![
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Minus, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "!10",
+            expected_constants: vec![Object::Integer(10)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Bang, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "~10",
+            expected_constants: vec![Object::Integer(10)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Not, &[], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },

@@ -60,6 +60,7 @@ lazy_static! {
         map.insert(Opcode::GetFree, Definition::new("OpGetFree", &[1]));
         map.insert(Opcode::SetFree, Definition::new("OpSetFree", &[1]));
         map.insert(Opcode::CurrClosure, Definition::new("OpCurrClosure", &[]));
+        map.insert(Opcode::Not, Definition::new("OpNot", &[]));
         map
     };
 }

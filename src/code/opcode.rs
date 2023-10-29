@@ -37,6 +37,7 @@ pub enum Opcode {
     GetFree,
     SetFree,
     CurrClosure,
+    Not,
     #[default]
     Invalid,
 }
@@ -80,6 +81,7 @@ impl From<u8> for Opcode {
             33 => Opcode::GetFree,
             34 => Opcode::SetFree,
             35 => Opcode::CurrClosure,
+            36 => Opcode::Not,
             _ => Opcode::Invalid,
         }
     }

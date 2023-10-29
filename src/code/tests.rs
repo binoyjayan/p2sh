@@ -3,6 +3,15 @@ use super::opcode::*;
 use crate::code::definitions;
 use crate::code::definitions::Instructions;
 
+// Test the order of the Opcode enum variants
+#[test]
+fn test_opcode_order() {
+    for code in 0..(Opcode::Invalid as usize) {
+        let op = Opcode::from(code as u8);
+        assert_eq!(code, op as usize);
+    }
+}
+
 #[test]
 fn test_make() {
     /*

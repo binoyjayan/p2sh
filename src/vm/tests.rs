@@ -225,6 +225,41 @@ fn test_integer_arithmetic() {
 }
 
 #[test]
+fn test_unary_expressions() {
+    let tests = vec![
+        VmTestCase {
+            input: "-10",
+            expected: Object::Integer(-10),
+        },
+        VmTestCase {
+            input: "!2",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "~10",
+            expected: Object::Integer(-11),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_unary_expressions_negative() {
+    let tests = vec![
+        VmTestCaseErr {
+            input: r#"-"a""#,
+            expected: "bad operand type for unary '-'",
+        },
+        VmTestCaseErr {
+            input: r#"~"a""#,
+            expected: "bad operand type for unary '~'",
+        },
+    ];
+    run_vm_negative_tests(&tests);
+}
+
+#[test]
 fn test_floating_arithmetic() {
     let tests = vec![
         VmTestCase {

@@ -370,6 +370,9 @@ impl Compiler {
                     "-" => {
                         self.emit(Opcode::Minus, &[0], u.token.line);
                     }
+                    "~" => {
+                        self.emit(Opcode::Not, &[0], u.token.line);
+                    }
                     _ => return Err(CompileError::new("invalid unary operator", u.token.line)),
                 }
             }

@@ -29,6 +29,7 @@ lazy_static! {
         map.insert(Opcode::Sub, Definition::new("OpSub", &[]));
         map.insert(Opcode::Mul, Definition::new("OpMul", &[]));
         map.insert(Opcode::Div, Definition::new("OpDiv", &[]));
+        map.insert(Opcode::Mod, Definition::new("OpMod", &[]));
         map.insert(Opcode::True, Definition::new("OpTrue", &[]));
         map.insert(Opcode::False, Definition::new("OpFalse", &[]));
         map.insert(Opcode::Equal, Definition::new("OpEqual", &[]));

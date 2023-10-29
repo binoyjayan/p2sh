@@ -231,6 +231,16 @@ fn test_integer_arithmetic() {
             ],
         },
         CompilerTestCase {
+            input: "2 % 1",
+            expected_constants: vec![Object::Integer(2), Object::Integer(1)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Mod, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
             input: "1; 2",
             expected_constants: vec![Object::Integer(1), Object::Integer(2)],
             expected_instructions: vec![

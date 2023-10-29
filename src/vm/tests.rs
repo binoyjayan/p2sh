@@ -176,6 +176,10 @@ fn test_integer_arithmetic() {
             expected: Object::Integer(2),
         },
         VmTestCase {
+            input: "10 % 3",
+            expected: Object::Integer(1),
+        },
+        VmTestCase {
             input: "50 / 2 * 2 + 10 - 5",
             expected: Object::Integer(55),
         },

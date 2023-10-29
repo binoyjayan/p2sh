@@ -370,7 +370,7 @@ impl Compiler {
                     "-" => {
                         self.emit(Opcode::Minus, &[0], u.token.line);
                     }
-                    _ => return Err(CompileError::new("invalid binary operator", u.token.line)),
+                    _ => return Err(CompileError::new("invalid unary operator", u.token.line)),
                 }
             }
             Expression::Bool(b) => {
@@ -510,6 +510,9 @@ impl Compiler {
             }
             "/" => {
                 self.emit(Opcode::Div, &[0], line);
+            }
+            "%" => {
+                self.emit(Opcode::Mod, &[0], line);
             }
             "==" => {
                 self.emit(Opcode::Equal, &[0], line);

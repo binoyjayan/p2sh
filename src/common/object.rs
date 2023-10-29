@@ -177,6 +177,19 @@ impl ops::Div for &Object {
     }
 }
 
+impl ops::Rem for &Object {
+    type Output = Object;
+    fn rem(self, other: &Object) -> Object {
+        match (self, other) {
+            (&Object::Integer(a), &Object::Integer(b)) => Object::Integer(a % b),
+            (&Object::Float(a), &Object::Float(b)) => Object::Float(a % b),
+            (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 % b),
+            (&Object::Float(a), &Object::Integer(b)) => Object::Float(a % b as f64),
+            _ => panic!("Invalid operation"),
+        }
+    }
+}
+
 impl ops::Neg for &Object {
     type Output = Object;
     fn neg(self) -> Object {

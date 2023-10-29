@@ -42,6 +42,7 @@ enum BinaryOperation {
     Sub,
     Mul,
     Div,
+    Mod,
     Greater,
 }
 
@@ -195,6 +196,9 @@ impl VM {
                 }
                 Opcode::Div => {
                     self.binary_op(BinaryOperation::Div, |a, b| a / b, line)?;
+                }
+                Opcode::Mod => {
+                    self.binary_op(BinaryOperation::Mod, |a, b| a % b, line)?;
                 }
                 Opcode::True => self.push(Rc::new(Object::Bool(true)), line)?,
                 Opcode::False => self.push(Rc::new(Object::Bool(false)), line)?,

@@ -87,6 +87,7 @@ impl Scanner {
             '-' => self.make_token_ch(TokenType::Minus),
             '*' => self.make_token_ch(TokenType::Asterisk),
             '/' => self.make_token_ch(TokenType::Slash),
+            '%' => self.make_token_ch(TokenType::Modulo),
             '^' => self.make_token_ch(TokenType::BitwiseXor),
             '~' => self.make_token_ch(TokenType::BitwiseNot),
             '=' => self.make_token_twin(TokenType::Assign, &[('=', TokenType::Equal)]),

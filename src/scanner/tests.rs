@@ -13,7 +13,7 @@ fn test_next_token() {
             }
             let result = add(five, ten);
 
-            !-/*5;
+            !-/*5%2;
             5 < 10 > 5;
 
             if (5 < 10) {
@@ -76,12 +76,14 @@ fn test_next_token() {
         ExpectedToken(TokenType::Identifier, "ten"),
         ExpectedToken(TokenType::RightParen, ")"),
         ExpectedToken(TokenType::Semicolon, ";"),
-        // !-/*5;
+        // !-/*5%2;
         ExpectedToken(TokenType::Bang, "!"),
         ExpectedToken(TokenType::Minus, "-"),
         ExpectedToken(TokenType::Slash, "/"),
         ExpectedToken(TokenType::Asterisk, "*"),
         ExpectedToken(TokenType::Integer, "5"),
+        ExpectedToken(TokenType::Modulo, "%"),
+        ExpectedToken(TokenType::Integer, "2"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // 5 < 10 > 5;
         ExpectedToken(TokenType::Integer, "5"),
@@ -192,8 +194,8 @@ fn test_next_token() {
         let token = scanner.next_token();
         if token.ttype != tt.0 {
             panic!(
-                "tests[{}] - tokentype wrong. expected='{}', got='{}({})'",
-                i, tt.0, token.ttype, token.literal
+                "tests[{}] - tokentype wrong. expected='{}', got='{}'",
+                i, tt.0, token.ttype
             );
         }
         if token.literal != tt.1 {

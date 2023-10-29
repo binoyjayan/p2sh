@@ -291,6 +291,64 @@ fn test_unary_expressions() {
 }
 
 #[test]
+fn test_bitwise_expressions() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "1 & 3",
+            expected_constants: vec![Object::Integer(1), Object::Integer(3)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::And, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "1 | 3",
+            expected_constants: vec![Object::Integer(1), Object::Integer(3)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Or, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "1 ^ 3",
+            expected_constants: vec![Object::Integer(1), Object::Integer(3)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::Xor, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "1 << 3",
+            expected_constants: vec![Object::Integer(1), Object::Integer(3)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::ShiftLeft, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "1 >> 3",
+            expected_constants: vec![Object::Integer(1), Object::Integer(3)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::ShiftRight, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}
+
+#[test]
 fn test_boolean_expressions() {
     let tests = vec![
         CompilerTestCase {

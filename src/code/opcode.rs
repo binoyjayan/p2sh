@@ -38,6 +38,11 @@ pub enum Opcode {
     SetFree,
     CurrClosure,
     Not,
+    And,
+    Or,
+    Xor,
+    ShiftLeft,
+    ShiftRight,
     #[default]
     Invalid,
 }
@@ -82,6 +87,11 @@ impl From<u8> for Opcode {
             34 => Opcode::SetFree,
             35 => Opcode::CurrClosure,
             36 => Opcode::Not,
+            37 => Opcode::And,
+            38 => Opcode::Or,
+            39 => Opcode::Xor,
+            40 => Opcode::ShiftLeft,
+            41 => Opcode::ShiftRight,
             _ => Opcode::Invalid,
         }
     }

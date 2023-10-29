@@ -418,6 +418,21 @@ impl VM {
                         return Err(RTError::new("bad operand type for unary '~'", line));
                     }
                 }
+                Opcode::And => {
+                    self.bitwise_op(|a, b| a & b, line)?;
+                }
+                Opcode::Or => {
+                    self.bitwise_op(|a, b| a | b, line)?;
+                }
+                Opcode::Xor => {
+                    self.bitwise_op(|a, b| a ^ b, line)?;
+                }
+                Opcode::ShiftLeft => {
+                    self.bitwise_op(|a, b| a << b, line)?;
+                }
+                Opcode::ShiftRight => {
+                    self.bitwise_op(|a, b| a >> b, line)?;
+                }
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),
@@ -443,6 +458,11 @@ impl VM {
 
         match (&*left, &*right) {
             (Object::Integer(_) | Object::Float(_), Object::Integer(_) | Object::Float(_)) => {
+                if matches!(optype, BinaryOperation::Div) {
+                    if right.is_zero() {
+                        return Err(RTError::new("Division by zero.", line));
+                    }
+                }
                 self.push(Rc::new(op(&left, &right)), line)?;
                 Ok(())
             }
@@ -470,6 +490,24 @@ impl VM {
                 Ok(())
             }
             _ => Err(RTError::new("Invalid binary operation.", line)),
+        }
+    }
+
+    fn bitwise_op(
+        &mut self,
+        op: fn(a: &Object, b: &Object) -> Object,
+        line: usize,
+    ) -> Result<(), RTError> {
+        // pop right before left
+        let right = self.pop(line)?;
+        let left = self.pop(line)?;
+
+        match (&*left, &*right) {
+            (Object::Integer(_), Object::Integer(_)) => {
+                self.push(Rc::new(op(&left, &right)), line)?;
+                Ok(())
+            }
+            _ => Err(RTError::new("Invalid bitwise operation.", line)),
         }
     }
 

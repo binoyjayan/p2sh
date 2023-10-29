@@ -8,7 +8,7 @@ use crate::code::definitions::Instructions;
 fn test_opcode_order() {
     for code in 0..(Opcode::Invalid as usize) {
         let op = Opcode::from(code as u8);
-        assert_eq!(code, op as usize);
+        assert_eq!(code, op as usize, "u8 to opcode conversion failed");
     }
 }
 

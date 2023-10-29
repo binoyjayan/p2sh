@@ -61,6 +61,11 @@ lazy_static! {
         map.insert(Opcode::SetFree, Definition::new("OpSetFree", &[1]));
         map.insert(Opcode::CurrClosure, Definition::new("OpCurrClosure", &[]));
         map.insert(Opcode::Not, Definition::new("OpNot", &[]));
+        map.insert(Opcode::And, Definition::new("OpAnd", &[]));
+        map.insert(Opcode::Or, Definition::new("OpOr", &[]));
+        map.insert(Opcode::Xor, Definition::new("OpXor", &[]));
+        map.insert(Opcode::ShiftLeft, Definition::new("OpShiftLeft", &[]));
+        map.insert(Opcode::ShiftRight, Definition::new("OpShiftRight", &[]));
         map
     };
 }

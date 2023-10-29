@@ -225,11 +225,30 @@ fn test_integer_arithmetic() {
 }
 
 #[test]
+fn test_division_by_zero() {
+    let tests = vec![
+        VmTestCaseErr {
+            input: "1 / 0",
+            expected: "Division by zero.",
+        },
+        VmTestCaseErr {
+            input: "1. / 0",
+            expected: "Division by zero.",
+        },
+    ];
+    run_vm_negative_tests(&tests);
+}
+
+#[test]
 fn test_unary_expressions() {
     let tests = vec![
         VmTestCase {
             input: "-10",
             expected: Object::Integer(-10),
+        },
+        VmTestCase {
+            input: "-10.2",
+            expected: Object::Float(-10.2),
         },
         VmTestCase {
             input: "!2",
@@ -254,6 +273,57 @@ fn test_unary_expressions_negative() {
         VmTestCaseErr {
             input: r#"~"a""#,
             expected: "bad operand type for unary '~'",
+        },
+    ];
+    run_vm_negative_tests(&tests);
+}
+
+#[test]
+fn test_bitwise_operators() {
+    let tests = vec![
+        VmTestCase {
+            input: "10 & 12",
+            expected: Object::Integer(8),
+        },
+        VmTestCase {
+            input: "10 | 12",
+            expected: Object::Integer(14),
+        },
+        VmTestCase {
+            input: "10 ^ 12",
+            expected: Object::Integer(6),
+        },
+        VmTestCase {
+            input: "10 << 2",
+            expected: Object::Integer(40),
+        },
+        VmTestCase {
+            input: "10 >> 2",
+            expected: Object::Integer(2),
+        },
+        VmTestCase {
+            input: "((7 | (12 ^ 5)) & (9 << 2)) >> 2",
+            expected: Object::Integer(1),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_bitwise_operators_negative() {
+    let tests = vec![
+        VmTestCaseErr {
+            input: "1.1 & 2.1",
+            expected: "Invalid bitwise operation.",
+        },
+        VmTestCaseErr {
+            input: "10 << 2.",
+            expected: "Invalid bitwise operation.",
+        },
+        VmTestCaseErr {
+            input: "10. >> 2",
+            expected: "Invalid bitwise operation.",
         },
     ];
     run_vm_negative_tests(&tests);

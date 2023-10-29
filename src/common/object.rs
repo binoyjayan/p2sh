@@ -82,7 +82,14 @@ impl Object {
         matches!(self, Object::Str(_))
     }
     pub fn is_number(&self) -> bool {
-        matches!(self, Object::Integer(_))
+        matches!(self, Object::Integer(_) | Object::Float(_))
+    }
+    pub fn is_zero(&self) -> bool {
+        match self {
+            Object::Integer(n) => *n == 0,
+            Object::Float(n) => *n == 0.,
+            _ => false,
+        }
     }
     pub fn is_falsey(&self) -> bool {
         match self {
@@ -133,7 +140,7 @@ impl ops::Add for &Object {
             (&Object::Float(a), &Object::Float(b)) => Object::Float(a + b),
             (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 + b),
             (&Object::Float(a), &Object::Integer(b)) => Object::Float(a + b as f64),
-            _ => panic!("Invalid operation"),
+            _ => panic!("Invalid binary operation"),
         }
     }
 }
@@ -146,7 +153,7 @@ impl ops::Sub for &Object {
             (&Object::Float(a), &Object::Float(b)) => Object::Float(a - b),
             (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 - b),
             (&Object::Float(a), &Object::Integer(b)) => Object::Float(a - b as f64),
-            _ => panic!("Invalid operation"),
+            _ => panic!("Invalid binary operation"),
         }
     }
 }
@@ -159,7 +166,7 @@ impl ops::Mul for &Object {
             (&Object::Float(a), &Object::Float(b)) => Object::Float(a * b),
             (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 * b),
             (&Object::Float(a), &Object::Integer(b)) => Object::Float(a * b as f64),
-            _ => panic!("Invalid operation"),
+            _ => panic!("Invalid binary operation"),
         }
     }
 }
@@ -172,7 +179,7 @@ impl ops::Div for &Object {
             (&Object::Float(a), &Object::Float(b)) => Object::Float(a / b),
             (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 / b),
             (&Object::Float(a), &Object::Integer(b)) => Object::Float(a / b as f64),
-            _ => panic!("Invalid operation"),
+            _ => panic!("Invalid binary operation"),
         }
     }
 }
@@ -185,7 +192,7 @@ impl ops::Rem for &Object {
             (&Object::Float(a), &Object::Float(b)) => Object::Float(a % b),
             (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 % b),
             (&Object::Float(a), &Object::Integer(b)) => Object::Float(a % b as f64),
-            _ => panic!("Invalid operation"),
+            _ => panic!("Invalid binary operation"),
         }
     }
 }
@@ -195,7 +202,63 @@ impl ops::Neg for &Object {
     fn neg(self) -> Object {
         match self {
             &Object::Integer(a) => Object::Integer(-a),
-            _ => panic!("Invalid operation"),
+            &Object::Float(f) => Object::Float(-f),
+            _ => panic!("Invalid binary operation"),
+        }
+    }
+}
+
+impl ops::BitAnd for &Object {
+    type Output = Object;
+
+    fn bitand(self, other: &Object) -> Object {
+        match (self, other) {
+            (&Object::Integer(a), &Object::Integer(b)) => Object::Integer(a & b),
+            _ => panic!("Invalid bitwise operation"),
+        }
+    }
+}
+
+impl ops::BitOr for &Object {
+    type Output = Object;
+
+    fn bitor(self, other: &Object) -> Object {
+        match (self, other) {
+            (&Object::Integer(a), &Object::Integer(b)) => Object::Integer(a | b),
+            _ => panic!("Invalid bitwise operation"),
+        }
+    }
+}
+
+impl ops::BitXor for &Object {
+    type Output = Object;
+
+    fn bitxor(self, other: &Object) -> Object {
+        match (self, other) {
+            (&Object::Integer(a), &Object::Integer(b)) => Object::Integer(a ^ b),
+            _ => panic!("Invalid bitwise operation"),
+        }
+    }
+}
+
+impl ops::Shl<&Object> for &Object {
+    type Output = Object;
+
+    fn shl(self, rhs: &Object) -> Object {
+        match (self, rhs) {
+            (&Object::Integer(a), Object::Integer(b)) => Object::Integer(a << b),
+            _ => panic!("Invalid bitwise operation"),
+        }
+    }
+}
+
+impl ops::Shr<&Object> for &Object {
+    type Output = Object;
+
+    fn shr(self, rhs: &Object) -> Object {
+        match (self, rhs) {
+            (&Object::Integer(a), Object::Integer(b)) => Object::Integer(a >> b),
+            _ => panic!("Invalid bitwise operation"),
         }
     }
 }

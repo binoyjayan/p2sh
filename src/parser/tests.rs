@@ -487,6 +487,32 @@ fn test_parsing_infix_expressions() {
             left: Literal::Bool(false),
             right: Literal::Bool(false),
         },
+    ];
+
+    for test in infix_tests {
+        let program = parse_test_program(test.input, 1);
+        let stmt = &program.statements[0];
+        if let Statement::Expr(stmt) = stmt {
+            test_infix_expression(&stmt.value, test.left, test.operator, test.right);
+        } else {
+            panic!(
+                "program.statements[0] is not an expression statement. got={}",
+                stmt
+            );
+        }
+    }
+}
+
+#[test]
+fn test_parsing_bitwise_infix_expressions() {
+    struct InfixTest {
+        input: &'static str,
+        operator: &'static str,
+        left: Literal,
+        right: Literal,
+    }
+
+    let infix_tests = vec![
         InfixTest {
             input: "5 && 2;",
             operator: "&&",
@@ -530,7 +556,6 @@ fn test_parsing_infix_expressions() {
             right: Literal::Integer(2),
         },
     ];
-
     for test in infix_tests {
         let program = parse_test_program(test.input, 1);
         let stmt = &program.statements[0];

@@ -526,6 +526,21 @@ impl Compiler {
             ">" | "<" => {
                 self.emit(Opcode::Greater, &[0], line);
             }
+            "&" => {
+                self.emit(Opcode::And, &[0], line);
+            }
+            "|" => {
+                self.emit(Opcode::Or, &[0], line);
+            }
+            "^" => {
+                self.emit(Opcode::Xor, &[0], line);
+            }
+            "<<" => {
+                self.emit(Opcode::ShiftLeft, &[0], line);
+            }
+            ">>" => {
+                self.emit(Opcode::ShiftRight, &[0], line);
+            }
             _ => return Err(CompileError::new("invalid binary operator", line)),
         }
         Ok(())

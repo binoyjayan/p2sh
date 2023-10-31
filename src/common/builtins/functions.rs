@@ -28,6 +28,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("println", builtin_println),
     BuiltinFunction::new("eprint", builtin_eprint),
     BuiltinFunction::new("eprintln", builtin_eprintln),
+    BuiltinFunction::new("round", builtin_round),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -358,4 +359,23 @@ fn builtin_eprintln(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     eprintln!();
     len += 1;
     Ok(Rc::new(Object::Integer(len)))
+}
+
+fn builtin_round(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 2 {
+        return Err(format!("takes two arguments. got={}", args.len()));
+    }
+
+    match args[0].as_ref() {
+        Object::Float(f) => {
+            if let Object::Integer(n) = args[1].as_ref() {
+                let multiplier = 10i64.pow(*n as u32);
+                let rounded = (f * multiplier as f64).round() / multiplier as f64;
+                Ok(Rc::new(Object::Float(rounded)))
+            } else {
+                Err(String::from("second argument should be an integer"))
+            }
+        }
+        _ => Err(String::from("first argument should be a float")),
+    }
 }

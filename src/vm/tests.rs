@@ -1178,6 +1178,10 @@ fn test_builtin_functions() {
             input: "int(false)",
             expected: Object::Integer(0),
         },
+        VmTestCase {
+            input: r#"round(3.141592653589793238, 2)"#,
+            expected: Object::Float(3.14),
+        },
     ];
     run_vm_tests(&tests);
 }

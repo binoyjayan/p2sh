@@ -65,13 +65,15 @@ pub fn run_prompt(args: Vec<String>) {
             if !line.trim().is_empty() {
                 let program = match parse_program(&line) {
                     Some(program) => program,
-                    None => return,
+                    None => continue,
                 };
 
                 let mut compiler = Compiler::new_with_state(symtab, constants);
                 if let Err(e) = compiler.compile(program) {
                     eprintln!("{}", e);
-                    return;
+                    symtab = compiler.symtab;
+                    constants = compiler.constants;
+                    continue;
                 }
                 let bytecode = compiler.bytecode();
                 let mut vm = VM::new_with_global_store(bytecode, globals);
@@ -79,7 +81,10 @@ pub fn run_prompt(args: Vec<String>) {
                 let err = vm.run();
                 if let Err(err) = err {
                     eprintln!("vm error: {}", err);
-                    return;
+                    globals = vm.globals;
+                    symtab = compiler.symtab;
+                    constants = compiler.constants;
+                    continue;
                 }
                 // Get the object at the top of the VM's stack
                 let stack_elem = vm.last_popped();

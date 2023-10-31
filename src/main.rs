@@ -38,6 +38,11 @@ fn main() {
     }
 }
 
+fn show_prompt() {
+    print!(">> ");
+    io::stdout().flush().unwrap();
+}
+
 pub fn run_prompt(args: Vec<String>) {
     println!("{} v{}", PKG_DESC, PKG_VERSION);
     println!("Ctrl+D to quit");
@@ -58,14 +63,16 @@ pub fn run_prompt(args: Vec<String>) {
         symtab.define_builtin_var(n, name);
     }
 
-    print!(">> ");
-    io::stdout().flush().unwrap();
+    show_prompt();
     for line in stdin.lock().lines() {
         if let Ok(line) = line {
             if !line.trim().is_empty() {
                 let program = match parse_program(&line) {
                     Some(program) => program,
-                    None => continue,
+                    None => {
+                        show_prompt();
+                        continue;
+                    }
                 };
 
                 let mut compiler = Compiler::new_with_state(symtab, constants);
@@ -73,6 +80,7 @@ pub fn run_prompt(args: Vec<String>) {
                     eprintln!("{}", e);
                     symtab = compiler.symtab;
                     constants = compiler.constants;
+                    show_prompt();
                     continue;
                 }
                 let bytecode = compiler.bytecode();
@@ -84,6 +92,7 @@ pub fn run_prompt(args: Vec<String>) {
                     globals = vm.globals;
                     symtab = compiler.symtab;
                     constants = compiler.constants;
+                    show_prompt();
                     continue;
                 }
                 // Get the object at the top of the VM's stack
@@ -94,8 +103,7 @@ pub fn run_prompt(args: Vec<String>) {
                 constants = compiler.constants;
             }
         }
-        print!(">> ");
-        io::stdout().flush().unwrap();
+        show_prompt();
     }
     println!("\nExiting...");
 }

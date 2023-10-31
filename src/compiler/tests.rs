@@ -472,18 +472,22 @@ fn test_conditional() {
                 // 0000 : The condition
                 definitions::make(Opcode::True, &[], 1),
                 // 0001 : Jump to the 'Nil' instruction following 'then_stmt'
-                definitions::make(Opcode::JumpIfFalse, &[10], 1),
-                // 0004 : The 'then_stmt'
-                definitions::make(Opcode::Constant, &[0], 1),
-                // 0007 : To Jump over the 'else_stmt' which is 'Nil' here.
-                definitions::make(Opcode::Jump, &[11], 1),
-                // 0010
-                definitions::make(Opcode::Nil, &[], 1),
-                // 0011 : [ Not part of the if expr - Pop its result ]
+                definitions::make(Opcode::JumpIfFalse, &[11], 1),
+                // 0004 : Pop the result of the condition
                 definitions::make(Opcode::Pop, &[], 1),
-                // 0012 : The instruction following the if expr
+                // 0005 : The 'then_stmt'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0008 : To Jump over the 'else_stmt' to the end of else statement
+                definitions::make(Opcode::Jump, &[13], 1),
+                // 0011 : Pop the result of the condition
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0012 : The 'else_stmt' (it is a Nil)
+                definitions::make(Opcode::Nil, &[], 1),
+                // 0013 : [ Not part of the if expr - Pop its result ]
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0014 : The instruction following the if expr
                 definitions::make(Opcode::Constant, &[1], 1),
-                // 0015
+                // 0017
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -498,18 +502,22 @@ fn test_conditional() {
                 // 0000 : The condition
                 definitions::make(Opcode::True, &[], 1),
                 // 0001: Jump to 'else_stmt' if condition is false
-                definitions::make(Opcode::JumpIfFalse, &[10], 1),
-                // 0004 : The 'then_stmt'
-                definitions::make(Opcode::Constant, &[0], 1),
-                // 0007 : Jump to the instruction following the 'if' expression
-                definitions::make(Opcode::Jump, &[13], 1),
-                // 0010 : The 'else_stmt'
-                definitions::make(Opcode::Constant, &[1], 1),
-                // 0013 : [ Not part of the if expr - Pop its result ]
+                definitions::make(Opcode::JumpIfFalse, &[11], 1),
+                // 0004 : Pop the result of the condition
                 definitions::make(Opcode::Pop, &[], 1),
-                // 0014 : The instruction following the if expr
+                // 0005 : The 'then_stmt'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0008 : Jump to the instruction following the 'if' expression
+                definitions::make(Opcode::Jump, &[15], 1),
+                // 0011 : Pop the result of the condition
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0012 : The 'else_stmt'
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0015 : [ Not part of the if expr - Pop its result ]
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0016 : The instruction following the if expr
                 definitions::make(Opcode::Constant, &[2], 1),
-                // 0017
+                // 0019
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -1770,5 +1778,45 @@ fn test_assignment_expressions_free_variables() {
             definitions::make(Opcode::Pop, &[], 1),
         ],
     }];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_logical_and_expressions() {
+    let tests = vec![
+        CompilerTestCase {
+            input: r#"true && "hello""#,
+            expected_constants: vec![Object::Str("hello".into())],
+            expected_instructions: vec![
+                // 0000 : The left-hand side expression
+                definitions::make(Opcode::True, &[], 1),
+                // 0001 : Jump over the rhs expression if the lhs is false
+                definitions::make(Opcode::JumpIfFalse, &[8], 1),
+                // 0004 : Pop the result of the lhs expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0005 : The rhs expression
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0008 : Pop the result of the expression (outside the && expression)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"1 && "hello""#,
+            expected_constants: vec![Object::Integer(1), Object::Str("hello".into())],
+            expected_instructions: vec![
+                // 0000 : The left-hand side expression
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0003 : Jump over the rhs expression if the lhs is false
+                definitions::make(Opcode::JumpIfFalse, &[10], 1),
+                // 0006 : Pop the result of the lhs expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0007 : The rhs expression
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0010 : Pop the result of the expression (outside the && expression)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+
     run_compiler_tests(&tests);
 }

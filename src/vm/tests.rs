@@ -1647,3 +1647,54 @@ fn test_set_index_assignment_expressions_free_variables() {
 
     run_vm_tests(&tests);
 }
+
+#[test]
+fn test_logical_and_expressions() {
+    let tests = vec![
+        VmTestCase {
+            input: "true && true",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "true && false",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "false && true",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "false && false",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "true && 1",
+            expected: Object::Integer(1),
+        },
+        VmTestCase {
+            input: r#"true && "hello""#,
+            expected: Object::Str("hello".to_string()),
+        },
+        VmTestCase {
+            input: r#"false && "hello""#,
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: r#""hello" && false"#,
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1 < 2 && 3 < 4",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "1 < 2 && 3 > 4",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1 > 2 && 3 < 4",
+            expected: Object::Bool(false),
+        },
+    ];
+    run_vm_tests(&tests);
+}

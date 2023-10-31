@@ -239,7 +239,9 @@ impl VM {
                     let pos: usize = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
                     // skip over the two bytes of the operand in the next cycle
                     self.current_frame().ip += 2;
-                    let condition = self.pop(line)?;
+                    // Do not pop the condition off the stack as it is used
+                    // by the logical operators '&&' and '||'
+                    let condition = self.top(0, line)?;
                     if condition.is_falsey() {
                         self.current_frame().ip = pos - 1;
                     }
@@ -458,10 +460,8 @@ impl VM {
 
         match (&*left, &*right) {
             (Object::Integer(_) | Object::Float(_), Object::Integer(_) | Object::Float(_)) => {
-                if matches!(optype, BinaryOperation::Div) {
-                    if right.is_zero() {
-                        return Err(RTError::new("Division by zero.", line));
-                    }
+                if matches!(optype, BinaryOperation::Div) && right.is_zero() {
+                    return Err(RTError::new("Division by zero.", line));
                 }
                 self.push(Rc::new(op(&left, &right)), line)?;
                 Ok(())

@@ -200,9 +200,9 @@ impl ops::Rem for &Object {
 impl ops::Neg for &Object {
     type Output = Object;
     fn neg(self) -> Object {
-        match self {
-            &Object::Integer(a) => Object::Integer(-a),
-            &Object::Float(f) => Object::Float(-f),
+        match *self {
+            Object::Integer(a) => Object::Integer(-a),
+            Object::Float(f) => Object::Float(-f),
             _ => panic!("Invalid binary operation"),
         }
     }

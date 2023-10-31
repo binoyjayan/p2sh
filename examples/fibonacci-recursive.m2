@@ -1,3 +1,5 @@
+#!/usr/bin/env p2sh
+
 let fibonacci = fn(x) {
     if x == 0 {
         return 0;

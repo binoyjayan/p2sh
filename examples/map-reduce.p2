@@ -1,3 +1,5 @@
+#!/usr/bin/env p2sh
+
 let map = fn(arr, f) {
     let iter = fn(arr, accumulated) {
         if len(arr) == 0 {

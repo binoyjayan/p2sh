@@ -1,3 +1,5 @@
+#!/usr/bin/env p2sh
+
 //
 // Examples adopted from Rust by example: "Formatted Print"
 //

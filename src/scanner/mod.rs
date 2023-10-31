@@ -247,7 +247,7 @@ impl Scanner {
     // skip single line comments
     fn skip_comments(&mut self) {
         loop {
-            if self.ch == '/' && self.peek_char() == '/' {
+            if self.ch == '#' || self.ch == '/' && self.peek_char() == '/' {
                 loop {
                     self.read_char();
                     if self.ch == '\n' || self.ch == '\0' {

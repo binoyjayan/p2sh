@@ -121,11 +121,11 @@ impl Parser {
     fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
         let token_let = self.current.clone();
         if !self.expect_peek(&TokenType::Identifier) {
-            return Ok(Statement::Nil);
+            return Ok(Statement::Null);
         }
         let token_ident = self.current.clone();
         if !self.expect_peek(&TokenType::Assign) {
-            return Ok(Statement::Nil);
+            return Ok(Statement::Null);
         }
         self.next_token();
         let value = self.parse_expression(Precedence::Lowest);
@@ -245,7 +245,7 @@ impl Parser {
             left_expr
         } else {
             self.no_prefix_parse_error();
-            Expression::Nil
+            Expression::Null
         }
     }
 

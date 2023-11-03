@@ -236,7 +236,7 @@ impl Parser {
         } else {
             let msg = format!("could not parse {} as an integer", self.current.literal);
             self.push_error(&msg);
-            Expression::Nil
+            Expression::Null
         }
     }
 
@@ -250,7 +250,7 @@ impl Parser {
         } else {
             let msg = format!("could not parse {} as a float", self.current.literal);
             self.push_error(&msg);
-            Expression::Nil
+            Expression::Null
         }
     }
 
@@ -264,7 +264,7 @@ impl Parser {
         } else {
             let msg = format!("could not parse {} as a string", self.current.literal);
             self.push_error(&msg);
-            Expression::Nil
+            Expression::Null
         }
     }
 
@@ -317,7 +317,7 @@ impl Parser {
             self.peek_invalid_assignment(false);
             expr
         } else {
-            Expression::Nil
+            Expression::Null
         }
     }
 
@@ -327,14 +327,14 @@ impl Parser {
         self.next_token();
         let condition = self.parse_expression(Precedence::Assignment);
         if !self.expect_peek(&TokenType::LeftBrace) {
-            return Expression::Nil;
+            return Expression::Null;
         }
         let then_stmt = self.parse_block_statement();
         // Check if an else branch exists
         let else_stmt = if self.peek_token_is(&TokenType::Else) {
             self.next_token();
             if !self.expect_peek(&TokenType::LeftBrace) {
-                return Expression::Nil;
+                return Expression::Null;
             }
             Some(self.parse_block_statement())
         } else {
@@ -365,11 +365,11 @@ impl Parser {
     fn parse_function_literal(&mut self) -> Expression {
         let token = self.current.clone();
         if !self.expect_peek(&TokenType::LeftParen) {
-            return Expression::Nil;
+            return Expression::Null;
         }
         let params = self.parse_function_params();
         if !self.expect_peek(&TokenType::LeftBrace) {
-            return Expression::Nil;
+            return Expression::Null;
         }
         let body = self.parse_block_statement();
         // The name of the string is unknown here so just use it as a
@@ -476,7 +476,7 @@ impl Parser {
         self.next_token();
         let index = self.parse_expression(Precedence::Assignment);
         if !self.expect_peek(&TokenType::RightBracket) {
-            return Expression::Nil;
+            return Expression::Null;
         }
 
         let access = self.peek_access_type();
@@ -499,7 +499,7 @@ impl Parser {
             let key: Expression = self.parse_expression(Precedence::Assignment);
 
             if !self.expect_peek(&TokenType::Colon) {
-                return Expression::Nil;
+                return Expression::Null;
             }
             // consume the colon (':') character
             self.next_token();
@@ -507,12 +507,12 @@ impl Parser {
             pairs.push((key, value));
 
             if !self.peek_token_is(&TokenType::RightBrace) && !self.expect_peek(&TokenType::Comma) {
-                return Expression::Nil;
+                return Expression::Null;
             }
         }
         // Consume the end brace '}'
         if !self.expect_peek(&TokenType::RightBrace) {
-            return Expression::Nil;
+            return Expression::Null;
         }
         Expression::Hash(HashLiteral { token, pairs })
     }

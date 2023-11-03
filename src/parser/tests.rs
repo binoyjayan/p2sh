@@ -858,7 +858,7 @@ fn test_if_then_expression() {
                 );
             }
             if expr.else_stmt.is_some() {
-                panic!("expr.else_stmt was not nil. got={:?}", expr.else_stmt);
+                panic!("expr.else_stmt was not null. got={:?}", expr.else_stmt);
             }
         } else {
             panic!("stmt.expr is not an If expression. got={}", stmt.value);

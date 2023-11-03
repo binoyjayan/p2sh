@@ -75,11 +75,11 @@ fn test_expected_object(evaluated: Rc<Object>, expected: &Object) {
             );
             assert_eq!(eval, exp);
         }
-        (_, Object::Nil) => {
+        (_, Object::Null) => {
             assert_eq!(
                 evaluated,
-                Rc::new(Object::Nil),
-                "object is not Nil. got={:?}",
+                Rc::new(Object::Null),
+                "object is not Null. got={:?}",
                 evaluated
             );
         }
@@ -539,11 +539,11 @@ fn test_conditionals() {
         },
         VmTestCase {
             input: "if 1 > 2 { 10 }",
-            expected: Object::Nil,
+            expected: Object::Null,
         },
         VmTestCase {
             input: "if false { 10 }",
-            expected: Object::Nil,
+            expected: Object::Null,
         },
         // nested conditionals
         VmTestCase {
@@ -835,7 +835,7 @@ fn test_calling_functions_without_return() {
             let noReturn = fn() { };
             noReturn();
             "#,
-            expected: Object::Nil,
+            expected: Object::Null,
         },
         VmTestCase {
             input: r#"
@@ -844,7 +844,7 @@ fn test_calling_functions_without_return() {
             noReturn1();
             noReturn2();
             "#,
-            expected: Object::Nil,
+            expected: Object::Null,
         },
     ];
     run_vm_tests(&tests);
@@ -1041,7 +1041,7 @@ fn test_builtin_functions() {
         },
         VmTestCase {
             input: r#"first([])"#,
-            expected: Object::Nil,
+            expected: Object::Null,
         },
         VmTestCase {
             input: r#"last([1, 2, 3])"#,
@@ -1049,7 +1049,7 @@ fn test_builtin_functions() {
         },
         VmTestCase {
             input: r#"last([])"#,
-            expected: Object::Nil,
+            expected: Object::Null,
         },
         VmTestCase {
             input: r#"rest([1, 2, 3])"#,
@@ -1062,7 +1062,7 @@ fn test_builtin_functions() {
         },
         VmTestCase {
             input: r#"rest([])"#,
-            expected: Object::Nil,
+            expected: Object::Null,
         },
         VmTestCase {
             input: r#"let a = []; push(a, 1); a"#,
@@ -1088,7 +1088,7 @@ fn test_builtin_functions() {
         },
         VmTestCase {
             input: r#"get({}, "k")"#,
-            expected: Object::Nil,
+            expected: Object::Null,
         },
         VmTestCase {
             input: r#"let m = {"k1": 999, "k2": 888, "k3": 777}; get(m, "k2")"#,
@@ -1096,17 +1096,17 @@ fn test_builtin_functions() {
         },
         VmTestCase {
             input: r#"let m = {"k1": 999, "k2": 888, "k3": 777}; get(m, "k")"#,
-            expected: Object::Nil,
+            expected: Object::Null,
         },
         VmTestCase {
             input: r#"let m = {}; insert(m, "k", 1)"#,
-            // insert returns Nil if key was not found already
-            expected: Object::Nil,
+            // insert returns Null if key was not found already
+            expected: Object::Null,
         },
         VmTestCase {
             input: r#"let m = {"k1": 999, "k2": 888}; insert(m, "k3", 777)"#,
-            // insert returns Nil if key was not found already
-            expected: Object::Nil,
+            // insert returns Null if key was not found already
+            expected: Object::Null,
         },
         VmTestCase {
             input: r#"let m = {"k1": 999, "k2": 888}; insert(m, "k2", 777)"#,
@@ -1125,9 +1125,9 @@ fn test_builtin_functions() {
             }),
         },
         VmTestCase {
-            // rest([]) is Nil
+            // rest([]) is Null
             input: "str(rest([]))",
-            expected: Object::Str(String::from("nil")),
+            expected: Object::Str(String::from("null")),
         },
         VmTestCase {
             input: r#"str("hello")"#,
@@ -1191,7 +1191,7 @@ fn test_builtin_functions_display() {
     let tests = vec![
         VmTestCase {
             input: r#"puts("hello", "world!")"#,
-            expected: Object::Nil,
+            expected: Object::Null,
         },
         VmTestCase {
             input: r#"print("Hello, World!")"#,

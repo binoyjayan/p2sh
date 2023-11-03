@@ -324,7 +324,7 @@ impl Compiler {
 
     fn compile_expression(&mut self, expr: Expression) -> Result<(), CompileError> {
         match expr {
-            Expression::Nil => {}
+            Expression::Null => {}
             Expression::Integer(num) => {
                 let obj = Object::Integer(num.value);
                 let idx = self.add_constant(obj);
@@ -426,7 +426,7 @@ impl Compiler {
                 match expr.else_stmt {
                     None => {
                         // Result of if expression when there is no 'else' branch
-                        self.emit(Opcode::Nil, &[0], expr.token.line);
+                        self.emit(Opcode::Null, &[0], expr.token.line);
                     }
                     Some(else_stmt) => {
                         // TODO: Find line number of 'else_stmt'
@@ -437,7 +437,7 @@ impl Compiler {
                     }
                 }
                 // change the operand of the Jump instruction to jump over the
-                // else branch – it could be Nil or a real 'else_stmt'
+                // else branch – it could be Null or a real 'else_stmt'
                 self.patch_jump(jump_pos);
             }
             Expression::Ident(expr) => {
@@ -565,7 +565,7 @@ impl Compiler {
 
     fn compile_let_stmt(&mut self, expr: Expression) -> Result<Object, CompileError> {
         self.compile_expression(expr)?;
-        Ok(Object::Nil)
+        Ok(Object::Null)
     }
 
     fn compile_identifier(&mut self, expr: Identifier) -> Result<(), CompileError> {

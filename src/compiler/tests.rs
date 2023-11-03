@@ -471,7 +471,7 @@ fn test_conditional() {
             expected_instructions: vec![
                 // 0000 : The condition
                 definitions::make(Opcode::True, &[], 1),
-                // 0001 : Jump to the 'Nil' instruction following 'then_stmt'
+                // 0001 : Jump to the 'Null' instruction following 'then_stmt'
                 definitions::make(Opcode::JumpIfFalse, &[11], 1),
                 // 0004 : Pop the result of the condition
                 definitions::make(Opcode::Pop, &[], 1),
@@ -481,8 +481,8 @@ fn test_conditional() {
                 definitions::make(Opcode::Jump, &[13], 1),
                 // 0011 : Pop the result of the condition
                 definitions::make(Opcode::Pop, &[], 1),
-                // 0012 : The 'else_stmt' (it is a Nil)
-                definitions::make(Opcode::Nil, &[], 1),
+                // 0012 : The 'else_stmt' (it is a Null)
+                definitions::make(Opcode::Null, &[], 1),
                 // 0013 : [ Not part of the if expr - Pop its result ]
                 definitions::make(Opcode::Pop, &[], 1),
                 // 0014 : The instruction following the if expr

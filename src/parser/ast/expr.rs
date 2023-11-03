@@ -18,7 +18,7 @@ pub enum Expression {
     Hash(HashLiteral),
     Index(IndexExpr),
     Assign(AssignExpr),
-    Nil,
+    Null,
 }
 
 // Type of access to a symbol or expresion
@@ -258,7 +258,7 @@ impl Expression {
             Expression::Hash(h) => h.token.literal.clone(),
             Expression::Index(idx) => idx.token.literal.clone(),
             Expression::Assign(asn) => asn.token.literal.clone(),
-            Expression::Nil => "nil".to_string(),
+            Expression::Null => "null".to_string(),
         }
     }
 }
@@ -280,7 +280,7 @@ impl fmt::Display for Expression {
             Expression::Hash(h) => write!(f, "{}", h),
             Expression::Index(idx) => write!(f, "{}", idx),
             Expression::Assign(asn) => write!(f, "{}", asn),
-            Expression::Nil => write!(f, "nil"),
+            Expression::Null => write!(f, "null"),
         }
     }
 }

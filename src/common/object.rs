@@ -10,7 +10,7 @@ use crate::code::definitions::Instructions;
 
 #[derive(Debug)]
 pub enum Object {
-    Nil,
+    Null,
     Str(String),
     Integer(i64),
     Float(f64),
@@ -26,7 +26,7 @@ pub enum Object {
 impl PartialEq for Object {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Object::Nil, Object::Nil) => true,
+            (Object::Null, Object::Null) => true,
             (Object::Str(a), Object::Str(b)) => a.eq(b),
             (Object::Integer(a), Object::Integer(b)) => a.eq(b),
             (Object::Float(a), Object::Float(b)) => a.eq(b),
@@ -46,7 +46,7 @@ impl Eq for Object {}
 impl PartialOrd for Object {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
-            (Object::Nil, Object::Nil) => None,
+            (Object::Null, Object::Null) => None,
             (Object::Str(a), Object::Str(b)) => a.partial_cmp(b),
             (Object::Integer(a), Object::Integer(b)) => a.partial_cmp(b),
             (Object::Float(a), Object::Float(b)) => a.partial_cmp(b),
@@ -59,7 +59,7 @@ impl PartialOrd for Object {
 impl Clone for Object {
     fn clone(&self) -> Self {
         match self {
-            Object::Nil => Object::Nil,
+            Object::Null => Object::Null,
             Object::Str(s) => Object::Str(s.clone()),
             Object::Integer(n) => Object::Integer(*n),
             Object::Float(n) => Object::Float(*n),
@@ -75,8 +75,8 @@ impl Clone for Object {
 }
 
 impl Object {
-    pub fn is_nil(&self) -> bool {
-        matches!(self, Object::Nil)
+    pub fn is_null(&self) -> bool {
+        matches!(self, Object::Null)
     }
     pub fn is_string(&self) -> bool {
         matches!(self, Object::Str(_))
@@ -93,7 +93,7 @@ impl Object {
     }
     pub fn is_falsey(&self) -> bool {
         match self {
-            Object::Bool(false) | Object::Integer(0) | Object::Nil => true,
+            Object::Bool(false) | Object::Integer(0) | Object::Null => true,
             // floating point types cannot be used in patterns
             Object::Float(v) => *v == 0.,
             _ => false,
@@ -107,7 +107,7 @@ impl Object {
                 | Object::Integer(_)
                 | Object::Float(_)
                 | Object::Bool(_)
-                | Object::Nil
+                | Object::Null
                 | Object::Builtin(_)
         )
     }
@@ -116,7 +116,7 @@ impl Object {
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Self::Nil => write!(f, "nil"),
+            Self::Null => write!(f, "null"),
             Self::Str(s) => write!(f, "{}", s),
             Self::Integer(val) => write!(f, "{}", val),
             Self::Float(val) => write!(f, "{}", val),
@@ -325,13 +325,13 @@ impl Array {
     pub fn get(&self, idx: usize) -> Rc<Object> {
         match self.elements.borrow().get(idx) {
             Some(value) => value.clone(),
-            None => Rc::new(Object::Nil),
+            None => Rc::new(Object::Null),
         }
     }
     pub fn last(&self) -> Rc<Object> {
         match self.elements.borrow().last() {
             Some(value) => value.clone(),
-            None => Rc::new(Object::Nil),
+            None => Rc::new(Object::Null),
         }
     }
     pub fn push(&self, obj: Rc<Object>) {
@@ -359,7 +359,7 @@ impl HMap {
     pub fn get(&self, key: &Rc<Object>) -> Rc<Object> {
         match self.pairs.borrow().get(key) {
             Some(value) => value.clone(),
-            None => Rc::new(Object::Nil),
+            None => Rc::new(Object::Null),
         }
     }
     pub fn contains(&self, key: &Rc<Object>) -> bool {
@@ -368,7 +368,7 @@ impl HMap {
     pub fn insert(&self, key: Rc<Object>, val: Rc<Object>) -> Rc<Object> {
         match self.pairs.borrow_mut().insert(key, val) {
             Some(v) => v,
-            None => Rc::new(Object::Nil),
+            None => Rc::new(Object::Null),
         }
     }
 }
@@ -451,7 +451,7 @@ impl Eq for HMap {}
 // sitting on top of the stack.
 // OpReturnValue tells the VM to return the value on top of the stack
 // to the calling context.
-// OpReturn is similar to OpReturnValue except that it returns Nil.
+// OpReturn is similar to OpReturnValue except that it returns Null.
 #[derive(Debug, Clone, Default)]
 pub struct CompiledFunction {
     pub instructions: Rc<Instructions>,

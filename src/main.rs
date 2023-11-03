@@ -49,7 +49,7 @@ pub fn run_prompt(args: Vec<String>) {
     // Define globals outside REPL loop so the environment is retained
     let stdin = io::stdin();
     let mut constants = vec![];
-    let data = Rc::new(Object::Nil);
+    let data = Rc::new(Object::Null);
     let mut globals = vec![data; GLOBALS_SIZE];
 
     let mut symtab = SymbolTable::default();
@@ -115,7 +115,7 @@ pub fn run_file(path: &str, args: Vec<String>) {
         return;
     }
     let buf = buf.unwrap();
-    let data = Rc::new(Object::Nil);
+    let data = Rc::new(Object::Null);
     let globals = vec![data; GLOBALS_SIZE];
 
     if !buf.trim().is_empty() {

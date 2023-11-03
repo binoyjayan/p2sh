@@ -46,7 +46,7 @@ fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 fn builtin_puts(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.is_empty() {
         println!();
-        return Ok(Rc::new(Object::Nil));
+        return Ok(Rc::new(Object::Null));
     }
 
     for obj in args {
@@ -61,8 +61,8 @@ fn builtin_puts(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         }
     }
     println!();
-    // puts returns Nil
-    Ok(Rc::new(Object::Nil))
+    // puts returns Null
+    Ok(Rc::new(Object::Null))
 }
 
 fn builtin_first(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -92,7 +92,7 @@ fn builtin_rest(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     match args[0].as_ref() {
         Object::Arr(a) => {
             if a.is_empty() {
-                Ok(Rc::new(Object::Nil))
+                Ok(Rc::new(Object::Null))
             } else {
                 let slice = a.elements.borrow()[1..].to_vec();
                 Ok(Rc::new(Object::Arr(Rc::new(Array::new(slice)))))
@@ -111,14 +111,14 @@ fn builtin_push(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     match args[0].as_ref() {
         Object::Arr(arr) => {
             arr.push(args[1].clone());
-            Ok(Rc::new(Object::Nil))
+            Ok(Rc::new(Object::Null))
         }
         _ => Err(String::from("unsupported argument")),
     }
 }
 
 // Get an array item by index or a map value by key
-// Return Nil if index is out of bounds or if the key doesn't exist
+// Return Null if index is out of bounds or if the key doesn't exist
 fn builtin_get(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.len() != 2 {
         return Err(format!("takes two arguments. got={}", args.len()));
@@ -154,7 +154,7 @@ fn builtin_contains(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 }
 
 // Insert a key-value pair into a map. If the key already exists,
-// the old value is returned, otherwise Nil is returned.
+// the old value is returned, otherwise Null is returned.
 fn builtin_insert(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.len() != 3 {
         return Err(format!("takes three arguments. got={}", args.len()));
@@ -179,7 +179,7 @@ fn builtin_str(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     let obj = args[0].as_ref();
     if !matches!(
         obj,
-        Object::Nil
+        Object::Null
             | Object::Str(_)
             | Object::Integer(_)
             | Object::Bool(_)
@@ -269,7 +269,7 @@ fn builtin_exit(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         _ => return Err(String::from("unsupported argument")),
     }
     process::exit(0);
-    Ok(Rc::new(Object::Nil))
+    Ok(Rc::new(Object::Null))
 }
 
 fn flush_stdout(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -277,7 +277,7 @@ fn flush_stdout(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         return Err(format!("takes no argument(s). got={}", args.len()));
     }
     io::stdout().flush().expect("Failed to flush stdout");
-    Ok(Rc::new(Object::Nil))
+    Ok(Rc::new(Object::Null))
 }
 
 fn flush_stderr(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -285,7 +285,7 @@ fn flush_stderr(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         return Err(format!("takes no argument(s). got={}", args.len()));
     }
     io::stderr().flush().expect("Failed to flush stderr");
-    Ok(Rc::new(Object::Nil))
+    Ok(Rc::new(Object::Null))
 }
 
 pub fn builtin_format(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {

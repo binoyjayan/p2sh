@@ -1698,3 +1698,77 @@ fn test_logical_and_expressions() {
     ];
     run_vm_tests(&tests);
 }
+
+#[test]
+fn test_logical_or_expressions() {
+    let tests = vec![
+        VmTestCase {
+            input: "true || true",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "true || false",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "false || true",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "false || false",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "true || 1",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: r#"true || "hello""#,
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: r#"false || "hello""#,
+            expected: Object::Str("hello".to_string()),
+        },
+        VmTestCase {
+            input: r#""hello" || false"#,
+            expected: Object::Str("hello".to_string()),
+        },
+        VmTestCase {
+            input: "1 < 2 || 3 < 4",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "1 < 2 || 3 > 4",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "1 > 2 || 3 < 4",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "1 > 2 || 3 > 4",
+            expected: Object::Bool(false),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_logical_expressions_combined() {
+    let tests = vec![
+        VmTestCase {
+            input: "true && true || false",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "true && false || true",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "true || false && true",
+            expected: Object::Bool(true),
+        },
+    ];
+    run_vm_tests(&tests);
+}

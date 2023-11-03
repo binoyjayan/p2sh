@@ -1820,3 +1820,47 @@ fn test_logical_and_expressions() {
 
     run_compiler_tests(&tests);
 }
+
+#[test]
+fn test_logical_or_expressions() {
+    let tests = vec![
+        CompilerTestCase {
+            input: r#"0 || "hello""#,
+            expected_constants: vec![Object::Integer(0), Object::Str("hello".into())],
+            expected_instructions: vec![
+                // 0000 : The left-hand side expression
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0003 : Jump over the rhs expression if the lhs is false
+                definitions::make(Opcode::JumpIfFalse, &[9], 1),
+                // 0006 : Pop the result of the lhs expression
+                definitions::make(Opcode::Jump, &[13], 1),
+                // 0009 : Pop the result of the lhs expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0010 : The rhs expression
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0013 : Pop the result of the expression (outside the && expression)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"1 || "hello""#,
+            expected_constants: vec![Object::Integer(1), Object::Str("hello".into())],
+            expected_instructions: vec![
+                // 0000 : The left-hand side expression
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0003 : Jump over the rhs expression if the lhs is false
+                definitions::make(Opcode::JumpIfFalse, &[9], 1),
+                // 0006 : Pop the result of the lhs expression
+                definitions::make(Opcode::Jump, &[13], 1),
+                // 0009 : Pop the result of the lhs expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0010 : The rhs expression
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0013 : Pop the result of the expression (outside the || expression)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}

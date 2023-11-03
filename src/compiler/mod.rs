@@ -352,6 +352,9 @@ impl Compiler {
                     "&&" => {
                         self.compile_logical_and(*binary.left, *binary.right, binary.token.line)?;
                     }
+                    "||" => {
+                        self.compile_logical_or(*binary.left, *binary.right, binary.token.line)?;
+                    }
                     "<" => {
                         // In case of '<', re order the operands to reuse the '>' operator
                         self.compile_expression(*binary.right)?;
@@ -636,6 +639,31 @@ impl Compiler {
         // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
         // position of the instruction that comes after the '&&' expression
         self.change_operand(jump_if_false_pos, after_pos);
+        Ok(())
+    }
+
+    fn compile_logical_or(
+        &mut self,
+        left: Expression,
+        right: Expression,
+        line: usize,
+    ) -> Result<(), CompileError> {
+        self.compile_expression(left)?;
+        // If lhs is false, jump to the rhs expression to evaluate that
+        let rhs_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], line);
+        // If true, then use the result on the stack as the value of the entire expression
+        // Jump over to the end of the expression since we have the value we need
+        let end_pos = self.emit(Opcode::Jump, &[0xFFFF], line);
+        let after_pos = self.get_curr_instructions().len();
+        // Patch the 'JumpIfFalse' instruction
+        self.change_operand(rhs_pos, after_pos);
+        // pop result of lhs since it is false; now, rhs needs to be evaluated.
+        self.emit(Opcode::Pop, &[0], line);
+        // If the result is true, then right hand side gets evaluated
+        self.compile_expression(right)?;
+        let after_pos = self.get_curr_instructions().len();
+        // Patch the Jump instruction
+        self.change_operand(end_pos, after_pos);
         Ok(())
     }
 }

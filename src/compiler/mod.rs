@@ -260,6 +260,14 @@ impl Compiler {
         self.replace_instruction(op_pos, &new_instruction.code);
     }
 
+    fn patch_jump(&mut self, pos: usize) {
+        // offset of the next-to-be-emitted instruction
+        let after_pos = self.get_curr_instructions().len();
+        // Replace the operand of the instruction at position 'pos'
+        // with the position of the next-to-be-emitted instruction.
+        self.change_operand(pos, after_pos);
+    }
+
     pub fn compile(&mut self, pgm: Program) -> Result<(), CompileError> {
         self.compile_program(pgm)?;
         Ok(())
@@ -407,12 +415,9 @@ impl Compiler {
                 // Emit an 'Jump' with a placeholder. Save it's position so it can be altered later
                 // The target for this jump is the instruction following the 'else' statement
                 let jump_pos = self.emit(Opcode::Jump, &[0xFFFF], expr.token.line);
-
-                // offset of the next-to-be-emitted instruction
-                let after_then_pos = self.get_curr_instructions().len();
                 // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
                 // position of the instruction that comes after the 'then' statement
-                self.change_operand(jump_if_false_pos, after_then_pos);
+                self.patch_jump(jump_if_false_pos);
 
                 // Pop the result of the condition expression
                 self.emit(Opcode::Pop, &[0], expr.token.line);
@@ -431,11 +436,9 @@ impl Compiler {
                         }
                     }
                 }
-                // offset of the next-to-be-emitted instruction
-                let after_else_pos = self.get_curr_instructions().len();
                 // change the operand of the Jump instruction to jump over the
                 // else branch – it could be Nil or a real 'else_stmt'
-                self.change_operand(jump_pos, after_else_pos);
+                self.patch_jump(jump_pos);
             }
             Expression::Ident(expr) => {
                 self.compile_identifier(expr)?;
@@ -604,11 +607,9 @@ impl Compiler {
     // The the left-hand side expression is compiled first. That means, at
     // runtime, its value will be on top of the stack. If that value is falsey,
     // then the entire expression must be false and so the right-hand side is
-    // not evaluated at all. If the left-hand side expression is truthy, then
-    // the right-hand side expression is evaluated and its value becomes the
-    // value of the entire expression. Otherwise, discard the left-hand value
-    // and evaluate the right operand which becomes the result of the whole
-    // 'and' expression.
+    // not evaluated at all. Otherwise, if lhs is truthy, the discard the value
+    // of the lhs expression and evaluate the rhs expression and the result
+    // becomes the value of the entire 'and' expression.
     //
     // Control Flow:
     // left operand expression
@@ -634,14 +635,27 @@ impl Compiler {
         self.emit(Opcode::Pop, &[0], line);
         // If the result is true, then right hand side gets evaluated
         self.compile_expression(right)?;
-        // offset of the next-to-be-emitted instruction
-        let after_pos = self.get_curr_instructions().len();
         // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
         // position of the instruction that comes after the '&&' expression
-        self.change_operand(jump_if_false_pos, after_pos);
+        self.patch_jump(jump_if_false_pos);
         Ok(())
     }
 
+    // The the left-hand side expression is compiled first. That means, at
+    // runtime, its value will be on top of the stack. If that value is truthy,
+    // then the entire expression must be true and so the right-hand side is
+    // not evaluated at all. Otherwise, if lhs is falsey, the discard the value
+    // of the lhs expression and evaluate the rhs expression and the result
+    // becomes the value of the entire 'or' expression.
+    //
+    // Control Flow:
+    // left operand expression
+    // OpJumpIfFalse      --------+
+    // OpJump   ------------------|---+
+    // OpPop              <-------+   |
+    // right operand expression       |
+    // continue           <-----------+
+    //
     fn compile_logical_or(
         &mut self,
         left: Expression,
@@ -654,16 +668,14 @@ impl Compiler {
         // If true, then use the result on the stack as the value of the entire expression
         // Jump over to the end of the expression since we have the value we need
         let end_pos = self.emit(Opcode::Jump, &[0xFFFF], line);
-        let after_pos = self.get_curr_instructions().len();
         // Patch the 'JumpIfFalse' instruction
-        self.change_operand(rhs_pos, after_pos);
+        self.patch_jump(rhs_pos);
         // pop result of lhs since it is false; now, rhs needs to be evaluated.
         self.emit(Opcode::Pop, &[0], line);
         // If the result is true, then right hand side gets evaluated
         self.compile_expression(right)?;
-        let after_pos = self.get_curr_instructions().len();
         // Patch the Jump instruction
-        self.change_operand(end_pos, after_pos);
+        self.patch_jump(end_pos);
         Ok(())
     }
 }

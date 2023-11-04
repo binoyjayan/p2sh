@@ -982,6 +982,22 @@ fn test_functions_without_return_value() {
 }
 
 #[test]
+fn test_return_from_non_functions() {
+    let tests = vec![
+        CompilerTestCaseErrors {
+            input: "return 1",
+            error: "[line 1] compile error: return statement outside of function",
+        },
+        CompilerTestCaseErrors {
+            input: "if true { return 1; }",
+            error: "[line 1] compile error: return statement outside of function",
+        },
+    ];
+
+    run_compiler_failed_tests(&tests);
+}
+
+#[test]
 fn test_compiler_scopes() {
     let mut compiler = Compiler::new();
     assert_eq!(compiler.scope_index, 0);

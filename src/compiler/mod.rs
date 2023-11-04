@@ -314,6 +314,12 @@ impl Compiler {
                 }
             }
             Statement::Return(stmt) => {
+                if self.scope_index == 0 {
+                    return Err(CompileError::new(
+                        "return statement outside of function",
+                        stmt.token.line,
+                    ));
+                }
                 self.compile_expression(stmt.value)?;
                 self.emit(Opcode::ReturnValue, &[0], stmt.token.line);
             }

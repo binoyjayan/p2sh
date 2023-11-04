@@ -366,8 +366,8 @@ impl Compiler {
                     "||" => {
                         self.compile_logical_or(*binary.left, *binary.right, binary.token.line)?;
                     }
-                    "<" => {
-                        // In case of '<', re order the operands to reuse the '>' operator
+                    "<" | "<=" => {
+                        // In case of '<' or '<=', re order the operands to reuse the '>' or '>='
                         self.compile_expression(*binary.right)?;
                         self.compile_expression(*binary.left)?;
                         self.compile_infix_expr(&binary.operator, binary.token.line)?;
@@ -545,6 +545,9 @@ impl Compiler {
             }
             ">" | "<" => {
                 self.emit(Opcode::Greater, &[0], line);
+            }
+            ">=" | "<=" => {
+                self.emit(Opcode::GreaterEq, &[0], line);
             }
             "&" => {
                 self.emit(Opcode::And, &[0], line);

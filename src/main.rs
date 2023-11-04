@@ -88,7 +88,7 @@ pub fn run_prompt(args: Vec<String>) {
                 update_builtin_vars(&mut vm, args.clone());
                 let err = vm.run();
                 if let Err(err) = err {
-                    eprintln!("vm error: {}", err);
+                    eprintln!("{}", err);
                     globals = vm.globals;
                     symtab = compiler.symtab;
                     constants = compiler.constants;
@@ -134,7 +134,7 @@ pub fn run_file(path: &str, args: Vec<String>) {
         update_builtin_vars(&mut vm, args);
         let err = vm.run();
         if let Err(err) = err {
-            eprintln!("vm error: {}", err);
+            eprintln!("{}", err);
         }
     }
 }

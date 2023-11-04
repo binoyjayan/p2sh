@@ -16,6 +16,7 @@ fn test_next_token() {
 
             !-/*5%2;
             5 < 10 > 5;
+            5 <= 10 >= 5;
 
             if (5 < 10) {
                 return true;
@@ -97,6 +98,13 @@ fn test_next_token() {
         ExpectedToken(TokenType::Less, "<"),
         ExpectedToken(TokenType::Integer, "10"),
         ExpectedToken(TokenType::Greater, ">"),
+        ExpectedToken(TokenType::Integer, "5"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        // 5 <= 10 >= 5;
+        ExpectedToken(TokenType::Integer, "5"),
+        ExpectedToken(TokenType::LessEqual, "<="),
+        ExpectedToken(TokenType::Integer, "10"),
+        ExpectedToken(TokenType::GreaterEqual, ">="),
         ExpectedToken(TokenType::Integer, "5"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // if (5 < 10) { return true; } else { return false; }

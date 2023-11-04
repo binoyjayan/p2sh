@@ -385,7 +385,15 @@ fn test_boolean_expressions() {
             expected: Object::Bool(true),
         },
         VmTestCase {
+            input: "1 <= 2",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
             input: "1 > 2",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1 >= 2",
             expected: Object::Bool(false),
         },
         VmTestCase {
@@ -393,8 +401,16 @@ fn test_boolean_expressions() {
             expected: Object::Bool(false),
         },
         VmTestCase {
+            input: "1 <= 1",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
             input: "1 > 1",
             expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "1 >= 1",
+            expected: Object::Bool(true),
         },
         VmTestCase {
             input: "1.1 < 2.2",

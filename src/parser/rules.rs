@@ -90,7 +90,17 @@ lazy_static! {
             Some(Parser::parse_infix_expression),
             Precedence::Relational,
         );
+        rules[TokenType::LessEqual as usize] = ParseRule::new(
+            None,
+            Some(Parser::parse_infix_expression),
+            Precedence::Relational,
+        );
         rules[TokenType::Greater as usize] = ParseRule::new(
+            None,
+            Some(Parser::parse_infix_expression),
+            Precedence::Relational,
+        );
+        rules[TokenType::GreaterEqual as usize] = ParseRule::new(
             None,
             Some(Parser::parse_infix_expression),
             Precedence::Relational,

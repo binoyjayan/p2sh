@@ -215,6 +215,9 @@ impl VM {
                 Opcode::Greater => {
                     self.binary_op(BinaryOperation::Greater, |a, b| Object::Bool(a > b), line)?;
                 }
+                Opcode::GreaterEq => {
+                    self.binary_op(BinaryOperation::Greater, |a, b| Object::Bool(a >= b), line)?;
+                }
                 Opcode::Minus => {
                     if !self.peek(0).is_number() {
                         return Err(RTError::new("bad operand type for unary '-'", line));

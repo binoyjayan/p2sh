@@ -387,6 +387,16 @@ fn test_boolean_expressions() {
             ],
         },
         CompilerTestCase {
+            input: "1 >= 2",
+            expected_constants: vec![Object::Integer(1), Object::Integer(2)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::GreaterEq, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
             input: "1.1 > 2.2",
             expected_constants: vec![Object::Float(1.1), Object::Float(2.2)],
             expected_instructions: vec![
@@ -404,6 +414,17 @@ fn test_boolean_expressions() {
                 definitions::make(Opcode::Constant, &[0], 1),
                 definitions::make(Opcode::Constant, &[1], 1),
                 definitions::make(Opcode::Greater, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "1 <= 2",
+            // Constants are in reverse order: '1 < 2' is '2 > 1'
+            expected_constants: vec![Object::Integer(2), Object::Integer(1)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Constant, &[1], 1),
+                definitions::make(Opcode::GreaterEq, &[], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },

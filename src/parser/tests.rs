@@ -669,8 +669,13 @@ fn test_parsing_operator_precedence() {
             num_stmts: 1,
         },
         PrecedenceTest {
-            input: "3 < 5 == true",
-            expected: "((3 < 5) == true)",
+            input: "3 >= 5 == false",
+            expected: "((3 >= 5) == false)",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "3 <= 5 == true",
+            expected: "((3 <= 5) == true)",
             num_stmts: 1,
         },
         PrecedenceTest {

@@ -123,11 +123,11 @@ impl Parser {
     fn parse_let_statement(&mut self) -> Result<Statement, ParseError> {
         let token_let = self.current.clone();
         if !self.expect_peek(&TokenType::Identifier) {
-            return Ok(Statement::Null);
+            return Ok(Statement::Invalid);
         }
         let token_ident = self.current.clone();
         if !self.expect_peek(&TokenType::Assign) {
-            return Ok(Statement::Null);
+            return Ok(Statement::Invalid);
         }
         self.next_token();
         let value = self.parse_expression(Precedence::Lowest);
@@ -180,7 +180,7 @@ impl Parser {
     fn parse_loop_statement(&mut self) -> Result<Statement, ParseError> {
         let token = self.current.clone();
         if !self.expect_peek(&TokenType::LeftBrace) {
-            return Ok(Statement::Null);
+            return Ok(Statement::Invalid);
         }
         let body = self.parse_block_statement();
         Ok(Statement::Loop(LoopStmt { token, body }))

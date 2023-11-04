@@ -10,7 +10,7 @@ pub enum Statement {
     Expr(ExpressionStmt),
     Loop(LoopStmt),
     Break(BreakStmt),
-    Null,
+    Invalid,
 }
 
 #[derive(Debug, Clone)]
@@ -73,7 +73,7 @@ impl Statement {
             Statement::Expr(stmt) => stmt.token.literal.clone(),
             Statement::Loop(stmt) => stmt.token.literal.clone(),
             Statement::Break(brk) => brk.token.literal.clone(),
-            Statement::Null => "null".to_string(),
+            Statement::Invalid => "null".to_string(),
         }
     }
 }
@@ -86,7 +86,7 @@ impl fmt::Display for Statement {
             Statement::Expr(e) => write!(f, "{}", e.value),
             Statement::Loop(l) => write!(f, "{}", l),
             Statement::Break(_) => write!(f, "break"),
-            Statement::Null => write!(f, "null"),
+            Statement::Invalid => write!(f, "invalid"),
         }
     }
 }

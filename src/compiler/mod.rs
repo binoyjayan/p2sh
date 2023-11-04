@@ -350,7 +350,9 @@ impl Compiler {
                     ));
                 }
             }
-            _ => {}
+            Statement::Invalid => {
+                panic!("Invalid statement encountered");
+            }
         }
         Ok(())
     }

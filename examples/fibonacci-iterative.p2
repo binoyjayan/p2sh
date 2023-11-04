@@ -1,0 +1,43 @@
+#!/usr/bin/env p2sh
+
+let fibonacci = fn(n) {
+    if n == 0 {
+        return 0;
+    } else {
+        if n == 1 {
+            return 1;
+        }
+    }
+
+    let a = 0;
+    let b = 1;
+    let result = 0;
+    let i = 2;
+
+    loop {
+        if i > n {
+            break;
+        }
+
+        result = a + b;
+        a = b;
+        b = result;
+        i = i + 1;
+    }
+
+    return result;
+}
+
+
+let n = if len(argv) > 1 {
+  int(argv[1])
+} else {
+ 30
+};
+
+let t1 = time();
+let fib = fibonacci(n);
+let t2 = time();
+let secs = t2 - t1;
+
+println("fib({}) = {} [took {} secs] ", n, fib, secs);

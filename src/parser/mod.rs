@@ -245,7 +245,7 @@ impl Parser {
             left_expr
         } else {
             self.no_prefix_parse_error();
-            Expression::Null
+            Expression::Invalid
         }
     }
 

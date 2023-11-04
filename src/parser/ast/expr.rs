@@ -4,6 +4,7 @@ use std::fmt;
 
 #[derive(Clone, Debug)]
 pub enum Expression {
+    Null(NullLiteral),
     Ident(Identifier),
     Integer(IntegerLiteral),
     Float(FloatLiteral),
@@ -18,7 +19,7 @@ pub enum Expression {
     Hash(HashLiteral),
     Index(IndexExpr),
     Assign(AssignExpr),
-    Null,
+    Invalid,
 }
 
 // Type of access to a symbol or expresion
@@ -72,6 +73,17 @@ pub struct FloatLiteral {
 }
 
 impl fmt::Display for FloatLiteral {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.token)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct NullLiteral {
+    pub token: Token,
+}
+
+impl fmt::Display for NullLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.token)
     }
@@ -258,7 +270,8 @@ impl Expression {
             Expression::Hash(h) => h.token.literal.clone(),
             Expression::Index(idx) => idx.token.literal.clone(),
             Expression::Assign(asn) => asn.token.literal.clone(),
-            Expression::Null => "null".to_string(),
+            Expression::Null(null) => null.token.literal.clone(),
+            Expression::Invalid => "invalid".to_string(),
         }
     }
 }
@@ -280,7 +293,8 @@ impl fmt::Display for Expression {
             Expression::Hash(h) => write!(f, "{}", h),
             Expression::Index(idx) => write!(f, "{}", idx),
             Expression::Assign(asn) => write!(f, "{}", asn),
-            Expression::Null => write!(f, "null"),
+            Expression::Null(null) => write!(f, "{}", null),
+            Expression::Invalid => write!(f, "invalid"),
         }
     }
 }

@@ -6,6 +6,7 @@ fn test_next_token() {
     // expected-type, expected-literal
     struct ExpectedToken<'a>(TokenType, &'a str);
     let input = r#"
+            let none = null;
             let five = 5;
             let ten = 10;
             let add = fn(x, y) {
@@ -37,6 +38,12 @@ fn test_next_token() {
         "#;
 
     let tests = vec![
+        // let none = null;
+        ExpectedToken(TokenType::Let, "let"),
+        ExpectedToken(TokenType::Identifier, "none"),
+        ExpectedToken(TokenType::Assign, "="),
+        ExpectedToken(TokenType::Null, "null"),
+        ExpectedToken(TokenType::Semicolon, ";"),
         // let five = 5;
         ExpectedToken(TokenType::Let, "let"),
         ExpectedToken(TokenType::Identifier, "five"),

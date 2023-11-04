@@ -38,6 +38,7 @@ impl Default for Token {
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub enum TokenType {
     Illegal = 0,
+    Null,
     Eof,
     // Identifiers + literals
     Identifier,
@@ -92,6 +93,7 @@ impl From<TokenType> for &'static str {
     fn from(ttype: TokenType) -> &'static str {
         match ttype {
             TokenType::Illegal => "ILLEGAL",
+            TokenType::Null => "NULL",
             TokenType::Eof => "EOF",
             TokenType::Identifier => "IDENT",
             TokenType::Integer => "INT",

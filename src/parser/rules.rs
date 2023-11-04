@@ -52,6 +52,8 @@ lazy_static! {
     pub static ref PARSE_RULES: Vec<ParseRule> = {
         let mut rules = vec![ParseRule::default(); TokenType::NumberOfTokens as usize];
         // Terminal expressions
+        rules[TokenType::Null as usize] =
+            ParseRule::new(Some(Parser::parse_null), None, Precedence::Lowest);
         rules[TokenType::Identifier as usize] =
             ParseRule::new(Some(Parser::parse_identifier), None, Precedence::Lowest);
         rules[TokenType::Integer as usize] =
@@ -217,6 +219,12 @@ impl Parser {
             && !self.peek_token_is(&TokenType::Eof)
     }
 
+    fn parse_null(&mut self) -> Expression {
+        Expression::Null(NullLiteral {
+            token: self.current.clone(),
+        })
+    }
+
     fn parse_identifier(&mut self) -> Expression {
         let access = self.peek_access_type();
         Expression::Ident(Identifier {
@@ -236,7 +244,7 @@ impl Parser {
         } else {
             let msg = format!("could not parse {} as an integer", self.current.literal);
             self.push_error(&msg);
-            Expression::Null
+            Expression::Invalid
         }
     }
 
@@ -250,7 +258,7 @@ impl Parser {
         } else {
             let msg = format!("could not parse {} as a float", self.current.literal);
             self.push_error(&msg);
-            Expression::Null
+            Expression::Invalid
         }
     }
 
@@ -264,7 +272,7 @@ impl Parser {
         } else {
             let msg = format!("could not parse {} as a string", self.current.literal);
             self.push_error(&msg);
-            Expression::Null
+            Expression::Invalid
         }
     }
 
@@ -317,7 +325,7 @@ impl Parser {
             self.peek_invalid_assignment(false);
             expr
         } else {
-            Expression::Null
+            Expression::Invalid
         }
     }
 
@@ -327,14 +335,14 @@ impl Parser {
         self.next_token();
         let condition = self.parse_expression(Precedence::Assignment);
         if !self.expect_peek(&TokenType::LeftBrace) {
-            return Expression::Null;
+            return Expression::Invalid;
         }
         let then_stmt = self.parse_block_statement();
         // Check if an else branch exists
         let else_stmt = if self.peek_token_is(&TokenType::Else) {
             self.next_token();
             if !self.expect_peek(&TokenType::LeftBrace) {
-                return Expression::Null;
+                return Expression::Invalid;
             }
             Some(self.parse_block_statement())
         } else {
@@ -365,11 +373,11 @@ impl Parser {
     fn parse_function_literal(&mut self) -> Expression {
         let token = self.current.clone();
         if !self.expect_peek(&TokenType::LeftParen) {
-            return Expression::Null;
+            return Expression::Invalid;
         }
         let params = self.parse_function_params();
         if !self.expect_peek(&TokenType::LeftBrace) {
-            return Expression::Null;
+            return Expression::Invalid;
         }
         let body = self.parse_block_statement();
         // The name of the string is unknown here so just use it as a
@@ -476,7 +484,7 @@ impl Parser {
         self.next_token();
         let index = self.parse_expression(Precedence::Assignment);
         if !self.expect_peek(&TokenType::RightBracket) {
-            return Expression::Null;
+            return Expression::Invalid;
         }
 
         let access = self.peek_access_type();
@@ -499,7 +507,7 @@ impl Parser {
             let key: Expression = self.parse_expression(Precedence::Assignment);
 
             if !self.expect_peek(&TokenType::Colon) {
-                return Expression::Null;
+                return Expression::Invalid;
             }
             // consume the colon (':') character
             self.next_token();
@@ -507,12 +515,12 @@ impl Parser {
             pairs.push((key, value));
 
             if !self.peek_token_is(&TokenType::RightBrace) && !self.expect_peek(&TokenType::Comma) {
-                return Expression::Null;
+                return Expression::Invalid;
             }
         }
         // Consume the end brace '}'
         if !self.expect_peek(&TokenType::RightBrace) {
-            return Expression::Null;
+            return Expression::Invalid;
         }
         Expression::Hash(HashLiteral { token, pairs })
     }

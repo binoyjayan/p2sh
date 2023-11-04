@@ -285,6 +285,15 @@ fn test_unary_expressions() {
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
+        CompilerTestCase {
+            input: "!null",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::Null, &[], 1),
+                definitions::make(Opcode::Bang, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
     ];
 
     run_compiler_tests(&tests);
@@ -449,10 +458,30 @@ fn test_boolean_expressions() {
             ],
         },
         CompilerTestCase {
+            input: "null == false",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::Null, &[], 1),
+                definitions::make(Opcode::False, &[], 1),
+                definitions::make(Opcode::Equal, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
             input: "!false",
             expected_constants: vec![],
             expected_instructions: vec![
                 definitions::make(Opcode::False, &[], 1),
+                definitions::make(Opcode::Bang, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "!!null",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::Null, &[], 1),
+                definitions::make(Opcode::Bang, &[], 1),
                 definitions::make(Opcode::Bang, &[], 1),
                 definitions::make(Opcode::Pop, &[], 1),
             ],

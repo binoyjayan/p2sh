@@ -324,7 +324,10 @@ impl Compiler {
 
     fn compile_expression(&mut self, expr: Expression) -> Result<(), CompileError> {
         match expr {
-            Expression::Null => {}
+            Expression::Invalid => {}
+            Expression::Null(null) => {
+                self.emit(Opcode::Null, &[0], null.token.line);
+            }
             Expression::Integer(num) => {
                 let obj = Object::Integer(num.value);
                 let idx = self.add_constant(obj);

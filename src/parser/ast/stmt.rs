@@ -8,6 +8,8 @@ pub enum Statement {
     Let(LetStmt),
     Return(ReturnStmt),
     Expr(ExpressionStmt),
+    Loop(LoopStmt),
+    Break(BreakStmt),
     Null,
 }
 
@@ -22,6 +24,24 @@ pub struct LetStmt {
 pub struct ReturnStmt {
     pub token: Token,
     pub value: Expression,
+}
+
+#[derive(Debug, Clone)]
+pub struct BreakStmt {
+    pub token: Token,
+}
+
+#[derive(Debug, Clone)]
+pub struct LoopStmt {
+    pub token: Token, // loop token
+    pub body: BlockStatement,
+}
+
+impl fmt::Display for LoopStmt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "loop {{ {} }}", self.body)?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -51,6 +71,8 @@ impl Statement {
             Statement::Let(stmt) => stmt.token.literal.clone(),
             Statement::Return(stmt) => stmt.token.literal.clone(),
             Statement::Expr(stmt) => stmt.token.literal.clone(),
+            Statement::Loop(stmt) => stmt.token.literal.clone(),
+            Statement::Break(brk) => brk.token.literal.clone(),
             Statement::Null => "null".to_string(),
         }
     }
@@ -62,6 +84,8 @@ impl fmt::Display for Statement {
             Statement::Let(l) => write!(f, "let {} = {};", l.name, l.value),
             Statement::Return(r) => write!(f, "return {};", r.value),
             Statement::Expr(e) => write!(f, "{}", e.value),
+            Statement::Loop(l) => write!(f, "{}", l),
+            Statement::Break(_) => write!(f, "break"),
             Statement::Null => write!(f, "null"),
         }
     }

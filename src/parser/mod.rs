@@ -114,6 +114,8 @@ impl Parser {
         match self.current.ttype {
             TokenType::Let => self.parse_let_statement(),
             TokenType::Return => self.parse_return_statement(),
+            TokenType::Loop => self.parse_loop_statement(),
+            TokenType::Break => self.parse_break_statement(),
             _ => self.parse_expr_statement(),
         }
     }
@@ -173,6 +175,24 @@ impl Parser {
             value,
         };
         Ok(Statement::Return(ret_stmt))
+    }
+
+    fn parse_loop_statement(&mut self) -> Result<Statement, ParseError> {
+        let token = self.current.clone();
+        if !self.expect_peek(&TokenType::LeftBrace) {
+            return Ok(Statement::Null);
+        }
+        let body = self.parse_block_statement();
+        Ok(Statement::Loop(LoopStmt { token, body }))
+    }
+
+    fn parse_break_statement(&mut self) -> Result<Statement, ParseError> {
+        let token_ret = self.current.clone();
+        if self.peek_token_is(&TokenType::Semicolon) {
+            self.next_token();
+        }
+        let break_stmt = BreakStmt { token: token_ret };
+        Ok(Statement::Break(break_stmt))
     }
 
     fn parse_expr_statement(&mut self) -> Result<Statement, ParseError> {

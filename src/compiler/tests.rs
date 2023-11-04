@@ -1930,3 +1930,119 @@ fn test_logical_or_expressions() {
 
     run_compiler_tests(&tests);
 }
+
+#[test]
+fn test_loop_instructions() {
+    let tests = vec![
+        CompilerTestCase {
+            input: r#"
+                loop {
+                    break;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0000 : The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[6], 1),
+                // 0003 : The Jump instruction for the loop
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0006 : The constant 1111
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0009 : Pop the result of the expression (outside the loop)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                let a = 1;
+                loop {
+                    if a == 10 {
+                        break;
+                    }
+                }
+                1111;
+            "#,
+            expected_constants: vec![
+                Object::Integer(1),
+                Object::Integer(10),
+                Object::Integer(1111),
+            ],
+            expected_instructions: vec![
+                // 0000 : The constant '1'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0003 : Define the global variable 'a'
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                // 0006 : Start of loop; get the value of 'a'
+                definitions::make(Opcode::GetGlobal, &[0], 3),
+                // 0009 : The constant '10'
+                definitions::make(Opcode::Constant, &[1], 3),
+                // 0012 : Instruction to compare 'a' and 10
+                definitions::make(Opcode::Equal, &[], 3),
+                // 0013 : Jump over the 'then' statement if condition is false
+                definitions::make(Opcode::JumpIfFalse, &[23], 3),
+                // 0016 : Pop the result of the condition
+                definitions::make(Opcode::Pop, &[], 3),
+                // 0017 : Jump for the break instruction
+                definitions::make(Opcode::Jump, &[29], 4),
+                // 0020 : Jump to the end of the 'if' expression
+                definitions::make(Opcode::Jump, &[25], 3),
+                // 0023 : Pop the result of the condition
+                definitions::make(Opcode::Pop, &[], 3),
+                // 0024 : Null else case
+                definitions::make(Opcode::Null, &[], 3),
+                // 0025 : Pop the result of the 'if' expression
+                definitions::make(Opcode::Pop, &[], 3),
+                // 0026 : Jump to the start of the loop
+                definitions::make(Opcode::Jump, &[6], 5),
+                // 0029 : The constant '1111'
+                definitions::make(Opcode::Constant, &[2], 7),
+                // 0032 : Pop the result of the expression (outside the loop)
+                definitions::make(Opcode::Pop, &[], 7),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                loop {
+                    break;
+                }
+                loop {
+                    break;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0000 : Loop 1: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[6], 1),
+                // 0003 : The Jump instruction for the first loop
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0006 : Loop 2: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[12], 1),
+                // 0009 : The Jump instruction for the second loop
+                definitions::make(Opcode::Jump, &[6], 1),
+                // 0012 : The constant 1111
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0015 : Pop the result of the expression (outside the loop)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_break_outside_loop() {
+    let tests = vec![
+        CompilerTestCaseErrors {
+            input: "break;",
+            error: "[line 1] compile error: break statement outside of loop",
+        },
+        CompilerTestCaseErrors {
+            input: "loop {} break; loop {}",
+            error: "[line 1] compile error: break statement outside of loop",
+        },
+    ];
+
+    run_compiler_failed_tests(&tests);
+}

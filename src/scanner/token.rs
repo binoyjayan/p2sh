@@ -86,6 +86,8 @@ pub enum TokenType {
     If,
     Else,
     Return,
+    Loop,
+    Break,
     NumberOfTokens,
 }
 
@@ -136,6 +138,8 @@ impl From<TokenType> for &'static str {
             TokenType::If => "IF",
             TokenType::Else => "ELSE",
             TokenType::Return => "RETURN",
+            TokenType::Loop => "LOOP",
+            TokenType::Break => "BREAK",
             TokenType::NumberOfTokens => "",
         }
     }

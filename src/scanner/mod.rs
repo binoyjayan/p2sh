@@ -17,6 +17,8 @@ lazy_static! {
         m.insert("else".into(), TokenType::Else);
         m.insert("return".into(), TokenType::Return);
         m.insert("null".into(), TokenType::Null);
+        m.insert("loop".into(), TokenType::Loop);
+        m.insert("break".into(), TokenType::Break);
         m
     };
 }

@@ -1326,3 +1326,32 @@ fn test_parsing_assignment_expressions_negative() {
     }
     assert_eq!(0, count, "tests failed");
 }
+
+#[test]
+fn test_loop_break_statement() {
+    let input = "loop { break; }";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Loop(stmt) = stmt {
+        let len = stmt.body.statements.len();
+        assert_eq!(
+            len, 1,
+            "loop body has wrong number of statements. got={}",
+            len
+        );
+        if let Statement::Break(stmt) = &stmt.body.statements[0] {
+            assert_eq!(stmt.token.literal, "break");
+        } else {
+            panic!(
+                "loop body statement is not a break statement. got={}",
+                stmt.body.statements[0]
+            );
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not a loop statement. got={}",
+            stmt
+        );
+    }
+}

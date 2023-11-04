@@ -367,7 +367,7 @@ impl Parser {
         })
     }
 
-    fn parse_block_statement(&mut self) -> BlockStatement {
+    pub fn parse_block_statement(&mut self) -> BlockStatement {
         let mut statements = Vec::new();
         self.next_token();
 

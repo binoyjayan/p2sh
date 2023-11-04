@@ -43,6 +43,8 @@ struct CompilationScope {
     instructions: Instructions,
     last_ins: EmittedInstruction, // instruction before the current
     prev_ins: EmittedInstruction, // instruction before the last
+    loop_pos: Option<usize>,      // position of the beginning of the 'loop' instruction
+    break_pos: Vec<usize>,        // positions of 'break' instruction in a loop
 }
 
 pub struct Compiler {
@@ -67,11 +69,7 @@ impl Compiler {
             symtab.define_builtin_var(n, name);
         }
 
-        let main_scope = CompilationScope {
-            instructions: Instructions::default(),
-            last_ins: EmittedInstruction::default(),
-            prev_ins: EmittedInstruction::default(),
-        };
+        let main_scope = CompilationScope::default();
         Compiler {
             constants: Vec::new(),
             symtab,
@@ -88,11 +86,7 @@ impl Compiler {
     }
 
     pub fn enter_scope(&mut self) {
-        let scope = CompilationScope {
-            instructions: Instructions::default(),
-            last_ins: EmittedInstruction::default(),
-            prev_ins: EmittedInstruction::default(),
-        };
+        let scope = CompilationScope::default();
         self.scopes.push(scope);
         self.scope_index += 1;
         self.symtab = SymbolTable::new_enclosed(self.symtab.clone());
@@ -322,6 +316,39 @@ impl Compiler {
                 }
                 self.compile_expression(stmt.value)?;
                 self.emit(Opcode::ReturnValue, &[0], stmt.token.line);
+            }
+            Statement::Loop(stmt) => {
+                // Record the position of the beginning of the loop so a 'Jump'
+                // instruction can be used to jump to the beginning of the loop
+                // It also indicates that the compiler is compiling a loop
+                let loop_pos = self.get_curr_instructions().len();
+                self.scopes[self.scope_index].loop_pos = Some(loop_pos);
+                self.compile_block_statement(stmt.body)?;
+                self.scopes[self.scope_index].loop_pos = Some(loop_pos);
+                // Instruction to jump to beginning of the loop
+                self.emit(Opcode::Jump, &[loop_pos], stmt.token.line);
+                // Patch all the 'break' instructions with the position of the
+                // instruction that comes after the loop
+                let break_pos = self.scopes[self.scope_index].break_pos.clone();
+                for pos in break_pos.iter() {
+                    self.patch_jump(*pos);
+                }
+                // Clear the loop position and the 'break' positions
+                self.scopes[self.scope_index].loop_pos = None;
+                self.scopes[self.scope_index].break_pos = Vec::new();
+            }
+            Statement::Break(stmt) => {
+                if self.scopes[self.scope_index].loop_pos.is_some() {
+                    // Placeholder instruction to jump to end of the loop
+                    let pos = self.emit(Opcode::Jump, &[0xFFFF], stmt.token.line);
+                    // Save the position of the 'break' instruction so it can be patched later
+                    self.scopes[self.scope_index].break_pos.push(pos);
+                } else {
+                    return Err(CompileError::new(
+                        "break statement outside of loop",
+                        stmt.token.line,
+                    ));
+                }
             }
             _ => {}
         }

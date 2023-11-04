@@ -1477,6 +1477,46 @@ fn test_recursive_fibonacci() {
 }
 
 #[test]
+fn test_iterative_fibonacci_loop() {
+    let tests: Vec<VmTestCase> = vec![VmTestCase {
+        input: r#"
+            let fibonacci = fn(n) {
+                if n == 0 {
+                    return 0;
+                } else {
+                    if n == 1 {
+                        return 1;
+                    }
+                }
+
+                let a = 0;
+                let b = 1;
+                let result = 0;
+                let i = 2;
+
+                loop {
+                    if i > n {
+                        break;
+                    }
+
+                    result = a + b;
+                    a = b;
+                    b = result;
+                    i = i + 1;
+                }
+
+                return result;
+            };
+
+            fibonacci(15);
+        "#,
+        expected: Object::Integer(610),
+    }];
+
+    run_vm_tests(&tests);
+}
+
+#[test]
 fn test_assignment_expressions() {
     let tests: Vec<VmTestCase> = vec![
         VmTestCase {
@@ -1792,6 +1832,46 @@ fn test_logical_expressions_combined() {
         VmTestCase {
             input: "true || false && true",
             expected: Object::Bool(true),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_loop_with_break() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+            let a = 1;
+            loop {
+                if a == 10 {
+                    break;
+                }
+                a = a + 1;
+            }
+            a;
+            "#,
+            expected: Object::Integer(10),
+        },
+        VmTestCase {
+            input: r#"
+            let a = 1;
+            loop {
+                if a == 10 {
+                    break;
+                }
+                a = a + 1;
+            }
+
+            loop {
+                if a <= 0 {
+                    break;
+                }
+                a = a - 1;
+            }
+            a;
+            "#,
+            expected: Object::Integer(0),
         },
     ];
     run_vm_tests(&tests);

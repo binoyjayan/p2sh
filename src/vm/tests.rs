@@ -1517,6 +1517,37 @@ fn test_iterative_fibonacci_loop() {
 }
 
 #[test]
+fn test_closures_with_depth() {
+    let tests: Vec<VmTestCase> = vec![
+        VmTestCase {
+            input: r#"
+                let newClosure = fn(a) {
+                    fn() { a; }
+                }
+                let closure = newClosure(99);
+                closure();
+                "#,
+            expected: Object::Integer(99),
+        },
+        VmTestCase {
+            input: r#"
+                fn(a) {
+                    if true {
+                        let a = 10;
+                    }
+                    fn(b) {
+                        a + b
+                    }
+                }(1)(2)
+                "#,
+            expected: Object::Integer(3),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}
+
+#[test]
 fn test_assignment_expressions() {
     let tests: Vec<VmTestCase> = vec![
         VmTestCase {
@@ -1872,6 +1903,66 @@ fn test_loop_with_break() {
             a;
             "#,
             expected: Object::Integer(0),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_scoped_global_variables() {
+    let tests: Vec<VmTestCase> = vec![
+        VmTestCase {
+            input: r#"
+                let a = 1;
+                if true {
+                    let a = 10;
+                    a
+                }
+                a
+                "#,
+            expected: Object::Integer(1),
+        },
+        VmTestCase {
+            input: r#"
+                let a = 1;
+                if true {
+                    let a = 10;
+                    a;
+                }
+                "#,
+            expected: Object::Integer(10),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_scoped_local_variables() {
+    let tests: Vec<VmTestCase> = vec![
+        VmTestCase {
+            input: r#"
+                let f = fn() {
+                    let a = 1;
+                    if true {
+                        let a = 10;
+                        a
+                    }
+                    a
+                }()
+                "#,
+            expected: Object::Integer(1),
+        },
+        VmTestCase {
+            input: r#"
+                let f = fn() {
+                    let a = 1;
+                    if true {
+                        let a = 10;
+                        a
+                    }
+                }()
+                "#,
+            expected: Object::Integer(10),
         },
     ];
     run_vm_tests(&tests);

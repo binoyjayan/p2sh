@@ -1370,6 +1370,67 @@ fn test_closures() {
     run_compiler_tests(&tests);
 }
 
+#[test]
+fn test_closures_with_depth() {
+    let tests = vec![CompilerTestCase {
+        input: "
+                fn(a) {
+                    if true {
+                        let a = 1;
+                    }
+                    fn(b) {
+                        a + b
+                    }
+                }
+            ",
+
+        expected_constants: vec![
+            Object::Integer(1),
+            Object::Func(Rc::new(CompiledFunction::new(
+                // the real closure
+                concat_instructions(&[
+                    // variable 'a' defined in the enclosing scope is a
+                    // 'free' variable for this scope
+                    definitions::make(Opcode::GetFree, &[0], 1),
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    definitions::make(Opcode::Add, &[], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+            Object::Func(Rc::new(CompiledFunction::new(
+                concat_instructions(&[
+                    definitions::make(Opcode::True, &[], 1),
+                    definitions::make(Opcode::JumpIfFalse, &[13], 1),
+                    // Pop condition
+                    definitions::make(Opcode::Pop, &[], 1),
+                    definitions::make(Opcode::Constant, &[0], 1),
+                    definitions::make(Opcode::DefineLocal, &[1], 1),
+                    definitions::make(Opcode::Jump, &[15], 1),
+                    // pop condition
+                    definitions::make(Opcode::Pop, &[], 1),
+                    definitions::make(Opcode::Null, &[], 1),
+                    definitions::make(Opcode::Pop, &[], 1),
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    // #free-vars is 1 as there is one free variable on the stack
+                    // that needs to be saved into the free field of the closure
+                    definitions::make(Opcode::Closure, &[1, 1], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                1,
+                0,
+            ))),
+        ],
+
+        expected_instructions: vec![
+            definitions::make(Opcode::Closure, &[2, 0], 1),
+            definitions::make(Opcode::Pop, &[], 1),
+        ],
+    }];
+    run_compiler_tests(&tests);
+}
+
 // There are three nested functions. The innermost function, the one with the
 // c parameter, references two free variables: a and b. b is defined in the
 // immediate enclosing scope, but a is defined in the outermost function, two

@@ -45,6 +45,7 @@ struct CompilationScope {
     prev_ins: EmittedInstruction, // instruction before the last
     loop_pos: Option<usize>,      // position of the beginning of the 'loop' instruction
     break_pos: Vec<usize>,        // positions of 'break' instruction in a loop
+    scope_depth: usize,           // depth within the current scope
 }
 
 pub struct Compiler {
@@ -272,9 +273,11 @@ impl Compiler {
     }
 
     fn compile_block_statement(&mut self, stmt: BlockStatement) -> Result<(), CompileError> {
+        self.scopes[self.scope_index].scope_depth += 1;
         for stmt in stmt.statements {
             self.compile_statement(stmt)?;
         }
+        self.scopes[self.scope_index].scope_depth -= 1;
         Ok(())
     }
 
@@ -297,7 +300,8 @@ impl Compiler {
             Statement::Let(stmt) => {
                 // Defining the symbol before the value allows compiling
                 // recursive functions that has reference to its own name.
-                let symbol = self.symtab.define(&stmt.name.value);
+                let depth = self.scopes[self.scope_index].scope_depth;
+                let symbol = self.symtab.define(&stmt.name.value, depth);
                 self.compile_let_stmt(stmt.value)?;
 
                 // Use a Symbol's scope to emit the right instruction
@@ -504,7 +508,7 @@ impl Compiler {
                 // variables (num_locals) of the function.
                 let num_params = func.params.len();
                 for p in func.params {
-                    self.symtab.define(&p.value);
+                    self.symtab.define(&p.value, 0);
                 }
                 self.compile_block_statement(func.body)?;
                 // Leave function scope. If the last expression statement in a
@@ -610,7 +614,8 @@ impl Compiler {
     }
 
     fn compile_identifier(&mut self, expr: Identifier) -> Result<(), CompileError> {
-        if let Some(symbol) = self.symtab.resolve(&expr.token.literal) {
+        let depth = self.scopes[self.scope_index].scope_depth;
+        if let Some(symbol) = self.symtab.resolve(&expr.token.literal, depth) {
             match expr.access {
                 AccessType::Get => {
                     self.load_symbol(symbol, expr.token.line);

@@ -368,6 +368,7 @@ impl Parser {
     }
 
     pub fn parse_block_statement(&mut self) -> BlockStatement {
+        let token = self.current.clone();
         let mut statements = Vec::new();
         self.next_token();
 
@@ -377,7 +378,7 @@ impl Parser {
             }
             self.next_token();
         }
-        BlockStatement { statements }
+        BlockStatement { token, statements }
     }
 
     fn parse_function_literal(&mut self) -> Expression {

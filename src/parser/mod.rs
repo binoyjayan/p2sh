@@ -114,8 +114,9 @@ impl Parser {
         match self.current.ttype {
             TokenType::Let => self.parse_let_statement(),
             TokenType::Return => self.parse_return_statement(),
-            TokenType::Loop => self.parse_loop_statement(),
+            TokenType::Loop => self.parse_loop_statement(None),
             TokenType::Break => self.parse_break_statement(),
+            TokenType::Continue => self.parse_continue_statement(),
             _ => self.parse_expr_statement(),
         }
     }
@@ -177,26 +178,65 @@ impl Parser {
         Ok(Statement::Return(ret_stmt))
     }
 
-    fn parse_loop_statement(&mut self) -> Result<Statement, ParseError> {
+    fn parse_loop_statement(&mut self, label: Option<Token>) -> Result<Statement, ParseError> {
         let token = self.current.clone();
         if !self.expect_peek(&TokenType::LeftBrace) {
             return Ok(Statement::Invalid);
         }
         let body = self.parse_block_statement();
-        Ok(Statement::Loop(LoopStmt { token, body }))
+        Ok(Statement::Loop(LoopStmt { token, label, body }))
     }
 
     fn parse_break_statement(&mut self) -> Result<Statement, ParseError> {
-        let token_ret = self.current.clone();
+        // The break token
+        let token = self.current.clone();
+        // If there is a label, parse it
+        let label = if self.peek_token_is(&TokenType::Identifier) {
+            self.next_token();
+            Some(self.current.clone())
+        } else {
+            None
+        };
         if self.peek_token_is(&TokenType::Semicolon) {
             self.next_token();
         }
-        let break_stmt = BreakStmt { token: token_ret };
+        let break_stmt = BreakStmt { token, label };
         Ok(Statement::Break(break_stmt))
     }
 
+    fn parse_continue_statement(&mut self) -> Result<Statement, ParseError> {
+        // The continue token
+        let token = self.current.clone();
+        // If there is a label, parse it
+        let label = if self.peek_token_is(&TokenType::Identifier) {
+            self.next_token();
+            Some(self.current.clone())
+        } else {
+            None
+        };
+        if self.peek_token_is(&TokenType::Semicolon) {
+            self.next_token();
+        }
+        let con_stmt = ContinueStmt { token, label };
+        Ok(Statement::Continue(con_stmt))
+    }
+
+    // Parse a statement as expression statement if it is none of the
+    // other statement types. However, if the statement begins with
+    // an idenifier and a colon, it is a label and should be followed
+    // by a loop statement.
     fn parse_expr_statement(&mut self) -> Result<Statement, ParseError> {
         let token_expr = self.current.clone();
+        if self.curr_token_is(&TokenType::Identifier) && self.peek_token_is(&TokenType::Colon) {
+            // Advance the token to the colon
+            self.next_token();
+            // only loops support labels for now
+            if !self.expect_peek(&TokenType::Loop) {
+                return Ok(Statement::Invalid);
+            }
+            // pass the label token to the loop statement
+            return self.parse_loop_statement(Some(token_expr));
+        }
         let expr = self.parse_expression(Precedence::Assignment);
         if self.peek_token_is(&TokenType::Semicolon) {
             self.next_token();

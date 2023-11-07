@@ -19,6 +19,7 @@ lazy_static! {
         m.insert("null".into(), TokenType::Null);
         m.insert("loop".into(), TokenType::Loop);
         m.insert("break".into(), TokenType::Break);
+        m.insert("continue".into(), TokenType::Continue);
         m
     };
 }

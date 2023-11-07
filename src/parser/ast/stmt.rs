@@ -10,6 +10,7 @@ pub enum Statement {
     Expr(ExpressionStmt),
     Loop(LoopStmt),
     Break(BreakStmt),
+    Continue(ContinueStmt),
     Invalid,
 }
 
@@ -27,13 +28,21 @@ pub struct ReturnStmt {
 }
 
 #[derive(Debug, Clone)]
+pub struct ContinueStmt {
+    pub token: Token,
+    pub label: Option<Token>,
+}
+
+#[derive(Debug, Clone)]
 pub struct BreakStmt {
     pub token: Token,
+    pub label: Option<Token>,
 }
 
 #[derive(Debug, Clone)]
 pub struct LoopStmt {
     pub token: Token, // loop token
+    pub label: Option<Token>,
     pub body: BlockStatement,
 }
 
@@ -74,6 +83,7 @@ impl Statement {
             Statement::Expr(stmt) => stmt.token.literal.clone(),
             Statement::Loop(stmt) => stmt.token.literal.clone(),
             Statement::Break(brk) => brk.token.literal.clone(),
+            Statement::Continue(con) => con.token.literal.clone(),
             Statement::Invalid => "null".to_string(),
         }
     }
@@ -87,6 +97,7 @@ impl fmt::Display for Statement {
             Statement::Expr(e) => write!(f, "{}", e.value),
             Statement::Loop(l) => write!(f, "{}", l),
             Statement::Break(_) => write!(f, "break"),
+            Statement::Continue(_) => write!(f, "continue"),
             Statement::Invalid => write!(f, "invalid"),
         }
     }

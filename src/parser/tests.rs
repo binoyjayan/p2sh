@@ -1328,7 +1328,7 @@ fn test_parsing_assignment_expressions_negative() {
 }
 
 #[test]
-fn test_loop_break_statement() {
+fn test_loop_with_break_statement() {
     let input = "loop { break; }";
     let program = parse_test_program(input, 1);
 
@@ -1340,6 +1340,10 @@ fn test_loop_break_statement() {
             "loop body has wrong number of statements. got={}",
             len
         );
+        // The loop does not have a label
+        if let Some(label) = stmt.label.clone() {
+            panic!("unexpected loop label: got={}", label);
+        }
         if let Statement::Break(stmt) = &stmt.body.statements[0] {
             assert_eq!(stmt.token.literal, "break");
         } else {
@@ -1347,6 +1351,32 @@ fn test_loop_break_statement() {
                 "loop body statement is not a break statement. got={}",
                 stmt.body.statements[0]
             );
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not a loop statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_loop_with_label_statement() {
+    let input = "empty: loop { }";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Loop(stmt) = stmt {
+        let len = stmt.body.statements.len();
+        assert_eq!(
+            len, 0,
+            "loop body has wrong number of statements. got={}",
+            len
+        );
+        if let Some(label) = stmt.label.clone() {
+            assert_eq!(label.literal, "empty", "wrong loop label. got={}", len);
+        } else {
+            panic!("loop statement has no label");
         }
     } else {
         panic!(

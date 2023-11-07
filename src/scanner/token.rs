@@ -88,6 +88,7 @@ pub enum TokenType {
     Return,
     Loop,
     Break,
+    Continue,
     NumberOfTokens,
 }
 
@@ -97,7 +98,7 @@ impl From<TokenType> for &'static str {
             TokenType::Illegal => "ILLEGAL",
             TokenType::Null => "NULL",
             TokenType::Eof => "EOF",
-            TokenType::Identifier => "IDENT",
+            TokenType::Identifier => "IDENTIFIER",
             TokenType::Integer => "INT",
             TokenType::Float => "FLOAT",
             TokenType::Str => "STRING",
@@ -140,6 +141,7 @@ impl From<TokenType> for &'static str {
             TokenType::Return => "RETURN",
             TokenType::Loop => "LOOP",
             TokenType::Break => "BREAK",
+            TokenType::Continue => "CONTINUE",
             TokenType::NumberOfTokens => "",
         }
     }

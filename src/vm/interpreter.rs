@@ -234,7 +234,12 @@ impl VM {
                 Opcode::Jump => {
                     let bytes = &instructions.code[ip + 1..ip + 3];
                     // decode the operand (jump address) right after the opcode
-                    self.current_frame().ip = u16::from_be_bytes([bytes[0], bytes[1]]) as usize - 1;
+                    self.current_frame().ip = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
+                    // Do not increment ip at the end of the loop since the
+                    // control is transferred to a jump statement. This allows
+                    // us to have statements such as 'loop {}' as the only
+                    // statement in a program.
+                    continue;
                 }
                 Opcode::JumpIfFalse => {
                     let bytes = &instructions.code[ip + 1..ip + 3];
@@ -244,8 +249,13 @@ impl VM {
                     self.current_frame().ip += 2;
                     // Pop the condition off the stack as it is not used in if-else
                     let condition = self.pop(line)?;
+                    // Jump if the condition is false but continue program
+                    // execution otherwise.
                     if condition.is_falsey() {
-                        self.current_frame().ip = pos - 1;
+                        self.current_frame().ip = pos;
+                        // Do not increment ip since the control is being
+                        // transferred to the jump address.
+                        continue;
                     }
                 }
                 Opcode::JumpIfFalseNoPop => {
@@ -258,7 +268,10 @@ impl VM {
                     // by the logical operators '&&' and '||'
                     let condition = self.top(0, line)?;
                     if condition.is_falsey() {
-                        self.current_frame().ip = pos - 1;
+                        self.current_frame().ip = pos;
+                        // Do not increment ip since the control is being
+                        // transferred to the jump address.
+                        continue;
                     }
                 }
                 Opcode::Null => {

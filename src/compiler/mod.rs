@@ -36,6 +36,25 @@ impl EmittedInstruction {
     }
 }
 
+// Keep track of the positions of the 'loop' instruction
+#[derive(Default, Clone)]
+struct LoopContext {
+    label: Option<String>,
+    begin: usize,
+    // positions of 'break' instructions in the current loop
+    break_positions: Vec<usize>,
+}
+
+impl LoopContext {
+    fn new(label: Option<String>, position: usize) -> Self {
+        Self {
+            label,
+            begin: position,
+            break_positions: Vec::new(),
+        }
+    }
+}
+
 // Before compiling a function body (i.e. enter a new scope),
 // push a new object of type CompilationScope onto the scopes stack
 #[derive(Default, Clone)]
@@ -43,8 +62,7 @@ struct CompilationScope {
     instructions: Instructions,
     last_ins: EmittedInstruction, // instruction before the current
     prev_ins: EmittedInstruction, // instruction before the last
-    loop_pos: Option<usize>,      // position of the beginning of the 'loop' instruction
-    break_pos: Vec<usize>,        // positions of 'break' instruction in a loop
+    loop_stack: Vec<LoopContext>, // stack of 'loop' instructions
     scope_depth: usize,           // depth within the current scope
 }
 
@@ -325,33 +343,89 @@ impl Compiler {
                 // Record the position of the beginning of the loop so a 'Jump'
                 // instruction can be used to jump to the beginning of the loop
                 // It also indicates that the compiler is compiling a loop
-                let loop_pos = self.get_curr_instructions().len();
-                self.scopes[self.scope_index].loop_pos = Some(loop_pos);
+                let loop_begin = self.get_curr_instructions().len();
+                // Push a new LoopLabel onto the loop stack.
+                let loop_label = if let Some(label) = stmt.label {
+                    LoopContext::new(Some(label.literal), loop_begin)
+                } else {
+                    LoopContext::new(None, loop_begin)
+                };
+                self.scopes[self.scope_index].loop_stack.push(loop_label);
+                // Compile the body of the loop
                 self.compile_block_statement(stmt.body)?;
-                self.scopes[self.scope_index].loop_pos = Some(loop_pos);
                 // Instruction to jump to beginning of the loop
-                self.emit(Opcode::Jump, &[loop_pos], stmt.token.line);
-                // Patch all the 'break' instructions with the position of the
-                // instruction that comes after the loop
-                let break_pos = self.scopes[self.scope_index].break_pos.clone();
-                for pos in break_pos.iter() {
-                    self.patch_jump(*pos);
+                self.emit(Opcode::Jump, &[loop_begin], stmt.token.line);
+
+                // Pop the current loop label off the loop stack
+                if let Some(loop_curr) = self.scopes[self.scope_index].loop_stack.pop() {
+                    // Patch all the anonymous 'break' instructions
+                    let break_pos = loop_curr.break_positions;
+                    for pos in break_pos.iter() {
+                        self.patch_jump(*pos);
+                    }
                 }
-                // Clear the loop position and the 'break' positions
-                self.scopes[self.scope_index].loop_pos = None;
-                self.scopes[self.scope_index].break_pos = Vec::new();
             }
             Statement::Break(stmt) => {
-                if self.scopes[self.scope_index].loop_pos.is_some() {
-                    // Placeholder instruction to jump to end of the loop
-                    let pos = self.emit(Opcode::Jump, &[0xFFFF], stmt.token.line);
-                    // Save the position of the 'break' instruction so it can be patched later
-                    self.scopes[self.scope_index].break_pos.push(pos);
-                } else {
+                // If loop stack is empty, the control is outside a loop
+                if self.scopes[self.scope_index].loop_stack.is_empty() {
                     return Err(CompileError::new(
                         "break statement outside of loop",
                         stmt.token.line,
                     ));
+                } else {
+                    // Placeholder instruction to jump to end of the loop
+                    let pos = self.emit(Opcode::Jump, &[0xFFFF], stmt.token.line);
+
+                    // Save the position of the 'break' instruction so it can be patched later
+                    // Add the break position to the current inner most loop
+                    if let Some(label) = stmt.label {
+                        // Labeled break statements. Find the loop label and add the break position
+                        let loop_stack = &mut self.scopes[self.scope_index].loop_stack;
+                        for loop_label in loop_stack.iter_mut().rev() {
+                            if let Some(loop_label_name) = &loop_label.label {
+                                if loop_label_name == &label.literal {
+                                    loop_label.break_positions.push(pos);
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        // Anonymous break statements
+                        if let Some(last) = self.scopes[self.scope_index].loop_stack.last_mut() {
+                            last.break_positions.push(pos);
+                        }
+                    }
+                }
+            }
+            Statement::Continue(stmt) => {
+                // If loop stack is empty, the control is outside a loop
+                if self.scopes[self.scope_index].loop_stack.is_empty() {
+                    return Err(CompileError::new(
+                        "continue statement outside of loop",
+                        stmt.token.line,
+                    ));
+                } else {
+                    // Save the position of the 'break' instruction so it can be patched later
+                    // Add the break position to the current inner most loop
+                    if let Some(label) = stmt.label {
+                        // Labeled continue statements. Find the loop label and add the break position
+                        let loop_stack = &self.scopes[self.scope_index].loop_stack;
+                        for loop_label in loop_stack.iter().rev() {
+                            if let Some(loop_label_name) = &loop_label.label {
+                                if loop_label_name == &label.literal {
+                                    self.emit(Opcode::Jump, &[loop_label.begin], stmt.token.line);
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        // Anonymous continue statements.
+                        // Emit a 'Jump' instruction to the beginning of the current loop
+                        let loop_stack = &self.scopes[self.scope_index].loop_stack;
+                        if let Some(loop_label) = loop_stack.last() {
+                            self.emit(Opcode::Jump, &[loop_label.begin], stmt.token.line);
+                        }
+                    }
                 }
             }
             Statement::Invalid => {

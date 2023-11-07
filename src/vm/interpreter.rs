@@ -242,6 +242,18 @@ impl VM {
                     let pos: usize = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
                     // skip over the two bytes of the operand in the next cycle
                     self.current_frame().ip += 2;
+                    // Pop the condition off the stack as it is not used in if-else
+                    let condition = self.pop(line)?;
+                    if condition.is_falsey() {
+                        self.current_frame().ip = pos - 1;
+                    }
+                }
+                Opcode::JumpIfFalseNoPop => {
+                    let bytes = &instructions.code[ip + 1..ip + 3];
+                    // decode the operand (jump address) right after the opcode
+                    let pos: usize = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
+                    // skip over the two bytes of the operand in the next cycle
+                    self.current_frame().ip += 2;
                     // Do not pop the condition off the stack as it is used
                     // by the logical operators '&&' and '||'
                     let condition = self.top(0, line)?;

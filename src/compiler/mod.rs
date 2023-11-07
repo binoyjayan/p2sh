@@ -445,8 +445,7 @@ impl Compiler {
                 // Emit an 'JumpIfFalse' with a placeholder. Save it's position so it can be altered later
                 // The target for this jump is the 'pop' instruction following the 'then' statement
                 let jump_if_false_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], expr.token.line);
-                // JumpIfFalse does not consume the result of 'condition'. So pop it.
-                self.emit(Opcode::Pop, &[0], expr.token.line);
+                // JumpIfFalse consumes the result of 'condition'.
                 self.compile_block_statement(expr.then_stmt)?;
                 // Get rid of the extra Pop that comes with the result of compiling 'then_stmt'
                 // This is so that we don't loose the result of the 'if' expression
@@ -460,9 +459,6 @@ impl Compiler {
                 // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
                 // position of the instruction that comes after the 'then' statement
                 self.patch_jump(jump_if_false_pos);
-
-                // Pop the result of the condition expression
-                self.emit(Opcode::Pop, &[0], expr.token.line);
 
                 // Look for an 'else' branch
                 match expr.else_stmt {
@@ -659,7 +655,7 @@ impl Compiler {
     //
     // Control Flow:
     // left operand expression
-    // OpJumpIfFalse        ------+
+    // JumpIfFalseNoPop     ------+
     // OpPop                      |
     // right operand expression   |
     // continue            <------+
@@ -671,9 +667,9 @@ impl Compiler {
         line: usize,
     ) -> Result<(), CompileError> {
         self.compile_expression(left)?;
-        // Emit an 'JumpIfFalse' with a placeholder. Save it's position so it can be altered later
+        // Emit an 'JumpIfFalseNoPop' with a placeholder. Save it's position so it can be altered later
         // Jump over the right hand side expression if the left hand side is false
-        let jump_if_false_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], line);
+        let jump_if_false_pos = self.emit(Opcode::JumpIfFalseNoPop, &[0xFFFF], line);
         // In the case of a 'false' result, we want to keep the result of the
         // left-hand side as the result of the entire '&&' expression.
         // So don't pop it. But inf the case of a 'true' result we do not want
@@ -681,7 +677,7 @@ impl Compiler {
         self.emit(Opcode::Pop, &[0], line);
         // If the result is true, then right hand side gets evaluated
         self.compile_expression(right)?;
-        // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
+        // Replace the operand of the placeholder 'JumpIfFalseNoPop' instruction with the
         // position of the instruction that comes after the '&&' expression
         self.patch_jump(jump_if_false_pos);
         Ok(())
@@ -696,7 +692,7 @@ impl Compiler {
     //
     // Control Flow:
     // left operand expression
-    // OpJumpIfFalse      --------+
+    // JumpIfFalseNoPop   --------+
     // OpJump   ------------------|---+
     // OpPop              <-------+   |
     // right operand expression       |
@@ -710,11 +706,11 @@ impl Compiler {
     ) -> Result<(), CompileError> {
         self.compile_expression(left)?;
         // If lhs is false, jump to the rhs expression to evaluate that
-        let rhs_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], line);
+        let rhs_pos = self.emit(Opcode::JumpIfFalseNoPop, &[0xFFFF], line);
         // If true, then use the result on the stack as the value of the entire expression
         // Jump over to the end of the expression since we have the value we need
         let end_pos = self.emit(Opcode::Jump, &[0xFFFF], line);
-        // Patch the 'JumpIfFalse' instruction
+        // Patch the 'JumpIfFalseNoPop' instruction
         self.patch_jump(rhs_pos);
         // pop result of lhs since it is false; now, rhs needs to be evaluated.
         self.emit(Opcode::Pop, &[0], line);

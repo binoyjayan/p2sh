@@ -385,10 +385,14 @@ impl Compiler {
                             if let Some(loop_label_name) = &loop_label.label {
                                 if loop_label_name == &label.literal {
                                     loop_label.break_positions.push(pos);
-                                    break;
+                                    return Ok(());
                                 }
                             }
                         }
+                        return Err(CompileError::new(
+                            &format!("unknown loop label '{}'", label.literal),
+                            stmt.token.line,
+                        ));
                     } else {
                         // Anonymous break statements
                         if let Some(last) = self.scopes[self.scope_index].loop_stack.last_mut() {
@@ -414,10 +418,14 @@ impl Compiler {
                             if let Some(loop_label_name) = &loop_label.label {
                                 if loop_label_name == &label.literal {
                                     self.emit(Opcode::Jump, &[loop_label.begin], stmt.token.line);
-                                    break;
+                                    return Ok(());
                                 }
                             }
                         }
+                        return Err(CompileError::new(
+                            &format!("unknown loop label '{}'", label.literal),
+                            stmt.token.line,
+                        ));
                     } else {
                         // Anonymous continue statements.
                         // Emit a 'Jump' instruction to the beginning of the current loop

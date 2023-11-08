@@ -2088,6 +2088,214 @@ fn test_break_outside_loop() {
             error: "[line 1] compile error: break statement outside of loop",
         },
     ];
+    run_compiler_failed_tests(&tests);
+}
 
+#[test]
+fn test_continue_outside_loop() {
+    let tests = vec![
+        CompilerTestCaseErrors {
+            input: "continue;",
+            error: "[line 1] compile error: continue statement outside of loop",
+        },
+        CompilerTestCaseErrors {
+            input: "loop {} continue; loop {}",
+            error: "[line 1] compile error: continue statement outside of loop",
+        },
+    ];
+    run_compiler_failed_tests(&tests);
+}
+
+#[test]
+fn test_nested_loop_with_break_instructions() {
+    let tests = vec![
+        CompilerTestCase {
+            input: r#"
+                loop {
+                    1;
+                    loop {
+                        2;
+                        break;
+                    }
+                    break;
+                }
+                1111;
+            "#,
+            expected_constants: vec![
+                Object::Integer(1),
+                Object::Integer(2),
+                Object::Integer(1111),
+            ],
+            expected_instructions: vec![
+                // 0000 : Loop 1: The constant '1'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0003 : Loop 1: Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0004: Loop 2: The constant '2'
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0007 : Loop 2: Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0008 : Loop 2: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[14], 1),
+                // 0011 : Loop 2: Jump to beginning of (inner) loop 2
+                definitions::make(Opcode::Jump, &[4], 1),
+                // 0014 : Loop 1: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[20], 1),
+                // 0017 : Loop 1: Jump to beginning of (outer) loop 1
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0020 : The constant '1111'
+                definitions::make(Opcode::Constant, &[2], 1),
+                // 0023 : Pop the result of the expression (outside the loop)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                a: loop {
+                    b: loop {
+                        break b;
+                    }
+                    break a;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0001 : Loop b: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[6], 1),
+                // 0003 : Loop b: Jump to beginning of (inner) loop b
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0006 : Loop a: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[12], 1),
+                // 0009 : Loop a: Jump to beginning of (outer) loop a
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0012 : The constant '1111'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0015 : Pop the result of the expression (outside the loop)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                a: loop {
+                    b: loop {
+                        break a;
+                    }
+                    break a;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0001 : Loop b: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[12], 1),
+                // 0003 : Loop b: Jump to beginning of (inner) loop b
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0006 : Loop a: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[12], 1),
+                // 0009 : Loop a: Jump to beginning of (outer) loop a
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0012 : The constant '1111'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0015 : Pop the result of the expression (outside the loop)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_nested_loop_with_continue_instructions() {
+    let tests = vec![
+        CompilerTestCase {
+            input: r#"
+                a: loop {
+                    1;
+                    b: loop {
+                        continue b;
+                    }
+                    continue a;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1), Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0000 : Loop 1: The constant '1'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0003 : Loop 1: Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0004 : Loop b: The Jump instruction for the continue
+                definitions::make(Opcode::Jump, &[4], 1),
+                // 0007 : Loop b: Jump to beginning of (inner) loop b
+                definitions::make(Opcode::Jump, &[4], 1),
+                // 0010 : Loop a: The Jump instruction for the continue
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0013 : Loop a: Jump to beginning of (outer) loop a
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0016 : The constant '1111'
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0019 : Pop the result of the expression (outside the loop)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                a: loop {
+                    b: loop {
+                        continue a;
+                    }
+                    continue a;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0001 : Loop b: The Jump instruction for the continue
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0003 : Loop b: Jump to beginning of (inner) loop b
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0006 : Loop a: The Jump instruction for the continue
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0009 : Loop a: Jump to beginning of (outer) loop a
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0012 : The constant '1111'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0015 : Pop the result of the expression (outside the loop)
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_unknown_loop_label() {
+    let tests = vec![
+        CompilerTestCaseErrors {
+            input: r#"
+                loop {
+                    loop {
+                        continue a;
+                    }
+                    continue a;
+                }
+                1111;
+            "#,
+            error: "[line 4] compile error: unknown loop label 'a'",
+        },
+        CompilerTestCaseErrors {
+            input: r#"
+                a: loop {
+                    b: loop {
+                        continue b;
+                    }
+                    continue b;
+                }
+                1111;
+            "#,
+            error: "[line 6] compile error: unknown loop label 'b'",
+        },
+    ];
     run_compiler_failed_tests(&tests);
 }

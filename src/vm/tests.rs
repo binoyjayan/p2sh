@@ -1967,3 +1967,108 @@ fn test_scoped_local_variables() {
     ];
     run_vm_tests(&tests);
 }
+
+#[test]
+fn test_loop_with_break_and_continue() {
+    let tests = vec![VmTestCase {
+        input: r#"
+            let a = 0;
+            let s = 0;
+            loop {
+                if a % 2 == 0 {
+                    a = a + 1;
+                    continue;
+                }
+                if a > 10 {
+                    puts("break: a = ", a);
+                    break;
+                }
+                a = a + 1;
+                s = s + a;
+            }
+            s;
+            "#,
+        expected: Object::Integer(30),
+    }];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_nested_loop_with_break() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+                let a = 1;
+                let b = 0;
+                let s = 0;
+                a: loop {
+                    if a > 3 {
+                        break;
+                    }
+                    // skip 2
+                    if a == 2 {
+                        a = a + 1;
+                        continue a;
+                    }
+                    b = 1;
+                    b: loop {
+                        if b > 3 {
+                            break;
+                        }
+                        // skip a == b
+                        if a == b {
+                            b = b + 1;
+                            continue b;
+                        }
+                        // count
+                        s = s + 1;
+                        b = b + 1;
+                    }
+                    a = a + 1;
+                }
+                s
+            "#,
+            // Combinations: (1,2), (1,3), (3,1), (3,2) = 4
+            expected: Object::Integer(4),
+        },
+        VmTestCase {
+            input: r#"
+                let total = 0;
+                let i = 1;
+                let j = 0;
+
+                loop {
+                    if i > 3 {
+                        break;
+                    }
+            
+                    if i % 2 == 0 {
+                        i = i + 1;
+                        continue; // Skip even values of i
+                    }
+            
+                    j = 1;
+                    loop {
+                        if j > 3 {
+                            break;
+                        }
+            
+                        if j % 2 == 0 {
+                            j = j + 1;
+                            continue; // Skip even values of j
+                        }
+            
+                        total = total + i * j;
+                        j = j + 1;
+                    }
+            
+                    i = i + 1;
+                }
+                total
+            "#,
+            //  1*1 + 1*3 + 3*1 + 3*3 = 16
+            expected: Object::Integer(16),
+        },
+    ];
+    run_vm_tests(&tests);
+}

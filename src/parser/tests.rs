@@ -1385,3 +1385,66 @@ fn test_loop_with_label_statement() {
         );
     }
 }
+
+#[test]
+fn test_while_with_break_statement() {
+    let input = "while true { break; }";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::While(stmt) = stmt {
+        let len = stmt.body.statements.len();
+        assert_eq!(
+            len, 1,
+            "loop body has wrong number of statements. got={}",
+            len
+        );
+        // assert condition
+        test_boolean_literal(&stmt.condition, true);
+        // The loop does not have a label
+        if let Some(label) = stmt.label.clone() {
+            panic!("unexpected loop label: got={}", label);
+        }
+        if let Statement::Break(stmt) = &stmt.body.statements[0] {
+            assert_eq!(stmt.token.literal, "break");
+        } else {
+            panic!(
+                "loop body statement is not a break statement. got={}",
+                stmt.body.statements[0]
+            );
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not a loop statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_while_with_label_statement() {
+    let input = "empty: while false { }";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::While(stmt) = stmt {
+        let len = stmt.body.statements.len();
+        assert_eq!(
+            len, 0,
+            "loop body has wrong number of statements. got={}",
+            len
+        );
+        // assert condition
+        test_boolean_literal(&stmt.condition, false);
+        if let Some(label) = stmt.label.clone() {
+            assert_eq!(label.literal, "empty", "wrong loop label. got={}", len);
+        } else {
+            panic!("loop statement has no label");
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not a loop statement. got={}",
+            stmt
+        );
+    }
+}

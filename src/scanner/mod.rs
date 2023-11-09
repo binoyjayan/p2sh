@@ -18,6 +18,7 @@ lazy_static! {
         m.insert("return".into(), TokenType::Return);
         m.insert("null".into(), TokenType::Null);
         m.insert("loop".into(), TokenType::Loop);
+        m.insert("while".into(), TokenType::While);
         m.insert("break".into(), TokenType::Break);
         m.insert("continue".into(), TokenType::Continue);
         m

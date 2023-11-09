@@ -1981,7 +1981,7 @@ fn test_logical_or_expressions() {
 }
 
 #[test]
-fn test_loop_instructions() {
+fn test_loop_statements() {
     let tests = vec![
         CompilerTestCase {
             input: r#"
@@ -1998,7 +1998,7 @@ fn test_loop_instructions() {
                 definitions::make(Opcode::Jump, &[0], 1),
                 // 0006 : The constant 1111
                 definitions::make(Opcode::Constant, &[0], 1),
-                // 0009 : Pop the result of the expression (outside the loop)
+                // 0009 : Pop the result of the expression
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -2042,7 +2042,7 @@ fn test_loop_instructions() {
                 definitions::make(Opcode::Jump, &[6], 5),
                 // 0027 : The constant '1111'
                 definitions::make(Opcode::Constant, &[2], 7),
-                // 0030 : Pop the result of the expression (outside the loop)
+                // 0030 : Pop the result of the expression
                 definitions::make(Opcode::Pop, &[], 7),
             ],
         },
@@ -2068,7 +2068,104 @@ fn test_loop_instructions() {
                 definitions::make(Opcode::Jump, &[6], 1),
                 // 0012 : The constant 1111
                 definitions::make(Opcode::Constant, &[0], 1),
-                // 0015 : Pop the result of the expression (outside the loop)
+                // 0015 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_while_statements() {
+    let tests = vec![
+        CompilerTestCase {
+            input: r#"
+                while true {
+                    break;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0000 : The constant 'true'
+                definitions::make(Opcode::True, &[], 1),
+                // 0001 : Jump over the rhs expression if the lhs is false
+                definitions::make(Opcode::JumpIfFalse, &[10], 1),
+                // 0004: Jump for the break
+                definitions::make(Opcode::Jump, &[10], 1),
+                // 0007 : Jump to the beginning of the while loop
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0010 : The constant 1111
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0013 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                let a = 1;
+                while a < 10 {
+                }
+                1111;
+            "#,
+            expected_constants: vec![
+                Object::Integer(1),
+                Object::Integer(10),
+                Object::Integer(1111),
+            ],
+            expected_instructions: vec![
+                // 0000 : The constant '1'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0003 : Define the global variable 'a'
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                // 0006 : Start of while loop; The constant '10'
+                definitions::make(Opcode::Constant, &[1], 3),
+                // 0009 : Get the value of 'a'
+                definitions::make(Opcode::GetGlobal, &[0], 3),
+                // 0012 : Instruction to compare 'a' and 10
+                definitions::make(Opcode::Greater, &[], 3),
+                // 0013 : Jump to end of loop if false
+                definitions::make(Opcode::JumpIfFalse, &[19], 3),
+                // 0016 : Jump to beginning of loop
+                definitions::make(Opcode::Jump, &[6], 3),
+                // 0019 : The constant '1111'
+                definitions::make(Opcode::Constant, &[2], 7),
+                // 0022 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 7),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                while true {
+                    break;
+                }
+                while false {
+                    continue;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0000 : Loop 1: The constant 'true'
+                definitions::make(Opcode::True, &[], 1),
+                // 0001 : Jump to end of loop if false
+                definitions::make(Opcode::JumpIfFalse, &[10], 1),
+                // 0004: Jump for the break
+                definitions::make(Opcode::Jump, &[10], 1),
+                // 0007 : Jump to the beginning of the while loop
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0010 : Loop 2: The constant 'false'
+                definitions::make(Opcode::False, &[], 1),
+                // 0011 : Jump over the rhs expression if the lhs is false
+                definitions::make(Opcode::JumpIfFalse, &[20], 1),
+                // 0014: Jump for the continue
+                definitions::make(Opcode::Jump, &[10], 1),
+                // 0017 : Jump to the beginning of the while loop
+                definitions::make(Opcode::Jump, &[10], 1),
+                // 0020 : The constant 1111
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0023 : Pop the result of the expression
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -2107,7 +2204,7 @@ fn test_continue_outside_loop() {
 }
 
 #[test]
-fn test_nested_loop_with_break_instructions() {
+fn test_nested_loop_with_break_statements() {
     let tests = vec![
         CompilerTestCase {
             input: r#"
@@ -2145,7 +2242,7 @@ fn test_nested_loop_with_break_instructions() {
                 definitions::make(Opcode::Jump, &[0], 1),
                 // 0020 : The constant '1111'
                 definitions::make(Opcode::Constant, &[2], 1),
-                // 0023 : Pop the result of the expression (outside the loop)
+                // 0023 : Pop the result of the expression
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -2171,7 +2268,7 @@ fn test_nested_loop_with_break_instructions() {
                 definitions::make(Opcode::Jump, &[0], 1),
                 // 0012 : The constant '1111'
                 definitions::make(Opcode::Constant, &[0], 1),
-                // 0015 : Pop the result of the expression (outside the loop)
+                // 0015 : Pop the result of the expression
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -2197,7 +2294,7 @@ fn test_nested_loop_with_break_instructions() {
                 definitions::make(Opcode::Jump, &[0], 1),
                 // 0012 : The constant '1111'
                 definitions::make(Opcode::Constant, &[0], 1),
-                // 0015 : Pop the result of the expression (outside the loop)
+                // 0015 : Pop the result of the expression
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -2206,7 +2303,130 @@ fn test_nested_loop_with_break_instructions() {
 }
 
 #[test]
-fn test_nested_loop_with_continue_instructions() {
+fn test_nested_while_with_break_statements() {
+    let tests = vec![
+        CompilerTestCase {
+            input: r#"
+                while true {
+                    1;
+                    while false {
+                        2;
+                        break;
+                    }
+                    break;
+                }
+                1111;
+            "#,
+            expected_constants: vec![
+                Object::Integer(1),
+                Object::Integer(2),
+                Object::Integer(1111),
+            ],
+            expected_instructions: vec![
+                // 0000: Loop 1: condition
+                definitions::make(Opcode::True, &[], 1),
+                // 0001 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[28], 1),
+                // 0004 : The constant '1'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0007 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0008: Loop 2: condition
+                definitions::make(Opcode::False, &[], 1),
+                // 0009 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[22], 1),
+                // 0012 : The constant '2'
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0015 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0016 : Loop 2: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[22], 1),
+                // 0019 : Loop 2: Jump to beginning of (inner) loop
+                definitions::make(Opcode::Jump, &[8], 1),
+                // 0022 : Loop 1: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[28], 1),
+                // 0025 : Loop 1: Jump to beginning of (outer) loop
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0028 : The constant '1111'
+                definitions::make(Opcode::Constant, &[2], 1),
+                // 0031 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                a: while false {
+                    b: while true {
+                        break b;
+                    }
+                    break a;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0000: Loop 1: condition
+                definitions::make(Opcode::False, &[], 1),
+                // 0001 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[20], 1),
+                // 0004: Loop 2: condition
+                definitions::make(Opcode::True, &[], 1),
+                // 0005 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[14], 1),
+                // 0008 : Loop 2: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[14], 1),
+                // 0011 : Loop 2: Jump to beginning of (inner) loop
+                definitions::make(Opcode::Jump, &[4], 1),
+                // 0014 : Loop 1: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[20], 1),
+                // 0017 : Loop 1: Jump to beginning of (outer) loop
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0020 : The constant '1111'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0023 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                a: while false {
+                    b: while false {
+                        break a;
+                    }
+                    break a;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0000: Loop 1: condition
+                definitions::make(Opcode::False, &[], 1),
+                // 0001 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[20], 1),
+                // 0004: Loop 2: condition
+                definitions::make(Opcode::False, &[], 1),
+                // 0005 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[14], 1),
+                // 0008 : Loop 2: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[20], 1),
+                // 0011 : Loop 2: Jump to beginning of (inner) loop
+                definitions::make(Opcode::Jump, &[4], 1),
+                // 0014 : Loop 1: The Jump instruction for the break
+                definitions::make(Opcode::Jump, &[20], 1),
+                // 0017 : Loop 1: Jump to beginning of (outer) loop
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0020 : The constant '1111'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0023 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_nested_loop_with_continue_statements() {
     let tests = vec![
         CompilerTestCase {
             input: r#"
@@ -2235,7 +2455,7 @@ fn test_nested_loop_with_continue_instructions() {
                 definitions::make(Opcode::Jump, &[0], 1),
                 // 0016 : The constant '1111'
                 definitions::make(Opcode::Constant, &[1], 1),
-                // 0019 : Pop the result of the expression (outside the loop)
+                // 0019 : Pop the result of the expression
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -2261,7 +2481,130 @@ fn test_nested_loop_with_continue_instructions() {
                 definitions::make(Opcode::Jump, &[0], 1),
                 // 0012 : The constant '1111'
                 definitions::make(Opcode::Constant, &[0], 1),
-                // 0015 : Pop the result of the expression (outside the loop)
+                // 0015 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_nested_while_with_continue_statements() {
+    let tests = vec![
+        CompilerTestCase {
+            input: r#"
+                while true {
+                    1;
+                    while false {
+                        2;
+                        continue;
+                    }
+                    continue;
+                }
+                1111;
+            "#,
+            expected_constants: vec![
+                Object::Integer(1),
+                Object::Integer(2),
+                Object::Integer(1111),
+            ],
+            expected_instructions: vec![
+                // 0000: Loop 1: condition
+                definitions::make(Opcode::True, &[], 1),
+                // 0001 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[28], 1),
+                // 0004 : The constant '1'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0007 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0008: Loop 2: condition
+                definitions::make(Opcode::False, &[], 1),
+                // 0009 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[22], 1),
+                // 0012 : The constant '2'
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0015 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0016 : Loop 2: The Jump instruction for the continue
+                definitions::make(Opcode::Jump, &[8], 1),
+                // 0019 : Loop 2: Jump to beginning of (inner) loop
+                definitions::make(Opcode::Jump, &[8], 1),
+                // 0022 : Loop 1: The Jump instruction for the continue
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0025 : Loop 1: Jump to beginning of (outer) loop
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0028 : The constant '1111'
+                definitions::make(Opcode::Constant, &[2], 1),
+                // 0031 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                a: while false {
+                    b: while true {
+                        continue b;
+                    }
+                    continue a;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0000: Loop 1: condition
+                definitions::make(Opcode::False, &[], 1),
+                // 0001 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[20], 1),
+                // 0004: Loop 2: condition
+                definitions::make(Opcode::True, &[], 1),
+                // 0005 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[14], 1),
+                // 0008 : Loop 2: The Jump instruction for the continue
+                definitions::make(Opcode::Jump, &[4], 1),
+                // 0011 : Loop 2: Jump to beginning of (inner) loop
+                definitions::make(Opcode::Jump, &[4], 1),
+                // 0014 : Loop 1: The Jump instruction for the continue
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0017 : Loop 1: Jump to beginning of (outer) loop
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0020 : The constant '1111'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0023 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                a: while false {
+                    b: while false {
+                        continue a;
+                    }
+                    continue a;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0000: Loop 1: condition
+                definitions::make(Opcode::False, &[], 1),
+                // 0001 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[20], 1),
+                // 0004: Loop 2: condition
+                definitions::make(Opcode::False, &[], 1),
+                // 0005 : The Jump to end if false
+                definitions::make(Opcode::JumpIfFalse, &[14], 1),
+                // 0008 : Loop 2: The Jump instruction for the continue
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0011 : Loop 2: Jump to beginning of (inner) loop
+                definitions::make(Opcode::Jump, &[4], 1),
+                // 0014 : Loop 1: The Jump instruction for the continue
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0017 : Loop 1: Jump to beginning of (outer) loop
+                definitions::make(Opcode::Jump, &[0], 1),
+                // 0020 : The constant '1111'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0023 : Pop the result of the expression
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },
@@ -2288,6 +2631,37 @@ fn test_unknown_loop_label() {
             input: r#"
                 a: loop {
                     b: loop {
+                        continue b;
+                    }
+                    continue b;
+                }
+                1111;
+            "#,
+            error: "[line 6] compile error: unknown loop label 'b'",
+        },
+    ];
+    run_compiler_failed_tests(&tests);
+}
+
+#[test]
+fn test_unknown_while_loop_label() {
+    let tests = vec![
+        CompilerTestCaseErrors {
+            input: r#"
+                while true {
+                    while false {
+                        continue a;
+                    }
+                    continue a;
+                }
+                1111;
+            "#,
+            error: "[line 4] compile error: unknown loop label 'a'",
+        },
+        CompilerTestCaseErrors {
+            input: r#"
+                a: while false {
+                    b: while true {
                         continue b;
                     }
                     continue b;

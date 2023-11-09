@@ -365,6 +365,38 @@ impl Compiler {
                     }
                 }
             }
+            Statement::While(stmt) => {
+                // Record the position of the beginning of the loop so a 'Jump'
+                let loop_begin = self.get_curr_instructions().len();
+                // Push a new LoopLabel onto the loop stack.
+                let loop_label = if let Some(label) = stmt.label {
+                    LoopContext::new(Some(label.literal), loop_begin)
+                } else {
+                    LoopContext::new(None, loop_begin)
+                };
+                self.scopes[self.scope_index].loop_stack.push(loop_label);
+
+                // Compile the condition expression
+                self.compile_expression(stmt.condition)?;
+                // Jump to end of loop if false
+                let condition_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], stmt.token.line);
+                // Compile the body of the loop
+                self.compile_block_statement(stmt.body)?;
+
+                // Instruction to jump to beginning of the loop
+                self.emit(Opcode::Jump, &[loop_begin], stmt.token.line);
+                // patch the jump to end of the loop
+                self.patch_jump(condition_pos);
+
+                // Pop the current loop label off the loop stack
+                if let Some(loop_curr) = self.scopes[self.scope_index].loop_stack.pop() {
+                    // Patch all the anonymous 'break' instructions
+                    let break_pos = loop_curr.break_positions;
+                    for pos in break_pos.iter() {
+                        self.patch_jump(*pos);
+                    }
+                }
+            }
             Statement::Break(stmt) => {
                 // If loop stack is empty, the control is outside a loop
                 if self.scopes[self.scope_index].loop_stack.is_empty() {

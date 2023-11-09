@@ -36,7 +36,7 @@ fn test_next_token() {
             a == b && c != d || e <= f;
             a & b | c ^ d;
             ~a | b << 1 >> 2;
-            loop { break; continue; }
+            loop { break; while { continue; } }
         "#;
 
     let tests = vec![
@@ -200,13 +200,16 @@ fn test_next_token() {
         ExpectedToken(TokenType::RightShift, ">>"),
         ExpectedToken(TokenType::Integer, "2"),
         ExpectedToken(TokenType::Semicolon, ";"),
-        // loop { break; continue; }
+        // loop { break; while { continue; } }
         ExpectedToken(TokenType::Loop, "loop"),
         ExpectedToken(TokenType::LeftBrace, "{"),
         ExpectedToken(TokenType::Break, "break"),
         ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::While, "while"),
+        ExpectedToken(TokenType::LeftBrace, "{"),
         ExpectedToken(TokenType::Continue, "continue"),
         ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::RightBrace, "}"),
         ExpectedToken(TokenType::RightBrace, "}"),
         // EOF
         ExpectedToken(TokenType::Eof, ""),

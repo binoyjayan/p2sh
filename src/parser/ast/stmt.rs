@@ -9,6 +9,7 @@ pub enum Statement {
     Return(ReturnStmt),
     Expr(ExpressionStmt),
     Loop(LoopStmt),
+    While(WhileStmt),
     Break(BreakStmt),
     Continue(ContinueStmt),
     Invalid,
@@ -54,6 +55,21 @@ impl fmt::Display for LoopStmt {
 }
 
 #[derive(Debug, Clone)]
+pub struct WhileStmt {
+    pub token: Token, // while token
+    pub label: Option<Token>,
+    pub condition: Expression,
+    pub body: BlockStatement,
+}
+
+impl fmt::Display for WhileStmt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "while {{ {} }}", self.body)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct ExpressionStmt {
     pub token: Token,
     pub value: Expression,
@@ -82,6 +98,7 @@ impl Statement {
             Statement::Return(stmt) => stmt.token.literal.clone(),
             Statement::Expr(stmt) => stmt.token.literal.clone(),
             Statement::Loop(stmt) => stmt.token.literal.clone(),
+            Statement::While(stmt) => stmt.token.literal.clone(),
             Statement::Break(brk) => brk.token.literal.clone(),
             Statement::Continue(con) => con.token.literal.clone(),
             Statement::Invalid => "null".to_string(),
@@ -96,6 +113,7 @@ impl fmt::Display for Statement {
             Statement::Return(r) => write!(f, "return {};", r.value),
             Statement::Expr(e) => write!(f, "{}", e.value),
             Statement::Loop(l) => write!(f, "{}", l),
+            Statement::While(w) => write!(f, "{}", w),
             Statement::Break(_) => write!(f, "break"),
             Statement::Continue(_) => write!(f, "continue"),
             Statement::Invalid => write!(f, "invalid"),

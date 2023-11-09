@@ -115,6 +115,7 @@ impl Parser {
             TokenType::Let => self.parse_let_statement(),
             TokenType::Return => self.parse_return_statement(),
             TokenType::Loop => self.parse_loop_statement(None),
+            TokenType::While => self.parse_while_statement(None),
             TokenType::Break => self.parse_break_statement(),
             TokenType::Continue => self.parse_continue_statement(),
             _ => self.parse_expr_statement(),
@@ -187,6 +188,22 @@ impl Parser {
         Ok(Statement::Loop(LoopStmt { token, label, body }))
     }
 
+    fn parse_while_statement(&mut self, label: Option<Token>) -> Result<Statement, ParseError> {
+        let token = self.current.clone();
+        self.next_token();
+        let condition = self.parse_expression(Precedence::Lowest);
+        if !self.expect_peek(&TokenType::LeftBrace) {
+            return Ok(Statement::Invalid);
+        }
+        let body = self.parse_block_statement();
+        Ok(Statement::While(WhileStmt {
+            token,
+            label,
+            condition,
+            body,
+        }))
+    }
+
     fn parse_break_statement(&mut self) -> Result<Statement, ParseError> {
         // The break token
         let token = self.current.clone();
@@ -228,14 +245,26 @@ impl Parser {
     fn parse_expr_statement(&mut self) -> Result<Statement, ParseError> {
         let token_expr = self.current.clone();
         if self.curr_token_is(&TokenType::Identifier) && self.peek_token_is(&TokenType::Colon) {
-            // Advance the token to the colon
+            // Advance the token to the colon (':')
             self.next_token();
-            // only loops support labels for now
-            if !self.expect_peek(&TokenType::Loop) {
-                return Ok(Statement::Invalid);
-            }
-            // pass the label token to the loop statement
-            return self.parse_loop_statement(Some(token_expr));
+            // match peek token to be loop and while
+            return match self.peek_next.ttype {
+                TokenType::Loop => {
+                    // Advance the token to the loop/while keyword
+                    self.next_token();
+                    // pass the label token to the loop statement
+                    return self.parse_loop_statement(Some(token_expr));
+                }
+                TokenType::While => {
+                    self.next_token();
+                    // pass the label token to the while statement
+                    return self.parse_while_statement(Some(token_expr));
+                }
+                _ => {
+                    // only loops support labels for now
+                    Ok(Statement::Invalid)
+                }
+            };
         }
         let expr = self.parse_expression(Precedence::Assignment);
         if self.peek_token_is(&TokenType::Semicolon) {

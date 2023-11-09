@@ -1909,6 +1909,37 @@ fn test_loop_with_break() {
 }
 
 #[test]
+fn test_while_loop() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+            let a = 1;
+            while a < 10 {
+                a = a + 1;
+            }
+            a;
+            "#,
+            expected: Object::Integer(10),
+        },
+        VmTestCase {
+            input: r#"
+            let a = 1;
+            while a < 10 {
+                a = a + 1;
+            }
+
+            while a > 0 {
+                a = a - 1;
+            }
+            a;
+            "#,
+            expected: Object::Integer(0),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
 fn test_scoped_global_variables() {
     let tests: Vec<VmTestCase> = vec![
         VmTestCase {
@@ -1994,7 +2025,28 @@ fn test_loop_with_break_and_continue() {
 }
 
 #[test]
-fn test_nested_loop_with_break() {
+fn test_while_with_continue() {
+    let tests = vec![VmTestCase {
+        input: r#"
+            let a = 0;
+            let s = 0;
+            while a < 10 {
+                if a % 2 == 0 {
+                    a = a + 1;
+                    continue;
+                }
+                a = a + 1;
+                s = s + a;
+            }
+            s;
+            "#,
+        expected: Object::Integer(30),
+    }];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_nested_loop_with_break_and_continue() {
     let tests = vec![
         VmTestCase {
             input: r#"
@@ -2062,6 +2114,72 @@ fn test_nested_loop_with_break() {
                         j = j + 1;
                     }
             
+                    i = i + 1;
+                }
+                total
+            "#,
+            //  1*1 + 1*3 + 3*1 + 3*3 = 16
+            expected: Object::Integer(16),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_nested_while_with_continue() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+                let a = 1;
+                let b = 0;
+                let s = 0;
+                a: while a <= 3 {
+                    // skip 2
+                    if a == 2 {
+                        a = a + 1;
+                        continue a;
+                    }
+                    b = 1;
+                    b: while b <= 3 {
+                        // skip a == b
+                        if a == b {
+                            b = b + 1;
+                            continue b;
+                        }
+                        // count
+                        s = s + 1;
+                        b = b + 1;
+                    }
+                    a = a + 1;
+                }
+                s
+            "#,
+            // Combinations: (1,2), (1,3), (3,1), (3,2) = 4
+            expected: Object::Integer(4),
+        },
+        VmTestCase {
+            input: r#"
+                let total = 0;
+                let i = 1;
+                let j = 0;
+
+                while i <= 3 {
+                    if i % 2 == 0 {
+                        i = i + 1;
+                        continue; // Skip even values of i
+                    }
+
+                    j = 1;
+                    while j <= 3 {
+                        if j % 2 == 0 {
+                            j = j + 1;
+                            continue; // Skip even values of j
+                        }
+
+                        total = total + i * j;
+                        j = j + 1;
+                    }
+
                     i = i + 1;
                 }
                 total

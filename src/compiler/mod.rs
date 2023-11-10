@@ -736,7 +736,7 @@ impl Compiler {
             }
         } else {
             return Err(CompileError::new(
-                &format!("undefined variable {}", expr.token.literal),
+                &format!("undefined indentifier '{}'", expr.token.literal),
                 expr.token.line,
             ));
         }

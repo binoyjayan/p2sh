@@ -1,6 +1,8 @@
 use std::io::{self, Write};
 use std::process;
 use std::rc::Rc;
+use std::thread;
+use std::time;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::print::format_buf;
@@ -29,6 +31,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("eprint", builtin_eprint),
     BuiltinFunction::new("eprintln", builtin_eprintln),
     BuiltinFunction::new("round", builtin_round),
+    BuiltinFunction::new("sleep", builtin_sleep),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -377,5 +380,19 @@ fn builtin_round(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             }
         }
         _ => Err(String::from("first argument should be a float")),
+    }
+}
+
+fn builtin_sleep(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+
+    match args[0].as_ref() {
+        Object::Integer(n) => {
+            thread::sleep(time::Duration::from_secs(*n as u64));
+            Ok(Rc::new(Object::Null))
+        }
+        _ => Err(String::from("argument should be an integer")),
     }
 }

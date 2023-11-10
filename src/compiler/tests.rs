@@ -609,6 +609,21 @@ fn test_global_let_statements() {
 }
 
 #[test]
+fn test_global_get_expressions() {
+    let tests = vec![
+        CompilerTestCaseErrors {
+            input: "undefined_var",
+            error: "[line 1] compile error: undefined indentifier 'undefined_var'",
+        },
+        CompilerTestCaseErrors {
+            input: "undefined_function()",
+            error: "[line 1] compile error: undefined indentifier 'undefined_function'",
+        },
+    ];
+    run_compiler_failed_tests(&tests);
+}
+
+#[test]
 fn test_string_expressions() {
     let tests = vec![
         CompilerTestCase {
@@ -1229,6 +1244,21 @@ fn test_let_statement_scopes() {
         },
     ];
     run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_local_get_expressions() {
+    let tests = vec![
+        CompilerTestCaseErrors {
+            input: "fn() { undefined_var }",
+            error: "[line 1] compile error: undefined indentifier 'undefined_var'",
+        },
+        CompilerTestCaseErrors {
+            input: "fn() { undefined_function() }",
+            error: "[line 1] compile error: undefined indentifier 'undefined_function'",
+        },
+    ];
+    run_compiler_failed_tests(&tests);
 }
 
 #[test]

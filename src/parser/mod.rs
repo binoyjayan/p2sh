@@ -118,6 +118,7 @@ impl Parser {
             TokenType::While => self.parse_while_statement(None),
             TokenType::Break => self.parse_break_statement(),
             TokenType::Continue => self.parse_continue_statement(),
+            TokenType::Function => self.parse_function_statement(),
             _ => self.parse_expr_statement(),
         }
     }
@@ -236,6 +237,34 @@ impl Parser {
         }
         let con_stmt = ContinueStmt { token, label };
         Ok(Statement::Continue(con_stmt))
+    }
+
+    // Function statements are of the form 'fn <name>(<params>) { <body> }'.
+    // They differ from function expressions and are parsed differently.
+    // However, the underlying implementations are the same.
+    fn parse_function_statement(&mut self) -> Result<Statement, ParseError> {
+        let token = self.current.clone(); // fn keyword
+        if !self.peek_token_is(&TokenType::Identifier) {
+            return self.parse_expr_statement();
+        }
+        // Advance to the function name
+        self.next_token();
+        let name = self.current.clone(); // fn name
+        if !self.expect_peek(&TokenType::LeftParen) {
+            return Ok(Statement::Invalid);
+        }
+        let params = self.parse_function_params();
+        if !self.expect_peek(&TokenType::LeftBrace) {
+            return Ok(Statement::Invalid);
+        }
+        let body = self.parse_block_statement();
+        // The name of the string is known here
+        Ok(Statement::Function(FunctionLiteral {
+            name: name.literal,
+            token,
+            params,
+            body,
+        }))
     }
 
     // Parse a statement as expression statement if it is none of the

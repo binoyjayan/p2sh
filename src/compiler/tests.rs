@@ -613,11 +613,11 @@ fn test_global_get_expressions() {
     let tests = vec![
         CompilerTestCaseErrors {
             input: "undefined_var",
-            error: "[line 1] compile error: undefined indentifier 'undefined_var'",
+            error: "[line 1] compile error: undefined identifier 'undefined_var'",
         },
         CompilerTestCaseErrors {
             input: "undefined_function()",
-            error: "[line 1] compile error: undefined indentifier 'undefined_function'",
+            error: "[line 1] compile error: undefined identifier 'undefined_function'",
         },
     ];
     run_compiler_failed_tests(&tests);
@@ -898,7 +898,7 @@ fn test_set_index_expressions() {
 }
 
 #[test]
-fn test_functions() {
+fn test_function_expressions() {
     let tests = vec![
         CompilerTestCase {
             input: "fn() { return 5 + 10 }",
@@ -965,6 +965,83 @@ fn test_functions() {
             expected_instructions: vec![
                 definitions::make(Opcode::Closure, &[2, 0], 1),
                 definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_function_statement() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "fn f1() { return 5 + 10 }",
+            expected_constants: vec![
+                Object::Integer(5),
+                Object::Integer(10),
+                Object::Func(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        definitions::make(Opcode::Constant, &[1], 1),
+                        definitions::make(Opcode::Add, &[], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
+                    ]),
+                    0,
+                    0,
+                ))),
+            ],
+            expected_instructions: vec![
+                // Number of free variables is '0'
+                definitions::make(Opcode::Closure, &[2, 0], 1),
+                // Define the function
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "fn f2() { 5 + 10 }",
+            expected_constants: vec![
+                Object::Integer(5),
+                Object::Integer(10),
+                Object::Func(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        definitions::make(Opcode::Constant, &[1], 1),
+                        definitions::make(Opcode::Add, &[], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
+                    ]),
+                    0,
+                    0,
+                ))),
+            ],
+            expected_instructions: vec![
+                // Number of free variables is '0'
+                definitions::make(Opcode::Closure, &[2, 0], 1),
+                // Define the function
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "fn f3() { 1; 2 }",
+            expected_constants: vec![
+                Object::Integer(1),
+                Object::Integer(2),
+                Object::Func(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
+                        definitions::make(Opcode::Constant, &[0], 1),
+                        // Pop the first value
+                        definitions::make(Opcode::Pop, &[], 1),
+                        definitions::make(Opcode::Constant, &[1], 1),
+                        // The pop is replaced by the implicit return
+                        definitions::make(Opcode::ReturnValue, &[], 1),
+                    ]),
+                    0,
+                    0,
+                ))),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Closure, &[2, 0], 1),
+                // Define the function
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
             ],
         },
     ];
@@ -1251,11 +1328,11 @@ fn test_local_get_expressions() {
     let tests = vec![
         CompilerTestCaseErrors {
             input: "fn() { undefined_var }",
-            error: "[line 1] compile error: undefined indentifier 'undefined_var'",
+            error: "[line 1] compile error: undefined identifier 'undefined_var'",
         },
         CompilerTestCaseErrors {
             input: "fn() { undefined_function() }",
-            error: "[line 1] compile error: undefined indentifier 'undefined_function'",
+            error: "[line 1] compile error: undefined identifier 'undefined_function'",
         },
     ];
     run_compiler_failed_tests(&tests);

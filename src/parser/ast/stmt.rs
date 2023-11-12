@@ -12,6 +12,7 @@ pub enum Statement {
     While(WhileStmt),
     Break(BreakStmt),
     Continue(ContinueStmt),
+    Function(FunctionLiteral),
     Invalid,
 }
 
@@ -101,6 +102,7 @@ impl Statement {
             Statement::While(stmt) => stmt.token.literal.clone(),
             Statement::Break(brk) => brk.token.literal.clone(),
             Statement::Continue(con) => con.token.literal.clone(),
+            Statement::Function(stmt) => stmt.token.literal.clone(),
             Statement::Invalid => "null".to_string(),
         }
     }
@@ -116,6 +118,7 @@ impl fmt::Display for Statement {
             Statement::While(w) => write!(f, "{}", w),
             Statement::Break(_) => write!(f, "break"),
             Statement::Continue(_) => write!(f, "continue"),
+            Statement::Function(fun) => write!(f, "{}", fun),
             Statement::Invalid => write!(f, "invalid"),
         }
     }

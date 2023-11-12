@@ -1223,6 +1223,49 @@ fn test_function_literal_with_name() {
 
     let stmt = &program.statements[0];
     if let Statement::Let(stmt) = stmt {
+        assert_eq!(stmt.name.value, "myfunc", "Wrong function name");
+        assert_eq!(
+            stmt.name.token.literal, "myfunc",
+            "Wrong identifier name in let statement"
+        );
+        if let Expression::Function(expr) = &stmt.value {
+            assert_eq!(expr.token.literal, "fn", "Wrong function keyword");
+            assert_eq!(
+                expr.params.len(),
+                0,
+                "FunctionLiteral params wrong. want 0, got={}",
+                expr.params.len()
+            );
+
+            assert_eq!(
+                expr.body.statements.len(),
+                0,
+                "function.body.statements has non-zero statements. got={}",
+                expr.body.statements.len()
+            );
+            assert_eq!(expr.name, "myfunc", "Wrong function name");
+        } else {
+            panic!(
+                "stmt.expr is not a FunctionLiteral expression. got={}",
+                stmt.value
+            );
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_function_literal_with_no_name() {
+    let input = "fn() { }";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        assert_eq!(stmt.token.literal, "fn", "Wrong function keyword");
         if let Expression::Function(expr) = &stmt.value {
             assert_eq!(
                 expr.params.len(),
@@ -1237,20 +1280,46 @@ fn test_function_literal_with_name() {
                 "function.body.statements has non-zero statements. got={}",
                 expr.body.statements.len()
             );
-            // assert_eq!(expr.name, "myfunc", "Wrong function name");
+            assert_eq!(expr.name, "", "Non empty function name");
         } else {
             panic!(
                 "stmt.expr is not a FunctionLiteral expression. got={}",
                 stmt.value
             );
         }
-        assert_eq!(
-            stmt.name.token.literal, "myfunc",
-            "Wrong identifier name in let statement"
-        );
     } else {
         panic!(
             "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_function_statement() {
+    let input = "fn myfunc() { }";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Function(stmt) = stmt {
+        assert_eq!(stmt.token.literal, "fn", "Wrong function keyword");
+        assert_eq!(stmt.name, "myfunc", "Wrong function name");
+        assert_eq!(
+            stmt.params.len(),
+            0,
+            "FunctionLiteral params wrong. want 0, got={}",
+            stmt.params.len()
+        );
+
+        assert_eq!(
+            stmt.body.statements.len(),
+            0,
+            "function.body.statements has non-zero statements. got={}",
+            stmt.body.statements.len()
+        );
+    } else {
+        panic!(
+            "program.statements[0] is not an function statement. got={}",
             stmt
         );
     }

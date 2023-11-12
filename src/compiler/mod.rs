@@ -468,6 +468,21 @@ impl Compiler {
                     }
                 }
             }
+            Statement::Function(func) => {
+                // Defining the symbol before the value allows compiling
+                // recursive functions that has reference to its own name.
+                let depth = self.scopes[self.scope_index].scope_depth;
+                let symbol = self.symtab.define(&func.name, depth);
+                let line = func.token.line;
+                self.compile_function_literal(func)?;
+
+                // Use a Symbol's scope to emit the right instruction
+                if symbol.scope == SymbolScope::Global {
+                    self.emit(Opcode::DefineGlobal, &[symbol.index], line);
+                } else {
+                    self.emit(Opcode::DefineLocal, &[symbol.index], line);
+                }
+            }
             Statement::Invalid => {
                 panic!("Invalid statement encountered");
             }
@@ -604,57 +619,7 @@ impl Compiler {
                 self.compile_expression(*expr.left)?;
             }
             Expression::Function(func) => {
-                // enter scope of a function
-                self.enter_scope();
-
-                if !func.name.is_empty() {
-                    self.symtab.define_function_name(&func.name);
-                }
-
-                // Tell the compiler to turn the local references to the function
-                // parameters into OpGetLocal instructions that load the arguments
-                // onto the stack. Since these definitions are done in the scope of
-                // the newly compiled function, they become part of the local
-                // variables (num_locals) of the function.
-                let num_params = func.params.len();
-                for p in func.params {
-                    self.symtab.define(&p.value, 0);
-                }
-                self.compile_block_statement(func.body)?;
-                // Leave function scope. If the last expression statement in a
-                // function is not turned into an implicit return value, but
-                // is still followed by an OpPop instruction, the fix the
-                // instruction after compiling the function’s body but before
-                // leaving the scope.
-                if self.is_last_instruction(Opcode::Pop) {
-                    self.replace_last_pop_with_return();
-                }
-                if !self.is_last_instruction(Opcode::ReturnValue) {
-                    self.emit(Opcode::Return, &[0], func.token.line);
-                }
-                // Take the current symbol table's num_definitions, save it to
-                // Object::CompiledFunction. That gives the info on the number
-                // of local bindings a function is going to create and use in the VM
-                // Make sure to also load free variables on to the stack after
-                // compiling the function so they are accessible to 'OpClosure'.
-                let num_locals = self.symtab.get_num_definitions();
-                // It is important to get the free symbols before leaving the scope
-                let free_symbols = self.symtab.free_symbols.clone();
-                let instructions = self.leave_scope();
-
-                // load free symbols on stack
-                for f in &free_symbols {
-                    self.load_symbol(f.clone(), func.token.line);
-                }
-                let compiled_fn = Object::Func(Rc::new(CompiledFunction::new(
-                    instructions,
-                    num_locals,
-                    num_params,
-                )));
-                let idx = self.add_constant(compiled_fn);
-                // emit closure instruction with the index to the compiled fn
-                // and with number of free variables
-                self.emit(Opcode::Closure, &[idx, free_symbols.len()], func.token.line);
+                self.compile_function_literal(func)?;
             }
             Expression::Call(call) => {
                 self.compile_expression(*call.func)?;
@@ -736,7 +701,7 @@ impl Compiler {
             }
         } else {
             return Err(CompileError::new(
-                &format!("undefined indentifier '{}'", expr.token.literal),
+                &format!("undefined identifier '{}'", expr.token.literal),
                 expr.token.line,
             ));
         }
@@ -757,6 +722,61 @@ impl Compiler {
                 self.emit(Opcode::SetIndex, &[], expr.token.line);
             }
         }
+        Ok(())
+    }
+
+    fn compile_function_literal(&mut self, func: FunctionLiteral) -> Result<(), CompileError> {
+        // enter scope of a function
+        self.enter_scope();
+
+        if !func.name.is_empty() {
+            self.symtab.define_function_name(&func.name);
+        }
+
+        // Tell the compiler to turn the local references to the function
+        // parameters into OpGetLocal instructions that load the arguments
+        // onto the stack. Since these definitions are done in the scope of
+        // the newly compiled function, they become part of the local
+        // variables (num_locals) of the function.
+        let num_params = func.params.len();
+        for p in func.params {
+            self.symtab.define(&p.value, 0);
+        }
+        self.compile_block_statement(func.body)?;
+        // Leave function scope. If the last expression statement in a
+        // function is not turned into an implicit return value, but
+        // is still followed by an OpPop instruction, the fix the
+        // instruction after compiling the function’s body but before
+        // leaving the scope.
+        if self.is_last_instruction(Opcode::Pop) {
+            self.replace_last_pop_with_return();
+        }
+        if !self.is_last_instruction(Opcode::ReturnValue) {
+            self.emit(Opcode::Return, &[0], func.token.line);
+        }
+        // Take the current symbol table's num_definitions, save it to
+        // Object::CompiledFunction. That gives the info on the number
+        // of local bindings a function is going to create and use in the VM
+        // Make sure to also load free variables on to the stack after
+        // compiling the function so they are accessible to 'OpClosure'.
+        let num_locals = self.symtab.get_num_definitions();
+        // It is important to get the free symbols before leaving the scope
+        let free_symbols = self.symtab.free_symbols.clone();
+        let instructions = self.leave_scope();
+
+        // load free symbols on stack
+        for f in &free_symbols {
+            self.load_symbol(f.clone(), func.token.line);
+        }
+        let compiled_fn = Object::Func(Rc::new(CompiledFunction::new(
+            instructions,
+            num_locals,
+            num_params,
+        )));
+        let idx = self.add_constant(compiled_fn);
+        // emit closure instruction with the index to the compiled fn
+        // and with number of free variables
+        self.emit(Opcode::Closure, &[idx, free_symbols.len()], func.token.line);
         Ok(())
     }
 

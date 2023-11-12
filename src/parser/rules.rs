@@ -179,7 +179,7 @@ lazy_static! {
             ParseRule::new(Some(Parser::parse_if_expr), None, Precedence::Lowest);
         // Function
         rules[TokenType::Function as usize] =
-            ParseRule::new(Some(Parser::parse_function_literal), None, Precedence::Lowest);
+            ParseRule::new(Some(Parser::parse_function_expression), None, Precedence::Lowest);
         // Array literal (prefix) and index operator (infix) parser
         rules[TokenType::LeftBracket as usize] =
             ParseRule::new(Some(Parser::parse_array_literal), Some(Parser::parse_index_expression), Precedence::Call);
@@ -381,7 +381,13 @@ impl Parser {
         BlockStatement { token, statements }
     }
 
-    fn parse_function_literal(&mut self) -> Expression {
+    // Function expressions are of the form 'fn(<params>) { <body> }' and differ
+    // from function statements. They are anonymous functions that can be assigned
+    // to a variable or passed as an argument to another function. Additionally,
+    // they can be used to define closures, which sets them apart from function
+    // statements. Despite these differences, the underlying implementations are
+    // the same.
+    fn parse_function_expression(&mut self) -> Expression {
         let token = self.current.clone();
         if !self.expect_peek(&TokenType::LeftParen) {
             return Expression::Invalid;
@@ -402,7 +408,7 @@ impl Parser {
         })
     }
 
-    fn parse_function_params(&mut self) -> Vec<Identifier> {
+    pub fn parse_function_params(&mut self) -> Vec<Identifier> {
         let mut identifiers = Vec::new();
         if self.peek_token_is(&TokenType::RightParen) {
             self.next_token();

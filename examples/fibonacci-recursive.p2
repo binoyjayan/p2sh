@@ -1,6 +1,6 @@
 #!/usr/bin/env p2sh
 
-let fibonacci = fn(x) {
+fn fibonacci(x) {
     if x == 0 {
         return 0;
     } else {
@@ -10,7 +10,7 @@ let fibonacci = fn(x) {
             fibonacci(x - 1) + fibonacci(x - 2);
         }
     }
-};
+}
 
 let n = if len(argv) > 1 {
   int(argv[1])

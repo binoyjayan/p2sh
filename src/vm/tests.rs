@@ -579,7 +579,7 @@ fn test_conditionals() {
         },
         // nested conditionals
         VmTestCase {
-            input: "if (if (false) { 10 }) { 10 } else { 20 }",
+            input: "if (if false { 10 }) { 10 } else { 20 }",
             expected: Object::Integer(20),
         },
     ];
@@ -1495,7 +1495,7 @@ fn test_recursive_fibonacci() {
 fn test_iterative_fibonacci_loop() {
     let tests: Vec<VmTestCase> = vec![VmTestCase {
         input: r#"
-            let fibonacci = fn(n) {
+            fn fibonacci(n) {
                 if n == 0 {
                     return 0;
                 } else {
@@ -1521,7 +1521,43 @@ fn test_iterative_fibonacci_loop() {
                 }
 
                 return result;
-            };
+            }
+
+            fibonacci(15);
+        "#,
+        expected: Object::Integer(610),
+    }];
+
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_iterative_fibonacci_while() {
+    let tests: Vec<VmTestCase> = vec![VmTestCase {
+        input: r#"
+            fn fibonacci(n) {
+                if n == 0 {
+                    return 0;
+                } else {
+                    if n == 1 {
+                        return 1;
+                    }
+                }
+
+                let a = 0;
+                let b = 1;
+                let result = 0;
+                let i = 2;
+
+                while i <= n {
+                    result = a + b;
+                    a = b;
+                    b = result;
+                    i = i + 1;
+                }
+
+                return result;
+            }
 
             fibonacci(15);
         "#,

@@ -336,7 +336,15 @@ impl Compiler {
                         stmt.token.line,
                     ));
                 }
-                self.compile_expression(stmt.value)?;
+                match stmt.value {
+                    Some(expr) => {
+                        self.compile_expression(expr)?;
+                    }
+                    None => {
+                        // Empty return statement. Emit a Null
+                        self.emit(Opcode::Null, &[0], stmt.token.line);
+                    }
+                }
                 self.emit(Opcode::ReturnValue, &[0], stmt.token.line);
             }
             Statement::Loop(stmt) => {
@@ -575,11 +583,16 @@ impl Compiler {
                 // The target for this jump is the 'pop' instruction following the 'then' statement
                 let jump_if_false_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], expr.token.line);
                 // JumpIfFalse consumes the result of 'condition'.
+                let is_then_empty = expr.then_stmt.statements.is_empty();
                 self.compile_block_statement(expr.then_stmt)?;
                 // Get rid of the extra Pop that comes with the result of compiling 'then_stmt'
                 // This is so that we don't loose the result of the 'if' expression
                 if self.is_last_instruction(Opcode::Pop) {
                     self.remove_last_pop();
+                }
+                if is_then_empty {
+                    // If 'then' statement is empty, then use a Null
+                    self.emit(Opcode::Null, &[0], expr.token.line);
                 }
 
                 // Emit an 'Jump' with a placeholder. Save it's position so it can be altered later
@@ -596,10 +609,15 @@ impl Compiler {
                         self.emit(Opcode::Null, &[0], expr.token.line);
                     }
                     Some(else_stmt) => {
+                        let is_else_empty = else_stmt.statements.is_empty();
                         // TODO: Find line number of 'else_stmt'
                         self.compile_block_statement(else_stmt)?;
                         if self.is_last_instruction(Opcode::Pop) {
                             self.remove_last_pop();
+                        }
+                        if is_else_empty {
+                            // If 'else' statement is empty, then use a Null
+                            self.emit(Opcode::Null, &[0], expr.token.line);
                         }
                     }
                 }

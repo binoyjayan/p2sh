@@ -168,8 +168,16 @@ impl Parser {
 
     fn parse_return_statement(&mut self) -> Result<Statement, ParseError> {
         let token_ret = self.current.clone();
-        self.next_token();
-        let value = self.parse_expression(Precedence::Lowest);
+        let value = if self.peek_token_is(&TokenType::Semicolon)
+            || self.peek_token_is(&TokenType::RightBrace)
+        {
+            // No return value
+            None
+        } else {
+            self.next_token();
+            Some(self.parse_expression(Precedence::Lowest))
+        };
+
         if self.peek_token_is(&TokenType::Semicolon) {
             self.next_token();
         }

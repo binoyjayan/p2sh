@@ -26,7 +26,16 @@ pub struct LetStmt {
 #[derive(Debug, Clone)]
 pub struct ReturnStmt {
     pub token: Token,
-    pub value: Expression,
+    pub value: Option<Expression>,
+}
+
+impl fmt::Display for ReturnStmt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.value {
+            Some(ref v) => write!(f, "return {};", v),
+            None => write!(f, "return;"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -112,7 +121,7 @@ impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             Statement::Let(l) => write!(f, "let {} = {};", l.name, l.value),
-            Statement::Return(r) => write!(f, "return {};", r.value),
+            Statement::Return(r) => write!(f, "{}", r),
             Statement::Expr(e) => write!(f, "{}", e.value),
             Statement::Loop(l) => write!(f, "{}", l),
             Statement::While(w) => write!(f, "{}", w),

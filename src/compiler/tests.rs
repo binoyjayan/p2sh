@@ -516,6 +516,50 @@ fn test_boolean_expressions() {
 fn test_conditional() {
     let tests = vec![
         CompilerTestCase {
+            input: "if true { }; 3333;",
+            expected_constants: vec![Object::Integer(3333)],
+            expected_instructions: vec![
+                // 0000 : The condition
+                definitions::make(Opcode::True, &[], 1),
+                // 0001 : Jump to the 'Null' instruction following 'then_stmt'
+                definitions::make(Opcode::JumpIfFalse, &[8], 1),
+                // 0004 : The 'then_stmt'
+                definitions::make(Opcode::Null, &[], 1),
+                // 0005 : To Jump over the 'else_stmt' to the end of else statement
+                definitions::make(Opcode::Jump, &[9], 1),
+                // 0008 : The 'else_stmt' (it is a Null)
+                definitions::make(Opcode::Null, &[], 1),
+                // 0009 : [ Not part of the if expr - Pop its result ]
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0010 : The instruction following the if expr
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0013 : Pop Constant '3333'
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "if true { } else { }; 3333;",
+            expected_constants: vec![Object::Integer(3333)],
+            expected_instructions: vec![
+                // 0000 : The condition
+                definitions::make(Opcode::True, &[], 1),
+                // 0001 : Jump to the 'Null' instruction following 'then_stmt'
+                definitions::make(Opcode::JumpIfFalse, &[8], 1),
+                // 0004 : The 'then_stmt'
+                definitions::make(Opcode::Null, &[], 1),
+                // 0005 : To Jump over the 'else_stmt' to the end of else statement
+                definitions::make(Opcode::Jump, &[9], 1),
+                // 0008 : The 'else_stmt' (it is a Null)
+                definitions::make(Opcode::Null, &[], 1),
+                // 0009 : [ Not part of the if expr - Pop its result ]
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0010 : The instruction following the if expr
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0013 : Pop Constant '3333'
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
             input: "if true { 10 }; 3333;",
             expected_constants: vec![Object::Integer(10), Object::Integer(3333)],
             expected_instructions: vec![
@@ -900,6 +944,22 @@ fn test_set_index_expressions() {
 #[test]
 fn test_function_expressions() {
     let tests = vec![
+        CompilerTestCase {
+            input: "fn() { return }",
+            expected_constants: vec![Object::Func(Rc::new(CompiledFunction::new(
+                concat_instructions(&[
+                    definitions::make(Opcode::Null, &[], 1),
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                0,
+                0,
+            )))],
+            expected_instructions: vec![
+                // Number of free variables is '0'
+                definitions::make(Opcode::Closure, &[0, 0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
         CompilerTestCase {
             input: "fn() { return 5 + 10 }",
             expected_constants: vec![

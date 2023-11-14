@@ -233,11 +233,12 @@ fn test_let_statement(stmt: &Statement, expected_id: &str, expected_val: Literal
 #[test]
 fn test_return_statements() {
     let input = "
+        return;
         return 5;
         return 10;
         return 993322;
         ";
-    let program = parse_test_program(input, 3);
+    let program = parse_test_program(input, 4);
 
     let mut count = 0;
     for stmt in program.statements.iter() {

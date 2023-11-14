@@ -566,7 +566,15 @@ fn test_conditionals() {
             expected: Object::Null,
         },
         VmTestCase {
+            input: "if true { }",
+            expected: Object::Null,
+        },
+        VmTestCase {
             input: "if false { 10 }",
+            expected: Object::Null,
+        },
+        VmTestCase {
+            input: "if false { } else { }",
             expected: Object::Null,
         },
         // nested conditionals
@@ -833,6 +841,13 @@ fn test_calling_functions_without_args() {
 #[test]
 fn test_calling_functions_with_return() {
     let tests = vec![
+        VmTestCase {
+            input: r#"
+            let earlyExit = fn() { return; 100; };
+            earlyExit();
+            "#,
+            expected: Object::Null,
+        },
         VmTestCase {
             input: r#"
             let earlyExit = fn() { return 99; 100; };

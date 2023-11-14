@@ -578,52 +578,7 @@ impl Compiler {
                 }
             }
             Expression::If(expr) => {
-                self.compile_expression(*expr.condition)?;
-                // Emit an 'JumpIfFalse' with a placeholder. Save it's position so it can be altered later
-                // The target for this jump is the 'pop' instruction following the 'then' statement
-                let jump_if_false_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], expr.token.line);
-                // JumpIfFalse consumes the result of 'condition'.
-                let is_then_empty = expr.then_stmt.statements.is_empty();
-                self.compile_block_statement(expr.then_stmt)?;
-                // Get rid of the extra Pop that comes with the result of compiling 'then_stmt'
-                // This is so that we don't loose the result of the 'if' expression
-                if self.is_last_instruction(Opcode::Pop) {
-                    self.remove_last_pop();
-                }
-                if is_then_empty {
-                    // If 'then' statement is empty, then use a Null
-                    self.emit(Opcode::Null, &[0], expr.token.line);
-                }
-
-                // Emit an 'Jump' with a placeholder. Save it's position so it can be altered later
-                // The target for this jump is the instruction following the 'else' statement
-                let jump_pos = self.emit(Opcode::Jump, &[0xFFFF], expr.token.line);
-                // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
-                // position of the instruction that comes after the 'then' statement
-                self.patch_jump(jump_if_false_pos);
-
-                // Look for an 'else' branch
-                match expr.else_stmt {
-                    None => {
-                        // Result of if expression when there is no 'else' branch
-                        self.emit(Opcode::Null, &[0], expr.token.line);
-                    }
-                    Some(else_stmt) => {
-                        let is_else_empty = else_stmt.statements.is_empty();
-                        // TODO: Find line number of 'else_stmt'
-                        self.compile_block_statement(else_stmt)?;
-                        if self.is_last_instruction(Opcode::Pop) {
-                            self.remove_last_pop();
-                        }
-                        if is_else_empty {
-                            // If 'else' statement is empty, then use a Null
-                            self.emit(Opcode::Null, &[0], expr.token.line);
-                        }
-                    }
-                }
-                // change the operand of the Jump instruction to jump over the
-                // else branch – it could be Null or a real 'else_stmt'
-                self.patch_jump(jump_pos);
+                self.compile_if_expression(expr)?;
             }
             Expression::Ident(expr) => {
                 self.compile_identifier(expr)?;
@@ -704,6 +659,56 @@ impl Compiler {
     fn compile_let_stmt(&mut self, expr: Expression) -> Result<Object, CompileError> {
         self.compile_expression(expr)?;
         Ok(Object::Null)
+    }
+
+    fn compile_if_expression(&mut self, expr: IfExpr) -> Result<(), CompileError> {
+        self.compile_expression(*expr.condition)?;
+        // Emit an 'JumpIfFalse' with a placeholder. Save it's position so it can be altered later
+        // The target for this jump is the 'pop' instruction following the 'then' statement
+        let jump_if_false_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], expr.token.line);
+        // JumpIfFalse consumes the result of 'condition'.
+        let is_then_empty = expr.then_stmt.statements.is_empty();
+        self.compile_block_statement(expr.then_stmt)?;
+        // Get rid of the extra Pop that comes with the result of compiling 'then_stmt'
+        // This is so that we don't loose the result of the 'if' expression
+        if self.is_last_instruction(Opcode::Pop) {
+            self.remove_last_pop();
+        }
+        if is_then_empty {
+            // If 'then' statement is empty, then use a Null
+            self.emit(Opcode::Null, &[0], expr.token.line);
+        }
+
+        // Emit an 'Jump' with a placeholder. Save it's position so it can be altered later
+        // The target for this jump is the instruction following the 'else' statement
+        let jump_pos = self.emit(Opcode::Jump, &[0xFFFF], expr.token.line);
+        // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
+        // position of the instruction that comes after the 'then' statement
+        self.patch_jump(jump_if_false_pos);
+
+        // Look for an 'else' branch
+        match expr.else_stmt {
+            None => {
+                // Result of if expression when there is no 'else' branch
+                self.emit(Opcode::Null, &[0], expr.token.line);
+            }
+            Some(else_stmt) => {
+                let is_else_empty = else_stmt.statements.is_empty();
+                // TODO: Find line number of 'else_stmt'
+                self.compile_block_statement(else_stmt)?;
+                if self.is_last_instruction(Opcode::Pop) {
+                    self.remove_last_pop();
+                }
+                if is_else_empty {
+                    // If 'else' statement is empty, then use a Null
+                    self.emit(Opcode::Null, &[0], expr.token.line);
+                }
+            }
+        }
+        // change the operand of the Jump instruction to jump over the
+        // else branch – it could be Null or a real 'else_stmt'
+        self.patch_jump(jump_pos);
+        Ok(())
     }
 
     fn compile_identifier(&mut self, expr: Identifier) -> Result<(), CompileError> {

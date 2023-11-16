@@ -513,7 +513,7 @@ fn test_boolean_expressions() {
 }
 
 #[test]
-fn test_conditional() {
+fn test_conditionals_if_else() {
     let tests = vec![
         CompilerTestCase {
             input: "if true { }; 3333;",
@@ -604,6 +604,85 @@ fn test_conditional() {
                 // 0014 : The instruction following the if expr
                 definitions::make(Opcode::Constant, &[2], 1),
                 // 0017 : Pop Constant '3333'
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_conditionals_else_if() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "if 1 { } else if 2 { } else { }; 3333;",
+            expected_constants: vec![
+                Object::Integer(1),
+                Object::Integer(2),
+                Object::Integer(3333),
+            ],
+            expected_instructions: vec![
+                // 0000 : The condition
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0003 : Jump to 'else_stmt' if condition is false
+                definitions::make(Opcode::JumpIfFalse, &[10], 1),
+                // 0006 : The 1st 'then_stmt'
+                definitions::make(Opcode::Null, &[], 1),
+                // 0007 : Jump to the instruction following the 'if' expression
+                definitions::make(Opcode::Jump, &[21], 1),
+                // 0010 : The 'else if' condition
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0013 : Jump to 'else_stmt' if condition is false
+                definitions::make(Opcode::JumpIfFalse, &[20], 1),
+                // 0016 : The 2nd 'then_stmt'
+                definitions::make(Opcode::Null, &[], 1),
+                // 0017 : Jump to the instruction following the 'if' expression
+                definitions::make(Opcode::Jump, &[21], 1),
+                // 0020 : The else stmt
+                definitions::make(Opcode::Null, &[], 1),
+                // 0021 : [ Not part of the if expr - Pop its result ]
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0022 : The 'else_stmt'
+                definitions::make(Opcode::Constant, &[2], 1),
+                // 0025 : Pop Constant '3333'
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "if 1 { 10 } else if 2 { 20 } else { 30 }; 3333;",
+            expected_constants: vec![
+                Object::Integer(1),
+                Object::Integer(10),
+                Object::Integer(2),
+                Object::Integer(20),
+                Object::Integer(30),
+                Object::Integer(3333),
+            ],
+            expected_instructions: vec![
+                // 0000 : The condition
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0003 : Jump to 'else_stmt' if condition is false
+                definitions::make(Opcode::JumpIfFalse, &[12], 1),
+                // 0006 : The 1st 'then_stmt'
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0009 : Jump to the instruction following the 'if' expression
+                definitions::make(Opcode::Jump, &[27], 1),
+                // 0012 : The 'else if' condition
+                definitions::make(Opcode::Constant, &[2], 1),
+                // 0015 : Jump to 'else_stmt' if condition is false
+                definitions::make(Opcode::JumpIfFalse, &[24], 1),
+                // 0018 : The 2nd 'then_stmt'
+                definitions::make(Opcode::Constant, &[3], 1),
+                // 0021 : Jump to the instruction following the 'if' expression
+                definitions::make(Opcode::Jump, &[27], 1),
+                // 0024 : The else stmt
+                definitions::make(Opcode::Constant, &[4], 1),
+                // 0027 : [ Not part of the if expr - Pop its result ]
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0028 : The instruction following the if expr
+                definitions::make(Opcode::Constant, &[5], 1),
+                // 0031 : Pop Constant '3333'
                 definitions::make(Opcode::Pop, &[], 1),
             ],
         },

@@ -687,12 +687,12 @@ impl Compiler {
         self.patch_jump(jump_if_false_pos);
 
         // Look for an 'else' branch
-        match expr.else_stmt {
-            None => {
+        match expr.else_if {
+            ElseIfExpr::Empty => {
                 // Result of if expression when there is no 'else' branch
                 self.emit(Opcode::Null, &[0], expr.token.line);
             }
-            Some(else_stmt) => {
+            ElseIfExpr::Else(else_stmt) => {
                 let is_else_empty = else_stmt.statements.is_empty();
                 // TODO: Find line number of 'else_stmt'
                 self.compile_block_statement(else_stmt)?;
@@ -702,6 +702,17 @@ impl Compiler {
                 if is_else_empty {
                     // If 'else' statement is empty, then use a Null
                     self.emit(Opcode::Null, &[0], expr.token.line);
+                }
+            }
+            ElseIfExpr::ElseIf(else_if) => {
+                // Compile the 'else_if' expression
+                if let Expression::If(else_if) = *else_if {
+                    self.compile_if_expression(else_if)?;
+                } else {
+                    return Err(CompileError::new(
+                        "invalid else if expression",
+                        expr.token.line,
+                    ));
                 }
             }
         }

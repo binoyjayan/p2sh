@@ -128,20 +128,39 @@ impl fmt::Display for BooleanExpr {
     }
 }
 
+// 'ElseIfExpr' expression can be 'Empty' when there is no else component
+// in an if expression. It can be 'Else' when there is an else component
+// in an if expression. It can be 'ElseIf' when there is an 'else if'
+// component in an if expression.
+#[derive(Clone, Debug)]
+pub enum ElseIfExpr {
+    Empty,
+    Else(BlockStatement),
+    ElseIf(Box<Expression>),
+}
+
+impl fmt::Display for ElseIfExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            ElseIfExpr::Empty => write!(f, ""),
+            ElseIfExpr::Else(stmt) => write!(f, " else {{ {} }}", stmt),
+            ElseIfExpr::ElseIf(else_if) => write!(f, " else {}", else_if),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct IfExpr {
     pub token: Token, // if token
     pub condition: Box<Expression>,
     pub then_stmt: BlockStatement,
-    pub else_stmt: Option<BlockStatement>,
+    pub else_if: ElseIfExpr,
 }
 
 impl fmt::Display for IfExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "if ({}) {{ {} }}", self.condition, self.then_stmt)?;
-        if let Some(else_stmt) = &self.else_stmt {
-            write!(f, " else {{ {} }}", else_stmt)?;
-        }
+        write!(f, " else {{ {} }}", self.else_if)?;
         Ok(())
     }
 }

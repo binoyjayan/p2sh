@@ -351,20 +351,43 @@ impl Parser {
         // Check if an else branch exists
         let else_stmt = if self.peek_token_is(&TokenType::Else) {
             self.next_token();
-            if !self.expect_peek(&TokenType::LeftBrace) {
+            if self.peek_token_is(&TokenType::If) {
+                self.next_token();
+                ElseIfExpr::ElseIf(Box::new(self.parse_if_expr()))
+            } else if self.peek_token_is(&TokenType::LeftBrace) {
+                self.next_token();
+                // Some(self.parse_block_statement())
+                ElseIfExpr::Else(self.parse_block_statement())
+            } else {
                 return Expression::Invalid;
             }
-            Some(self.parse_block_statement())
         } else {
-            None
+            ElseIfExpr::Empty
         };
 
-        Expression::If(IfExpr {
-            token,
-            condition: Box::new(condition),
-            then_stmt,
-            else_stmt,
-        })
+        match else_stmt {
+            ElseIfExpr::ElseIf(else_if) => Expression::If(IfExpr {
+                token,
+                condition: Box::new(condition),
+                then_stmt,
+                // else_stmt: None,
+                else_if: ElseIfExpr::ElseIf(Box::new(*else_if)),
+            }),
+            ElseIfExpr::Else(else_stmt) => Expression::If(IfExpr {
+                token,
+                condition: Box::new(condition),
+                then_stmt,
+                // else_stmt: Some(else_stmt.clone()),
+                else_if: ElseIfExpr::Else(else_stmt),
+            }),
+            ElseIfExpr::Empty => Expression::If(IfExpr {
+                token,
+                condition: Box::new(condition),
+                then_stmt,
+                // else_stmt: None,
+                else_if: ElseIfExpr::Empty,
+            }),
+        }
     }
 
     pub fn parse_block_statement(&mut self) -> BlockStatement {

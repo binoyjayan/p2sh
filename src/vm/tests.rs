@@ -582,6 +582,10 @@ fn test_conditionals() {
             input: "if (if false { 10 }) { 10 } else { 20 }",
             expected: Object::Integer(20),
         },
+        VmTestCase {
+            input: "if 1 > 2 { 10 } else if 2 > 3 { 20 } else { 30 }",
+            expected: Object::Integer(30),
+        },
     ];
 
     run_vm_tests(&tests);

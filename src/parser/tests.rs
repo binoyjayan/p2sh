@@ -863,8 +863,12 @@ fn test_if_then_expression() {
                     expr.then_stmt.statements[0]
                 );
             }
-            if expr.else_stmt.is_some() {
-                panic!("expr.else_stmt was not null. got={:?}", expr.else_stmt);
+            match expr.else_if {
+                ElseIfExpr::Empty => {} // Do nothing
+                _ => panic!(
+                    "expr.else_if was not of type ElseIfExpr::Empty. got={:?}",
+                    expr.else_if
+                ),
             }
         } else {
             panic!("stmt.expr is not an If expression. got={}", stmt.value);
@@ -902,7 +906,7 @@ fn test_if_then_else_expression() {
                 );
             }
             // If an else branch exists
-            if let Some(else_stmt) = &expr.else_stmt {
+            if let ElseIfExpr::Else(else_stmt) = &expr.else_if {
                 if let Statement::Expr(expr) = &else_stmt.statements[0] {
                     test_identifier(&expr.value, "y");
                 } else {
@@ -911,6 +915,81 @@ fn test_if_then_else_expression() {
                         else_stmt.statements[0]
                     );
                 }
+            }
+        } else {
+            panic!("stmt.expr is not an If expression. got={}", stmt.value);
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_if_then_else_if_expression() {
+    let input = "if a == 1 { 10 } else if a == 2 { 20 } else { 99 }";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::If(expr) = &stmt.value {
+            test_infix_expression(
+                &expr.condition,
+                Literal::Ident("a"),
+                "==",
+                Literal::Integer(1),
+            );
+            let num_stmts = expr.then_stmt.statements.len();
+            assert_eq!(num_stmts, 1, "then_stmt count not 1. got={}", num_stmts);
+            if let Statement::Expr(expr) = &expr.then_stmt.statements[0] {
+                test_integer_literal(&expr.value, 10);
+            } else {
+                panic!(
+                    "then_stmt.statements[0] is not an expression statement. got={}",
+                    expr.then_stmt.statements[0]
+                );
+            }
+            // else if branch
+            if let ElseIfExpr::ElseIf(else_if) = &expr.else_if {
+                if let Expression::If(expr) = &**else_if {
+                    test_infix_expression(
+                        &expr.condition,
+                        Literal::Ident("a"),
+                        "==",
+                        Literal::Integer(2),
+                    );
+                    let num_stmts = expr.then_stmt.statements.len();
+                    assert_eq!(num_stmts, 1, "then_stmt count not 1. got={}", num_stmts);
+                    if let Statement::Expr(expr) = &expr.then_stmt.statements[0] {
+                        test_integer_literal(&expr.value, 20);
+                    } else {
+                        panic!(
+                            "then_stmt.statements[0] is not an expression statement. got={}",
+                            expr.then_stmt.statements[0]
+                        );
+                    }
+
+                    // else branch
+                    if let ElseIfExpr::Else(else_stmt) = &expr.else_if {
+                        if let Statement::Expr(expr) = &else_stmt.statements[0] {
+                            test_integer_literal(&expr.value, 99);
+                        } else {
+                            panic!(
+                                "else_stmt.statements[0] is not an expression statement. got={}",
+                                else_stmt.statements[0]
+                            );
+                        }
+                    }
+                } else {
+                    panic!("else_if is not an If expression. got={}", else_if);
+                }
+            } else {
+                panic!(
+                    "expr.else_if is not an ElseIfExpr::ElseIf. got={:?}",
+                    expr.else_if
+                );
             }
         } else {
             panic!("stmt.expr is not an If expression. got={}", stmt.value);

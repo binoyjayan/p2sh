@@ -95,7 +95,7 @@ pub struct BlockStatement {
 impl fmt::Display for BlockStatement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for stmt in &self.statements {
-            write!(f, "{}", stmt)?;
+            write!(f, "{}; ", stmt)?;
         }
         Ok(())
     }

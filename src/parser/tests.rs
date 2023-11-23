@@ -10,6 +10,7 @@ enum Literal {
     Float(f64),
     Bool(bool),
     Str(&'static str),
+    Range(i64, i64),
 }
 
 #[cfg(test)]
@@ -130,6 +131,10 @@ fn test_literal(expression: &Expression, value: Literal) {
         }
         Literal::Str(value) => {
             test_string_literal(expression, value);
+        }
+        Literal::Range(begin, end) => {
+            test_integer_literal(expression, begin);
+            test_integer_literal(expression, end);
         }
     }
 }
@@ -1595,5 +1600,179 @@ fn test_while_with_label_statement() {
             "program.statements[0] is not a loop statement. got={}",
             stmt
         );
+    }
+}
+
+#[cfg(test)]
+fn test_match_arm(arm: MatchArm, expected_pattern: Vec<Literal>, expected_body: Literal) {
+    assert_eq!(
+        arm.patterns.len(),
+        expected_pattern.len(),
+        "wrong number of patterns. got={}",
+        arm.patterns.len()
+    );
+    for (i, pattern) in arm.patterns.iter().enumerate() {
+        let exp = expected_pattern[i].clone();
+        match (pattern, exp) {
+            (MatchPatternVariant::Integer(m), Literal::Integer(n)) => {
+                assert_eq!(m.value, n, "[{}] wrong integer literal. got={}", i, m)
+            }
+            (MatchPatternVariant::Str(s1), Literal::Str(s2)) => {
+                assert_eq!(s1.value, s2, "[{}] wrong integer string. got={}", i, s1)
+            }
+            (MatchPatternVariant::Default(d), Literal::Str(s)) => assert_eq!(d.value, s),
+            (MatchPatternVariant::Range(r), Literal::Range(b, e)) => {
+                test_literal(&r.begin, Literal::Integer(b));
+                test_literal(&r.end, Literal::Integer(e));
+            }
+            _ => panic!("[{}] unexpected pattern", i),
+        }
+    }
+    if let Statement::Expr(expr) = &arm.body.statements[0] {
+        test_literal(&expr.value, expected_body);
+    } else {
+        panic!(
+            "match arm body is not an expression statement. got={}",
+            arm.body,
+        );
+    }
+}
+
+// Test match expressions
+#[test]
+fn test_match_expression() {
+    let input = r#"
+        match x {
+            1 => "one"
+            1 | 2 => { "one-or-two" },
+            1..10 | 10..=20 => { "range" },
+            _ => "default"
+        }
+    "#;
+    let expected: Vec<(Vec<Literal>, Literal)> = vec![
+        (vec![Literal::Integer(1)], Literal::Str("one")),
+        (
+            vec![Literal::Integer(1), Literal::Integer(2)],
+            Literal::Str("one-or-two"),
+        ),
+        (
+            vec![Literal::Range(1, 10), Literal::Range(10, 20)],
+            Literal::Str("range"),
+        ),
+        (vec![Literal::Str("_")], Literal::Str("default")),
+    ];
+
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Expr(stmt) = stmt {
+        if let Expression::Match(expr) = &stmt.value {
+            test_identifier(&expr.expr, "x");
+            assert_eq!(
+                expr.arms.len(),
+                4,
+                "match expression has wrong number of arms. got={}",
+                expr.arms.len()
+            );
+
+            // Test match arms
+            for (i, arm) in expr.arms.iter().enumerate() {
+                test_match_arm(arm.clone(), expected[i].0.clone(), expected[i].1.clone());
+            }
+        } else {
+            panic!("stmt.expr is not a Match expression. got={}", stmt.value);
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        )
+    }
+}
+
+#[test]
+fn test_match_expressions_negative() {
+    struct MatchTest {
+        input: &'static str,
+        errors: Vec<&'static str>,
+    }
+    let tests = vec![
+        MatchTest {
+            input: r#"
+                match x {
+                    a => { "id" }
+                }
+            "#,
+            errors: vec!["[line 3] invalid pattern in match arm 'a'"],
+        },
+        MatchTest {
+            input: r#"
+                match x {
+                    1 || 2 => { "logical" }
+                }
+            "#,
+            errors: vec!["[line 3] invalid operation in match pattern '||'"],
+        },
+        MatchTest {
+            input: r#"
+                match x {
+                    "a".."b" => { "string-range" }
+                }
+            "#,
+            errors: vec![
+                "[line 3] invalid use of range operator '..'",
+                "[line 3] invalid pattern in match arm 'INVALID EXPRESSION'",
+            ],
+        },
+        MatchTest {
+            // This error is reported in the compiler
+            input: r#"
+                match x {
+                    _ => { "default1" }
+                    _ => { "default2" }
+                }
+            "#,
+            errors: vec!["[line 4] multiple default arms in match expression"],
+        },
+        MatchTest {
+            // This error is reported in the compiler
+            input: r#"
+                match x {
+                    _ | _ => { "default" }
+                }
+            "#,
+            errors: vec!["[line 3] multiple default patterns in match arm"],
+        },
+        MatchTest {
+            // This error is reported in the compiler
+            input: r#"
+                match x {
+                    1 | _ => { "default" }
+                }
+            "#,
+            errors: vec!["[line 3] default pattern cannot be used with other patterns"],
+        },
+        MatchTest {
+            // This error is reported in the compiler
+            input: r#"
+                match x {
+                    a..b => { "id-range" }
+                }
+            "#,
+            errors: vec![],
+        },
+    ];
+
+    for (i, test) in tests.iter().enumerate() {
+        let errors = parse_test_program_failures(test.input);
+        assert_eq!(
+            errors.len(),
+            test.errors.len(),
+            "[{}] Error count mismatch",
+            i
+        );
+        for (j, error) in errors.iter().enumerate() {
+            assert_eq!(error, test.errors[j], "[{}][{}] Error mismatch", i, j);
+        }
     }
 }

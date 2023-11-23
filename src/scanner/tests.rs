@@ -37,6 +37,8 @@ fn test_next_token() {
             a & b | c ^ d;
             ~a | b << 1 >> 2;
             loop { break; while { continue; } }
+            1..2 == 1 ..= 2;
+            match x { 0 => 1, _ => 0, }
         "#;
 
     let tests = vec![
@@ -210,6 +212,28 @@ fn test_next_token() {
         ExpectedToken(TokenType::Continue, "continue"),
         ExpectedToken(TokenType::Semicolon, ";"),
         ExpectedToken(TokenType::RightBrace, "}"),
+        ExpectedToken(TokenType::RightBrace, "}"),
+        // 1..2 == 1..=2;
+        ExpectedToken(TokenType::Integer, "1"),
+        ExpectedToken(TokenType::RangeEx, ".."),
+        ExpectedToken(TokenType::Integer, "2"),
+        ExpectedToken(TokenType::Equal, "=="),
+        ExpectedToken(TokenType::Integer, "1"),
+        ExpectedToken(TokenType::RangeInc, "..="),
+        ExpectedToken(TokenType::Integer, "2"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        // match x { 0 => 1, _ => 0, }
+        ExpectedToken(TokenType::Match, "match"),
+        ExpectedToken(TokenType::Identifier, "x"),
+        ExpectedToken(TokenType::LeftBrace, "{"),
+        ExpectedToken(TokenType::Integer, "0"),
+        ExpectedToken(TokenType::MatchArm, "=>"),
+        ExpectedToken(TokenType::Integer, "1"),
+        ExpectedToken(TokenType::Comma, ","),
+        ExpectedToken(TokenType::Underscore, "_"),
+        ExpectedToken(TokenType::MatchArm, "=>"),
+        ExpectedToken(TokenType::Integer, "0"),
+        ExpectedToken(TokenType::Comma, ","),
         ExpectedToken(TokenType::RightBrace, "}"),
         // EOF
         ExpectedToken(TokenType::Eof, ""),

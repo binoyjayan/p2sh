@@ -5,6 +5,7 @@ use std::fmt;
 #[derive(Clone, Debug)]
 pub enum Expression {
     Null(NullLiteral),
+    Score(Underscore),
     Ident(Identifier),
     Integer(IntegerLiteral),
     Float(FloatLiteral),
@@ -13,12 +14,14 @@ pub enum Expression {
     Binary(BinaryExpr),
     Bool(BooleanExpr),
     If(IfExpr),
+    Match(MatchExpr),
     Function(FunctionLiteral),
     Call(CallExpr),
     Array(ArrayLiteral),
     Hash(HashLiteral),
     Index(IndexExpr),
     Assign(AssignExpr),
+    Range(RangeExpr),
     Invalid,
 }
 
@@ -27,6 +30,18 @@ pub enum Expression {
 pub enum AccessType {
     Get,
     Set,
+}
+
+#[derive(Clone, Debug)]
+pub struct Underscore {
+    pub token: Token,
+    pub value: String,
+}
+
+impl fmt::Display for Underscore {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.token)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -159,9 +174,72 @@ pub struct IfExpr {
 
 impl fmt::Display for IfExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "if ({}) {{ {} }}", self.condition, self.then_stmt)?;
+        write!(f, "if {} {{ {} }}", self.condition, self.then_stmt)?;
         write!(f, " else {{ {} }}", self.else_if)?;
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum MatchPatternVariant {
+    Integer(IntegerLiteral),
+    Str(StringLiteral),
+    Range(RangeExpr),
+    Default(Underscore),
+}
+
+impl fmt::Display for MatchPatternVariant {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            MatchPatternVariant::Integer(num) => write!(f, "{}", num),
+            MatchPatternVariant::Str(s) => write!(f, "{}", s),
+            MatchPatternVariant::Range(r) => write!(f, "{}", r),
+            MatchPatternVariant::Default(u) => write!(f, "{}", u),
+        }
+    }
+}
+
+impl MatchPatternVariant {
+    pub fn is_default(&self) -> bool {
+        matches!(self, MatchPatternVariant::Default(_))
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MatchArm {
+    pub token: Token, // token '=>'
+    pub patterns: Vec<MatchPatternVariant>,
+    pub body: BlockStatement,
+}
+
+impl fmt::Display for MatchArm {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Display patterns separated by ' | '
+        let pat_str = self
+            .patterns
+            .iter()
+            .map(|p| format!("{} | ", p))
+            .collect::<String>();
+        let pat_str = pat_str.trim_end_matches(|c| c == ' ' || c == ',');
+        write!(f, "{} => {{ {} }}", pat_str, self.body)?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MatchExpr {
+    pub token: Token, // match token
+    pub expr: Box<Expression>,
+    pub arms: Vec<MatchArm>,
+}
+
+impl fmt::Display for MatchExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "match {} {{", self.expr)?;
+        for arm in self.arms.iter() {
+            writeln!(f, "{}", arm)?;
+        }
+        writeln!(f, "}}")
     }
 }
 
@@ -175,6 +253,7 @@ pub struct FunctionLiteral {
 
 impl fmt::Display for FunctionLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Display parameters separated by ', '
         let params_str = self
             .params
             .iter()
@@ -271,10 +350,25 @@ impl fmt::Display for AssignExpr {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct RangeExpr {
+    pub token: Token, //operator token
+    pub operator: String,
+    pub begin: Box<Expression>,
+    pub end: Box<Expression>,
+}
+
+impl fmt::Display for RangeExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}{}", self.begin, self.token, self.end)
+    }
+}
+
 impl Expression {
     #[allow(dead_code)]
     fn token_literal(&self) -> String {
         match &self {
+            Expression::Score(u) => u.token.literal.clone(),
             Expression::Ident(ident) => ident.token.literal.clone(),
             Expression::Integer(num) => num.token.literal.clone(),
             Expression::Float(num) => num.token.literal.clone(),
@@ -283,12 +377,14 @@ impl Expression {
             Expression::Binary(binary) => binary.token.literal.clone(),
             Expression::Bool(b) => b.token.literal.clone(),
             Expression::If(i) => i.token.literal.clone(),
+            Expression::Match(m) => m.token.literal.clone(),
             Expression::Function(f) => f.token.literal.clone(),
             Expression::Call(c) => c.token.literal.clone(),
             Expression::Array(s) => s.token.literal.clone(),
             Expression::Hash(h) => h.token.literal.clone(),
             Expression::Index(idx) => idx.token.literal.clone(),
             Expression::Assign(asn) => asn.token.literal.clone(),
+            Expression::Range(r) => r.token.literal.clone(),
             Expression::Null(null) => null.token.literal.clone(),
             Expression::Invalid => "invalid".to_string(),
         }
@@ -298,6 +394,7 @@ impl Expression {
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
+            Expression::Score(u) => write!(f, "{}", u),
             Expression::Ident(ident) => write!(f, "{}", ident),
             Expression::Integer(num) => write!(f, "{}", num),
             Expression::Float(num) => write!(f, "{}", num),
@@ -306,14 +403,16 @@ impl fmt::Display for Expression {
             Expression::Binary(binary) => write!(f, "{}", binary),
             Expression::Bool(b) => write!(f, "{}", b),
             Expression::If(i) => write!(f, "{}", i),
+            Expression::Match(m) => write!(f, "{}", m),
             Expression::Function(fun) => write!(f, "{}", fun),
             Expression::Call(c) => write!(f, "{}", c),
             Expression::Array(s) => write!(f, "{}", s),
             Expression::Hash(h) => write!(f, "{}", h),
             Expression::Index(idx) => write!(f, "{}", idx),
             Expression::Assign(asn) => write!(f, "{}", asn),
+            Expression::Range(r) => write!(f, "{}", r),
             Expression::Null(null) => write!(f, "{}", null),
-            Expression::Invalid => write!(f, "invalid"),
+            Expression::Invalid => write!(f, "INVALID EXPRESSION"),
         }
     }
 }

@@ -41,6 +41,7 @@ pub enum TokenType {
     Null,
     Eof,
     // Identifiers + literals
+    Underscore,
     Identifier,
     Integer,
     Float,
@@ -61,6 +62,7 @@ pub enum TokenType {
     GreaterEqual,
     Equal,
     BangEqual,
+    MatchArm,
     // Bitwise
     BitwiseAnd,
     BitwiseOr,
@@ -90,6 +92,9 @@ pub enum TokenType {
     While,
     Break,
     Continue,
+    RangeEx,
+    RangeInc,
+    Match,
     NumberOfTokens,
 }
 
@@ -99,6 +104,7 @@ impl From<TokenType> for &'static str {
             TokenType::Illegal => "ILLEGAL",
             TokenType::Null => "NULL",
             TokenType::Eof => "EOF",
+            TokenType::Underscore => "_",
             TokenType::Identifier => "IDENTIFIER",
             TokenType::Integer => "INT",
             TokenType::Float => "FLOAT",
@@ -118,8 +124,9 @@ impl From<TokenType> for &'static str {
             TokenType::GreaterEqual => ">=",
             TokenType::Equal => "==",
             TokenType::BangEqual => "!=",
+            TokenType::MatchArm => "=>",
             TokenType::BitwiseAnd => "&",
-            TokenType::BitwiseOr => "!",
+            TokenType::BitwiseOr => "|",
             TokenType::BitwiseXor => "^",
             TokenType::BitwiseNot => "~",
             TokenType::LeftShift => "<<",
@@ -144,6 +151,9 @@ impl From<TokenType> for &'static str {
             TokenType::While => "WHILE",
             TokenType::Break => "BREAK",
             TokenType::Continue => "CONTINUE",
+            TokenType::RangeEx => "..",
+            TokenType::RangeInc => "..=",
+            TokenType::Match => "MATCH",
             TokenType::NumberOfTokens => "",
         }
     }

@@ -54,6 +54,8 @@ lazy_static! {
         // Terminal expressions
         rules[TokenType::Null as usize] =
             ParseRule::new(Some(Parser::parse_null), None, Precedence::Lowest);
+        rules[TokenType::Underscore as usize] =
+            ParseRule::new(Some(Parser::parse_underscore), None, Precedence::Lowest);
         rules[TokenType::Identifier as usize] =
             ParseRule::new(Some(Parser::parse_identifier), None, Precedence::Lowest);
         rules[TokenType::Integer as usize] =
@@ -177,6 +179,8 @@ lazy_static! {
         // Control flow
         rules[TokenType::If as usize] =
             ParseRule::new(Some(Parser::parse_if_expr), None, Precedence::Lowest);
+        rules[TokenType::Match as usize] =
+            ParseRule::new(Some(Parser::parse_match_expr), None, Precedence::Lowest);
         // Function
         rules[TokenType::Function as usize] =
             ParseRule::new(Some(Parser::parse_function_expression), None, Precedence::Lowest);
@@ -192,13 +196,34 @@ lazy_static! {
             Precedence::Assignment,
             Associativity::Right
         );
+        // Range operators
+        rules[TokenType::RangeEx as usize] = ParseRule::new_with_assoc(
+            None,
+            Some(Parser::parse_range_expression),
+            Precedence::Range,
+            Associativity::Right
+        );
+        rules[TokenType::RangeInc as usize] = ParseRule::new_with_assoc(
+            None,
+            Some(Parser::parse_range_expression),
+            Precedence::Range,
+            Associativity::Right
+        );
         rules
     };
 }
 
 impl Parser {
+    // Return the precedence of the current token. If the current token is a
+    // bitwise OR operator and the parser is currently parsing a match pattern,
+    // return the precedence of the match pattern OR operator. Otherwise, return
+    // the precedence of the current token.
     pub fn curr_precedence(&self) -> Precedence {
-        PARSE_RULES[self.current.ttype as usize].precedence
+        if self.in_match_pattern && self.current.ttype == TokenType::BitwiseOr {
+            Precedence::MatchOr
+        } else {
+            PARSE_RULES[self.current.ttype as usize].precedence
+        }
     }
     pub fn curr_prefix(&self) -> Option<PrefixParserFn> {
         PARSE_RULES[self.current.ttype as usize].prefix
@@ -207,7 +232,11 @@ impl Parser {
         PARSE_RULES[self.peek_next.ttype as usize].infix
     }
     pub fn peek_precedence(&self) -> Precedence {
-        PARSE_RULES[self.peek_next.ttype as usize].precedence
+        if self.in_match_pattern && self.peek_next.ttype == TokenType::BitwiseOr {
+            Precedence::MatchOr
+        } else {
+            PARSE_RULES[self.peek_next.ttype as usize].precedence
+        }
     }
     pub fn peek_associativity(&self) -> Associativity {
         PARSE_RULES[self.peek_next.ttype as usize].associativity
@@ -232,6 +261,13 @@ impl Parser {
     fn parse_null(&mut self) -> Expression {
         Expression::Null(NullLiteral {
             token: self.current.clone(),
+        })
+    }
+
+    fn parse_underscore(&mut self) -> Expression {
+        Expression::Score(Underscore {
+            token: self.current.clone(),
+            value: self.current.literal.clone(),
         })
     }
 
@@ -388,6 +424,154 @@ impl Parser {
                 else_if: ElseIfExpr::Empty,
             }),
         }
+    }
+
+    fn parse_match_expr(&mut self) -> Expression {
+        // The match token
+        let token = self.current.clone();
+        // advance to the condition expression
+        self.next_token();
+        let condition = self.parse_expression(Precedence::Assignment);
+        if !self.expect_peek(&TokenType::LeftBrace) {
+            return Expression::Invalid;
+        }
+        let mut arms = Vec::new();
+        let mut def_arm = false;
+        while !self.peek_token_is(&TokenType::RightBrace) && !self.peek_token_is(&TokenType::Eof) {
+            self.next_token();
+
+            // Save the line number of the match arm in case there are errors
+            // on the pattern itself and parser would synchronize out of the
+            // match expression.
+            let line = self.scanner.get_line();
+            match self.parse_match_pattern() {
+                Ok(patterns) => {
+                    if patterns.len() == 1 && patterns[0].is_default() {
+                        if def_arm {
+                            self.push_error_at("multiple default arms in match expression", line);
+                            return Expression::Invalid;
+                        }
+                        def_arm = true;
+                    }
+                    if !self.expect_peek(&TokenType::MatchArm) {
+                        return Expression::Invalid;
+                    }
+                    let arm_token = self.current.clone();
+                    // body of the match arm can be either a block statement or an expression
+                    // advance to the '{' token or to the expression
+                    self.next_token();
+                    let body = if self.curr_token_is(&TokenType::LeftBrace) {
+                        self.parse_block_statement()
+                    } else {
+                        let token = self.current.clone();
+                        let expr = self.parse_expression(Precedence::Assignment);
+                        // Create a block statement from expression statement
+                        // Make a dummy token for the block statement
+                        BlockStatement {
+                            token: Token::new(TokenType::LeftBrace, "{", line),
+                            statements: vec![Statement::Expr(ExpressionStmt {
+                                token,
+                                value: expr,
+                                is_assign: false,
+                            })],
+                        }
+                    };
+
+                    // If there is a comma (,) consume it and continue to the next arm
+                    if self.peek_token_is(&TokenType::Comma) {
+                        self.next_token();
+                    }
+
+                    let arm = MatchArm {
+                        token: arm_token,
+                        patterns,
+                        body,
+                    };
+                    arms.push(arm);
+                }
+                Err(msg) => {
+                    self.push_error_at(&msg, line);
+                    return Expression::Invalid;
+                }
+            }
+        }
+        if !self.expect_peek(&TokenType::RightBrace) {
+            return Expression::Invalid;
+        }
+        let match_expr = MatchExpr {
+            token,
+            expr: Box::new(condition),
+            arms,
+        };
+        println!("{}", match_expr);
+        Expression::Match(match_expr)
+    }
+
+    // Parse match patterns that includes strings, integers and ranges
+    // separated by the '|' operator. It is different from the bitwise OR
+    // operator. The patterns are parsed as a vector of MatchPatternVariant's.
+    // The operands of bitwise expressions, are parsed recursively and are
+    // converted to vector of MatchPatternVariant's. Also set the flag
+    // 'in_match_pattern' to true to indicate that the parser is currently
+    // parsing a match pattern. This helps use different precedence for
+    // involving bitwise OR and match pattern OR tokens.
+    fn parse_match_pattern(&mut self) -> Result<Vec<MatchPatternVariant>, String> {
+        self.in_match_pattern = true;
+        let pattern = self.parse_expression(Precedence::Assignment);
+        self.in_match_pattern = false;
+        let patterns = Self::convert_to_pattern_list(pattern);
+
+        if let Ok(ref patterns) = patterns {
+            // Find duplicate default (_) patterns
+            let default_count = patterns
+                .iter()
+                .filter(|&pattern| pattern.is_default())
+                .count();
+
+            if default_count > 1 {
+                return Err("multiple default patterns in match arm".to_string());
+            } else if patterns.len() > 1 && default_count == 1 {
+                return Err("default pattern cannot be used with other patterns".to_string());
+            }
+        }
+        patterns
+    }
+
+    // Convert the expression to a vector of MatchPatternVariant's by recursively
+    // parsing the bitwise OR expressions. These operands are are converted to
+    // MatchPatternVariant's and pushed to the vector. The vector is returned.
+    fn convert_to_pattern_list(expr: Expression) -> Result<Vec<MatchPatternVariant>, String> {
+        let mut patterns = Vec::new();
+        let pattern_exp = match expr {
+            Expression::Score(expr) => MatchPatternVariant::Default(expr),
+            Expression::Integer(expr) => MatchPatternVariant::Integer(expr),
+            Expression::Str(expr) => MatchPatternVariant::Str(expr),
+            Expression::Range(expr) => MatchPatternVariant::Range(expr),
+            Expression::Binary(expr) => {
+                // convert the bitwise or expression to patterns recursively
+                match expr.operator.as_ref() {
+                    // bitwise OR operator
+                    "|" => {
+                        let mut left_patterns = Self::convert_to_pattern_list(*expr.left)?;
+                        patterns.append(&mut left_patterns);
+                        let mut right_patterns = Self::convert_to_pattern_list(*expr.right)?;
+                        patterns.append(&mut right_patterns);
+                    }
+                    _ => {
+                        return Err(format!(
+                            "invalid operation in match pattern '{}'",
+                            expr.operator
+                        ));
+                    }
+                }
+                return Ok(patterns);
+            }
+            _ => {
+                return Err(format!("invalid pattern in match arm '{}'", expr));
+            }
+        };
+        patterns.push(pattern_exp);
+        Ok(patterns)
     }
 
     pub fn parse_block_statement(&mut self) -> BlockStatement {
@@ -581,6 +765,46 @@ impl Parser {
             right: Box::new(right),
         })
     }
+
+    fn parse_range_expression(&mut self, left: Expression) -> Expression {
+        match self.parse_ranges(left) {
+            Ok(expr) => Expression::Range(expr),
+            Err(msg) => {
+                self.push_error(&msg);
+                Expression::Invalid
+            }
+        }
+    }
+
+    fn parse_ranges(&mut self, left: Expression) -> Result<RangeExpr, String> {
+        let operator = self.current.literal.clone();
+        let token = self.current.clone();
+        // precedence of the operator
+        let precedence = self.curr_precedence();
+
+        // advance to the next token
+        self.next_token();
+
+        let right = self.parse_expression(precedence);
+        // Check if both left and right operands are integers or identifiers
+        let is_valid_range = matches!(
+            (&left, &right),
+            (&Expression::Integer(_), &Expression::Integer(_))
+                | (&Expression::Ident(_), &Expression::Ident(_))
+        );
+
+        if is_valid_range {
+            Ok(RangeExpr {
+                token,
+                operator,
+                begin: Box::new(left),
+                end: Box::new(right),
+            })
+        } else {
+            Err(format!("invalid use of range operator '{}'", operator))
+        }
+    }
+
     fn peek_access_type(&self) -> AccessType {
         if self.peek_token_is(&TokenType::Assign) {
             AccessType::Set

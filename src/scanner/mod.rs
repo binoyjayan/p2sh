@@ -9,6 +9,7 @@ use crate::scanner::token::*;
 lazy_static! {
     static ref KEYWORDS: HashMap<String, TokenType> = {
         let mut m = HashMap::new();
+        m.insert("_".into(), TokenType::Underscore);
         m.insert("let".into(), TokenType::Let);
         m.insert("fn".into(), TokenType::Function);
         m.insert("true".into(), TokenType::True);
@@ -21,6 +22,7 @@ lazy_static! {
         m.insert("while".into(), TokenType::While);
         m.insert("break".into(), TokenType::Break);
         m.insert("continue".into(), TokenType::Continue);
+        m.insert("match".into(), TokenType::Match);
         m
     };
 }
@@ -95,10 +97,13 @@ impl Scanner {
             '%' => self.make_token_ch(TokenType::Modulo),
             '^' => self.make_token_ch(TokenType::BitwiseXor),
             '~' => self.make_token_ch(TokenType::BitwiseNot),
-            '=' => self.make_token_twin(TokenType::Assign, &[('=', TokenType::Equal)]),
             '!' => self.make_token_twin(TokenType::Bang, &[('=', TokenType::BangEqual)]),
             '&' => self.make_token_twin(TokenType::BitwiseAnd, &[('&', TokenType::LogicalAnd)]),
             '|' => self.make_token_twin(TokenType::BitwiseOr, &[('|', TokenType::LogicalOr)]),
+            '=' => self.make_token_twin(
+                TokenType::Assign,
+                &[('=', TokenType::Equal), ('>', TokenType::MatchArm)],
+            ),
             '<' => self.make_token_twin(
                 TokenType::Less,
                 &[('=', TokenType::LessEqual), ('<', TokenType::LeftShift)],
@@ -111,6 +116,8 @@ impl Scanner {
             _ => {
                 if Self::is_identifier_first(self.ch) {
                     return self.read_identifier();
+                } else if self.ch == '.' && self.peek_char() == '.' {
+                    return self.read_dot();
                 } else if self.ch == '.' || self.ch.is_ascii_digit() {
                     return self.read_number();
                 }
@@ -166,8 +173,8 @@ impl Scanner {
             self.read_char();
         }
 
-        // Check for a decimal point without any digits
-        if self.ch == '.' {
+        // Check for a decimal point but not a range operator (..)
+        if self.ch == '.' && self.peek_char() != '.' {
             is_float = true;
             self.read_char(); // Consume the '.'
             while self.ch.is_ascii_digit() {
@@ -217,10 +224,25 @@ impl Scanner {
         self.make_token(TokenType::Str, &the_str)
     }
 
+    // If current character is a dot, read next to see if it is
+    // a exclusive (..) or an inclusive (..=) range operator
+    fn read_dot(&mut self) -> Token {
+        self.read_char();
+        self.read_char();
+        if self.ch == '=' {
+            self.read_char();
+            self.make_token(TokenType::RangeInc, "..=")
+        } else {
+            self.make_token(TokenType::RangeEx, "..")
+        }
+    }
+
+    // Identifiers can start with a letter or underscore
     fn is_identifier_first(ch: char) -> bool {
         ch.is_alphabetic() || ch == '_'
     }
 
+    // Identifiers can contain letters, numbers or underscores
     fn is_identifier_remaining(ch: char) -> bool {
         ch.is_alphanumeric() || ch == '_'
     }

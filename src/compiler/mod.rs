@@ -501,6 +501,12 @@ impl Compiler {
     fn compile_expression(&mut self, expr: Expression) -> Result<(), CompileError> {
         match expr {
             Expression::Invalid => {}
+            Expression::Score(expr) => {
+                return Err(CompileError::new(
+                    "underscore is not supported here",
+                    expr.token.line,
+                ));
+            }
             Expression::Null(null) => {
                 self.emit(Opcode::Null, &[0], null.token.line);
             }
@@ -580,6 +586,9 @@ impl Compiler {
             Expression::If(expr) => {
                 self.compile_if_expression(expr)?;
             }
+            Expression::Match(expr) => {
+                self.compile_match_expression(expr)?;
+            }
             Expression::Ident(expr) => {
                 self.compile_identifier(expr)?;
             }
@@ -590,6 +599,13 @@ impl Compiler {
                 // compile the expression on the right side of the assignment
                 self.compile_expression(*expr.right)?;
                 self.compile_expression(*expr.left)?;
+            }
+            Expression::Range(expr) => {
+                // Range expressions not to be used here
+                return Err(CompileError::new(
+                    "range expression are not supported here",
+                    expr.token.line,
+                ));
             }
             Expression::Function(func) => {
                 self.compile_function_literal(func)?;
@@ -719,6 +735,12 @@ impl Compiler {
         // change the operand of the Jump instruction to jump over the
         // else branch – it could be Null or a real 'else_stmt'
         self.patch_jump(jump_pos);
+        Ok(())
+    }
+
+    fn compile_match_expression(&mut self, expr: MatchExpr) -> Result<(), CompileError> {
+        // Compile the expression to match against
+        self.compile_expression(*expr.expr)?;
         Ok(())
     }
 

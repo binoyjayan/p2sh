@@ -21,6 +21,7 @@ pub struct Parser {
     current: Token,
     peek_next: Token,
     errors: ParseErrors,
+    in_match_pattern: bool,
 }
 
 impl Parser {
@@ -62,10 +63,17 @@ impl Parser {
         }
     }
 
-    pub fn push_error(&mut self, err: &str) {
-        self.errors
-            .push(format!("[line {}] {}", self.scanner.get_line(), err));
+    // Report error at a specified line. This is used for reporting errors
+    // in expressions that had an error in a prior sub expression which
+    // causes the parser to synchronize and skip tokens until the next
+    // statement. This helps report error at a line prior to synchronization.
+    pub fn push_error_at(&mut self, err: &str, line: usize) {
+        self.errors.push(format!("[line {}] {}", line, err));
         self.synchronize();
+    }
+
+    pub fn push_error(&mut self, err: &str) {
+        self.push_error_at(err, self.scanner.get_line())
     }
 
     pub fn parse_errors(&self) -> &Vec<String> {
@@ -88,7 +96,15 @@ impl Parser {
             }
             if matches!(
                 self.peek_next.ttype,
-                TokenType::Function | TokenType::Let | TokenType::If | TokenType::Return
+                TokenType::Function
+                    | TokenType::Let
+                    | TokenType::If
+                    | TokenType::Return
+                    | TokenType::Loop
+                    | TokenType::While
+                    | TokenType::Break
+                    | TokenType::Continue
+                    | TokenType::Match
             ) {
                 return;
             }

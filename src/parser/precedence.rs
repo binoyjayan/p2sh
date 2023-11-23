@@ -7,6 +7,8 @@ pub enum Precedence {
     #[default]
     Lowest = 0,
     Assignment, // =
+    MatchOr,    // | (in match pattern)
+    Range,      // .. ..=
     LogicalOr,  // ||
     LogicalAnd, // &&
     Relational, // == != < > <= >=
@@ -43,18 +45,20 @@ impl From<usize> for Precedence {
         match v {
             0 => Precedence::Lowest,
             1 => Precedence::Assignment,
-            2 => Precedence::LogicalOr,
-            3 => Precedence::LogicalAnd,
-            4 => Precedence::Relational,
-            5 => Precedence::BitwiseOr,
-            6 => Precedence::BitwiseXor,
-            7 => Precedence::BitwiseAnd,
-            8 => Precedence::Shift,
-            9 => Precedence::Term,
-            10 => Precedence::Factor,
-            11 => Precedence::Unary,
-            12 => Precedence::Call,
-            13 => Precedence::Primary,
+            2 => Precedence::MatchOr,
+            3 => Precedence::Range,
+            4 => Precedence::LogicalOr,
+            5 => Precedence::LogicalAnd,
+            6 => Precedence::Relational,
+            7 => Precedence::BitwiseOr,
+            8 => Precedence::BitwiseXor,
+            9 => Precedence::BitwiseAnd,
+            10 => Precedence::Shift,
+            11 => Precedence::Term,
+            12 => Precedence::Factor,
+            13 => Precedence::Unary,
+            14 => Precedence::Call,
+            15 => Precedence::Primary,
             _ => panic!("Cannot convert {} into Precedence", v),
         }
     }

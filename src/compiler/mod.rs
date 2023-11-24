@@ -685,7 +685,7 @@ impl Compiler {
         // JumpIfFalse consumes the result of 'condition'.
         let is_then_empty = expr.then_stmt.statements.is_empty();
         self.compile_block_statement(expr.then_stmt)?;
-        // Get rid of the extra Pop that comes with the result of compiling 'then_stmt'
+        // Get rid of the extra Pop that is emitted as a result of compiling 'then_stmt'.
         // This is so that we don't loose the result of the 'if' expression
         if self.is_last_instruction(Opcode::Pop) {
             self.remove_last_pop();
@@ -738,9 +738,91 @@ impl Compiler {
         Ok(())
     }
 
-    fn compile_match_expression(&mut self, expr: MatchExpr) -> Result<(), CompileError> {
-        // Compile the expression to match against
-        self.compile_expression(*expr.expr)?;
+    fn compile_match_expression(&mut self, match_expr: MatchExpr) -> Result<(), CompileError> {
+        // Jump vector to jump to the end of the match expression
+        // for all patterns in all of the match arms
+        let mut jump_end_v = Vec::new();
+        // Compile the scrutinee expression. The result of this expression is
+        // duplicated on the stack for each pattern variant in each arm of the
+        // match expression. This is so that the result of the condition is
+        // available for comparison until a match is found. It is popped just
+        // before executing the block statement corresponding to the arm.
+        self.compile_expression(*match_expr.expr)?;
+
+        // MatchIfFalse consumes the result of 'condition'.
+        // Compile each arm of the match expression
+        for (idx, arm) in match_expr.arms.iter().enumerate() {
+            // Jump vector to jump to the match arm body if there is a match
+            // There is a jump instruction for every match arm variant.
+            let mut jump_body_v = Vec::new();
+            // Compile the patterns for this arm
+            for pattern_variant in &arm.patterns {
+                match pattern_variant {
+                    MatchPatternVariant::Integer(num) => {
+                        // Duplicate the scrutinee expression on the stack
+                        self.emit(Opcode::Dup, &[0], arm.token.line);
+
+                        // Push the integer pattern variant onto the stack
+                        let idx = self.add_constant(Object::Integer(num.value));
+                        self.emit(Opcode::Constant, &[idx], num.token.line);
+
+                        // Compare with OpNotEqual (inverse of OpEqual)
+                        self.emit(Opcode::NotEqual, &[0], num.token.line);
+
+                        // If the result of OpNotEqual is false, i.e. If Equal,
+                        // then jump to the block statement. Otherwise,
+                        // continue to the next pattern variant
+                        let jump_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], num.token.line);
+                        jump_body_v.push(jump_pos);
+                    }
+                    MatchPatternVariant::Default(u) => {
+                        // The condition is always true; jump to the block statement
+                        let jump_pos = self.emit(Opcode::Jump, &[0xFFFF], u.token.line);
+                        jump_body_v.push(jump_pos);
+                    }
+                    _ => {
+                        // Handle other pattern variants
+                    }
+                }
+            }
+
+            // If none of the pattern variants match, then jump to the next arm
+            // or to the end of the match expression if this is the last arm
+            let jump_over_body = self.emit(Opcode::Jump, &[0xFFFF], arm.token.line);
+
+            // Update the jump instructions to jump to the block statement
+            for jump_pos in jump_body_v {
+                self.patch_jump(jump_pos);
+            }
+
+            // Pop the original scrutinee expression when there is a match
+            self.emit(Opcode::Pop, &[0], arm.token.line);
+            // Compile the block statement for this match arm
+            self.compile_block_statement(arm.body.clone())?;
+            // Get rid of the extra Pop that is emitted as a result of
+            // compiling 'arm.body'. This is so that we don't loose the result
+            // of the 'match' expression
+            if self.is_last_instruction(Opcode::Pop) {
+                self.remove_last_pop();
+            }
+
+            // Jump to the end of the match expression after executing the block
+            // statement for this arm. If this arm is the last one, the
+            // instruction pointer is already at the end of the match expression.
+            // Therefore, a jump is not required.
+            if idx < match_expr.arms.len() - 1 {
+                let jump_pos = self.emit(Opcode::Jump, &[0xFFFF], match_expr.token.line);
+                jump_end_v.push(jump_pos);
+            }
+
+            // Patch the jump instruction to jump over the block statement
+            self.patch_jump(jump_over_body);
+        }
+        // Update the jump instructions to jump to the end of the match expression
+        for jump_pos in jump_end_v {
+            self.patch_jump(jump_pos);
+        }
+
         Ok(())
     }
 

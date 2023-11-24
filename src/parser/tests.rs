@@ -1725,7 +1725,6 @@ fn test_match_expressions_negative() {
             ],
         },
         MatchTest {
-            // This error is reported in the compiler
             input: r#"
                 match x {
                     _ => { "default1" }
@@ -1735,7 +1734,6 @@ fn test_match_expressions_negative() {
             errors: vec!["[line 4] multiple default arms in match expression"],
         },
         MatchTest {
-            // This error is reported in the compiler
             input: r#"
                 match x {
                     _ | _ => { "default" }
@@ -1744,13 +1742,21 @@ fn test_match_expressions_negative() {
             errors: vec!["[line 3] multiple default patterns in match arm"],
         },
         MatchTest {
-            // This error is reported in the compiler
             input: r#"
                 match x {
                     1 | _ => { "default" }
                 }
             "#,
             errors: vec!["[line 3] default pattern cannot be used with other patterns"],
+        },
+        MatchTest {
+            input: r#"
+                match x {
+                    _ => { "default" }
+                    1 => { "one" }
+                }
+            "#,
+            errors: vec!["[line 4] unreachable pattern"],
         },
         MatchTest {
             // This error is reported in the compiler

@@ -68,6 +68,7 @@ lazy_static! {
         map.insert(Opcode::Xor, Definition::new("OpXor", &[]));
         map.insert(Opcode::ShiftLeft, Definition::new("OpShiftLeft", &[]));
         map.insert(Opcode::ShiftRight, Definition::new("OpShiftRight", &[]));
+        map.insert(Opcode::Dup, Definition::new("OpDup", &[]));
         map
     };
 }

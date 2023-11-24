@@ -499,6 +499,36 @@ impl Parser {
         if !self.expect_peek(&TokenType::RightBrace) {
             return Expression::Invalid;
         }
+
+        if def_arm {
+            // If there is a default (_) pattern, it must be the last arm
+            if !arms[arms.len() - 1].is_default() {
+                self.push_error_at("unreachable pattern", arms[arms.len() - 1].token.line);
+                return Expression::Invalid;
+            }
+        } else {
+            // If there is no default (_) pattern, add one at the end. The body
+            // of the default (_) pattern is a null expression statement.
+            let default_arm = MatchArm {
+                token: Token::new(TokenType::Underscore, "_", token.line),
+                patterns: vec![MatchPatternVariant::Default(Underscore {
+                    token: Token::new(TokenType::Underscore, "_", token.line),
+                    value: "_".to_string(),
+                })],
+                body: BlockStatement {
+                    token: Token::new(TokenType::LeftBrace, "{", token.line),
+                    statements: [Statement::Expr(ExpressionStmt {
+                        token: Token::new(TokenType::Null, "null", token.line),
+                        value: Expression::Null(NullLiteral {
+                            token: Token::new(TokenType::Null, "null", token.line),
+                        }),
+                        is_assign: false,
+                    })]
+                    .to_vec(),
+                },
+            };
+            arms.push(default_arm);
+        }
         let match_expr = MatchExpr {
             token,
             expr: Box::new(condition),

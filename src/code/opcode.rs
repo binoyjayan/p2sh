@@ -45,6 +45,7 @@ pub enum Opcode {
     Xor,
     ShiftLeft,
     ShiftRight,
+    Dup,
     #[default]
     Invalid,
 }
@@ -96,6 +97,7 @@ impl From<u8> for Opcode {
             41 => Opcode::Xor,
             42 => Opcode::ShiftLeft,
             43 => Opcode::ShiftRight,
+            44 => Opcode::Dup,
             _ => Opcode::Invalid,
         }
     }

@@ -463,6 +463,11 @@ impl VM {
                 Opcode::ShiftRight => {
                     self.bitwise_op(|a, b| a >> b, line)?;
                 }
+                Opcode::Dup => {
+                    // Duplicate the top most element on the stack
+                    let obj = self.peek(0);
+                    self.push(obj, line)?;
+                }
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),

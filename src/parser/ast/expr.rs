@@ -226,6 +226,12 @@ impl fmt::Display for MatchArm {
     }
 }
 
+impl MatchArm {
+    pub fn is_default(&self) -> bool {
+        self.patterns.len() == 1 && self.patterns[0].is_default()
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct MatchExpr {
     pub token: Token, // match token

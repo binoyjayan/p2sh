@@ -446,13 +446,6 @@ impl Parser {
             let line = self.scanner.get_line();
             match self.parse_match_pattern() {
                 Ok(patterns) => {
-                    if patterns.len() == 1 && patterns[0].is_default() {
-                        if def_arm {
-                            self.push_error_at("multiple default arms in match expression", line);
-                            return Expression::Invalid;
-                        }
-                        def_arm = true;
-                    }
                     if !self.expect_peek(&TokenType::MatchArm) {
                         return Expression::Invalid;
                     }
@@ -487,6 +480,14 @@ impl Parser {
                         patterns,
                         body,
                     };
+                    // Look for duplicate default (_) patterns
+                    if arm.is_default() {
+                        if def_arm {
+                            self.push_error_at("multiple default arms in match expression", line);
+                            return Expression::Invalid;
+                        }
+                        def_arm = true;
+                    }
                     arms.push(arm);
                 }
                 Err(msg) => {

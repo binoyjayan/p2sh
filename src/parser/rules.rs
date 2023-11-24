@@ -504,7 +504,6 @@ impl Parser {
             expr: Box::new(condition),
             arms,
         };
-        println!("{}", match_expr);
         Expression::Match(match_expr)
     }
 

@@ -520,6 +520,22 @@ fn test_boolean_expressions() {
             input: "!(if false { 5; })",
             expected: Object::Bool(true),
         },
+        VmTestCase {
+            input: r#""a" < "a""#,
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: r#""a" > "a""#,
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: r#""a" <= "a""#,
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: r#""a" >= "a""#,
+            expected: Object::Bool(true),
+        },
     ];
 
     run_vm_tests(&tests);

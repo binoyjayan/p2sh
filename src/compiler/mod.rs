@@ -761,18 +761,23 @@ impl Compiler {
                     MatchPatternVariant::Integer(num) => {
                         // Duplicate the scrutinee expression on the stack
                         self.emit(Opcode::Dup, &[0], arm.token.line);
-
                         // Push the integer pattern variant onto the stack
                         let idx = self.add_constant(Object::Integer(num.value));
                         self.emit(Opcode::Constant, &[idx], num.token.line);
-
                         // Compare with OpNotEqual (inverse of OpEqual)
                         self.emit(Opcode::NotEqual, &[0], num.token.line);
-
                         // If the result of OpNotEqual is false, i.e. If Equal,
                         // then jump to the block statement. Otherwise,
                         // continue to the next pattern variant
                         let jump_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], num.token.line);
+                        jump_body_v.push(jump_pos);
+                    }
+                    MatchPatternVariant::Str(s) => {
+                        self.emit(Opcode::Dup, &[0], arm.token.line);
+                        let idx = self.add_constant(Object::Str(s.value.clone()));
+                        self.emit(Opcode::Constant, &[idx], s.token.line);
+                        self.emit(Opcode::NotEqual, &[0], s.token.line);
+                        let jump_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], s.token.line);
                         jump_body_v.push(jump_pos);
                     }
                     MatchPatternVariant::Default(u) => {
@@ -780,9 +785,7 @@ impl Compiler {
                         let jump_pos = self.emit(Opcode::Jump, &[0xFFFF], u.token.line);
                         jump_body_v.push(jump_pos);
                     }
-                    _ => {
-                        // Handle other pattern variants
-                    }
+                    _ => {}
                 }
             }
 

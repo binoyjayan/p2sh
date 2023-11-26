@@ -43,7 +43,7 @@ enum BinaryOperation {
     Mul,
     Div,
     Mod,
-    Greater,
+    Relational,
 }
 
 impl VM {
@@ -213,10 +213,18 @@ impl VM {
                     self.push(Rc::new(Object::Bool(a != b)), line)?;
                 }
                 Opcode::Greater => {
-                    self.binary_op(BinaryOperation::Greater, |a, b| Object::Bool(a > b), line)?;
+                    self.binary_op(
+                        BinaryOperation::Relational,
+                        |a, b| Object::Bool(a > b),
+                        line,
+                    )?;
                 }
                 Opcode::GreaterEq => {
-                    self.binary_op(BinaryOperation::Greater, |a, b| Object::Bool(a >= b), line)?;
+                    self.binary_op(
+                        BinaryOperation::Relational,
+                        |a, b| Object::Bool(a >= b),
+                        line,
+                    )?;
                 }
                 Opcode::Minus => {
                     if !self.peek(0).is_number() {
@@ -496,21 +504,18 @@ impl VM {
                 if matches!(optype, BinaryOperation::Div) && right.is_zero() {
                     return Err(RTError::new("Division by zero.", line));
                 }
-                self.push(Rc::new(op(&left, &right)), line)?;
-                Ok(())
+                self.push(Rc::new(op(&left, &right)), line)
             }
-            (Object::Str(left), Object::Str(right)) => {
-                if matches!(optype, BinaryOperation::Add) {
-                    self.push(Rc::new(Object::Str(format!("{}{}", left, right))), line)?;
-                    Ok(())
-                } else {
-                    Err(RTError::new("Invalid operation on strings.", line))
+            (Object::Str(s1), Object::Str(s2)) => match optype {
+                BinaryOperation::Add => {
+                    self.push(Rc::new(Object::Str(format!("{}{}", s1, s2))), line)
                 }
-            }
+                BinaryOperation::Relational => self.push(Rc::new(op(&left, &right)), line),
+                _ => Err(RTError::new("Invalid operation on strings.", line)),
+            },
             (Object::Str(s), Object::Integer(n)) | (Object::Integer(n), Object::Str(s)) => {
                 if matches!(optype, BinaryOperation::Mul) {
-                    self.push(Rc::new(Object::Str(s.repeat(*n as usize))), line)?;
-                    Ok(())
+                    self.push(Rc::new(Object::Str(s.repeat(*n as usize))), line)
                 } else {
                     Err(RTError::new("Invalid operation on strings.", line))
                 }
@@ -519,8 +524,7 @@ impl VM {
                 let mut e1 = a.elements.borrow().clone();
                 let e2 = b.elements.borrow().clone();
                 e1.extend_from_slice(&e2);
-                self.push(Rc::new(Object::Arr(Rc::new(Array::new(e1)))), line)?;
-                Ok(())
+                self.push(Rc::new(Object::Arr(Rc::new(Array::new(e1)))), line)
             }
             _ => Err(RTError::new("Invalid binary operation.", line)),
         }

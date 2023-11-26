@@ -820,6 +820,7 @@ impl Parser {
         let is_valid_range = matches!(
             (&left, &right),
             (&Expression::Integer(_), &Expression::Integer(_))
+                | (&Expression::Str(_), &Expression::Str(_))
                 | (&Expression::Ident(_), &Expression::Ident(_))
         );
 

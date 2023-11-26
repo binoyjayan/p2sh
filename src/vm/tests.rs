@@ -2261,3 +2261,101 @@ fn test_nested_while_with_continue() {
     ];
     run_vm_tests(&tests);
 }
+
+#[test]
+fn test_match_expressions_integers() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+                fn to_str(p) {
+                    match p {
+                        90..101 => "A",
+                        80..90  => "B",
+                        70..80  => "C",
+                        60..70  => "D",
+                        50..60  => "E",
+                        _ => "F",
+                    }
+                }
+                let s1 = to_str(100) + "," + to_str(80) + "," + to_str(70) + "," + to_str(60) + "," + to_str(50) + "," + to_str(40);
+                let s2 = to_str(99) + "," + to_str(89) + "," + to_str(79) + "," + to_str(69) + "," + to_str(59) + "," + to_str(49);
+                s1 + " " + s2
+            "#,
+            expected: Object::Str("A,B,C,D,E,F A,B,C,D,E,F".to_string()),
+        },
+        VmTestCase {
+            input: r#"
+                fn to_str(p) {
+                    match p {
+                        90..=100 => "A",
+                        80..=89  => "B",
+                        70..=79  => "C",
+                        60..=69  => "D",
+                        50..=59  => "E",
+                        _ => "F",
+                    }
+                }
+                let s1 = to_str(100) + "," + to_str(80) + "," + to_str(70) + "," + to_str(60) + "," + to_str(50) + "," + to_str(40);
+                let s2 = to_str(99) + "," + to_str(89) + "," + to_str(79) + "," + to_str(69) + "," + to_str(59) + "," + to_str(49);
+                s1 + " " + s2
+            "#,
+            expected: Object::Str("A,B,C,D,E,F A,B,C,D,E,F".to_string()),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_match_expressions_strings() {
+    let tests = vec![VmTestCase {
+        input: r#"
+                fn lang(p) {
+                    match p {
+                        "a" | "e" | "i" | "o" | "u" | "A" | "E" | "I" | "O" | "U" => {  "vowel" }
+                        "b"..="z" | "B"..="Z" => "consonant",
+                        _ => {  "others" }
+                      }
+                }
+                [
+                    lang("a"), lang("e"), lang("i"), lang("o"), lang("u"), lang("A"), lang("E"), lang("I"), lang("O"), lang("U"),
+                    lang("b"), lang("c"), lang("d"), lang("f"), lang("z"), lang("B"), lang("C"), lang("D"), lang("F"), lang("Z"),
+                    lang("1"), lang("3"), lang("5"), lang("9"), lang("0"), lang(" "), lang(","), lang(";"), lang("'"), lang("+")
+                ]
+            "#,
+        expected: Object::Arr(Rc::new(Array {
+            elements: RefCell::new(vec![
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+            ]),
+        })),
+    }];
+    run_vm_tests(&tests);
+}

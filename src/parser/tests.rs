@@ -1716,17 +1716,6 @@ fn test_match_expressions_negative() {
         MatchTest {
             input: r#"
                 match x {
-                    "a".."b" => { "string-range" }
-                }
-            "#,
-            errors: vec![
-                "[line 3] invalid use of range operator '..'",
-                "[line 3] invalid pattern in match arm 'INVALID EXPRESSION'",
-            ],
-        },
-        MatchTest {
-            input: r#"
-                match x {
                     _ => { "default1" }
                     _ => { "default2" }
                 }

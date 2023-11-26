@@ -780,12 +780,52 @@ impl Compiler {
                         let jump_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], s.token.line);
                         jump_body_v.push(jump_pos);
                     }
+                    MatchPatternVariant::Range(r) => {
+                        let (idx_beg, idx_end) = match (&*r.begin, &*r.end) {
+                            (Expression::Integer(begin), Expression::Integer(end)) => (
+                                self.add_constant(Object::Integer(begin.value)),
+                                self.add_constant(Object::Integer(end.value)),
+                            ),
+                            (Expression::Str(begin), Expression::Str(end)) => (
+                                self.add_constant(Object::Str(begin.value.clone())),
+                                self.add_constant(Object::Str(end.value.clone())),
+                            ),
+                            _ => {
+                                return Err(CompileError::new(
+                                    "invalid range expression",
+                                    r.token.line,
+                                ));
+                            }
+                        };
+
+                        // Compare the beginning part of the range
+                        self.emit(Opcode::Dup, &[0], arm.token.line);
+                        self.emit(Opcode::Constant, &[idx_beg], r.token.line);
+                        // If GreaterEq is false i.e. value < begin, then goto end
+                        self.emit(Opcode::GreaterEq, &[0], r.token.line);
+                        let jump_end = self.emit(Opcode::JumpIfFalse, &[0xFFFF], r.token.line);
+
+                        // Now compare the end range
+                        self.emit(Opcode::Dup, &[0], arm.token.line);
+                        self.emit(Opcode::Constant, &[idx_end], r.token.line);
+                        // Check if the range is exclusive or inclusive
+                        if r.operator == ".." {
+                            // 'value >= end' is false implies value < end; goto the block stmt
+                            self.emit(Opcode::GreaterEq, &[0], r.token.line);
+                        } else {
+                            // 'value > end' is false implies value <= end; goto the block stmt
+                            self.emit(Opcode::Greater, &[0], r.token.line);
+                        }
+                        let jump_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], r.token.line);
+                        jump_body_v.push(jump_pos);
+                        // If the value is not in the range, then do nothing (continue to next pattern)
+                        self.patch_jump(jump_end);
+                    }
                     MatchPatternVariant::Default(u) => {
                         // The condition is always true; jump to the block statement
                         let jump_pos = self.emit(Opcode::Jump, &[0xFFFF], u.token.line);
                         jump_body_v.push(jump_pos);
                     }
-                    _ => {}
                 }
             }
 

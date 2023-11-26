@@ -2919,3 +2919,119 @@ fn test_unknown_while_loop_label() {
     ];
     run_compiler_failed_tests(&tests);
 }
+
+#[test]
+fn test_match_expressions() {
+    let tests = vec![CompilerTestCase {
+        input: r#"
+            fn match_test(x) {
+                match x {
+                    1      => "one",
+                    2..5   => "two..five",
+                    5..=10 => "five..ten",
+                    _      =>  "something else",
+                }
+            }
+            "#,
+        expected_constants: vec![
+            Object::Integer(1),
+            Object::Str("one".into()),
+            Object::Integer(2),
+            Object::Integer(5),
+            Object::Str("two..five".into()),
+            Object::Integer(5),
+            Object::Integer(10),
+            Object::Str("five..ten".into()),
+            Object::Str("something else".into()),
+            Object::Func(Rc::new(CompiledFunction::new(
+                concat_instructions(&[
+                    // 0000 : The scrutinee expression
+                    definitions::make(Opcode::GetLocal, &[0], 1),
+                    // 0003 : Duplicate the scrutinee expression
+                    definitions::make(Opcode::Dup, &[], 1),
+                    // 0003 : The constant '1'
+                    definitions::make(Opcode::Constant, &[0], 1),
+                    // 0006 : Instruction to compare the scrutinee and 1
+                    definitions::make(Opcode::NotEqual, &[], 1),
+                    // 0007 : Jump to the next match if the scrutinee is not equal to 1
+                    definitions::make(Opcode::JumpIfFalse, &[13], 1),
+                    // 0010 : Jump to body for the match
+                    definitions::make(Opcode::Jump, &[20], 1),
+                    // 0013 : Pop the original scrutinee expression
+                    definitions::make(Opcode::Pop, &[], 1),
+                    // 0014 : The constant 'one'
+                    definitions::make(Opcode::Constant, &[1], 1),
+                    // 0017 : Jump to the end of the match expression
+                    definitions::make(Opcode::Jump, &[82], 1),
+                    // 0020 : Duplicate the scrutinee expression
+                    definitions::make(Opcode::Dup, &[], 1),
+                    // 0021 : The constant '2'
+                    definitions::make(Opcode::Constant, &[2], 1),
+                    // 0024 : Instruction to compare the scrutinee and lower range 2
+                    definitions::make(Opcode::GreaterEq, &[], 1),
+                    // 0025 : Jump to the end of this pattern if scrutinee < lower range
+                    definitions::make(Opcode::JumpIfFalse, &[36], 1),
+                    // 0028 : Duplicate the scrutinee expression
+                    definitions::make(Opcode::Dup, &[], 1),
+                    // 0029 : The constant '5'
+                    definitions::make(Opcode::Constant, &[3], 1),
+                    // 0032 : Instruction to compare the scrutinee and exclusive upper range 5
+                    definitions::make(Opcode::GreaterEq, &[], 1),
+                    // 0033 : Jump to the end of this pattern if scrutinee > exclusive upper range
+                    definitions::make(Opcode::JumpIfFalse, &[39], 1),
+                    // 0036 : Jump to next pattern
+                    definitions::make(Opcode::Jump, &[46], 1),
+                    // 0039 : Pop the original scrutinee expression
+                    definitions::make(Opcode::Pop, &[], 1),
+                    // 0040 : The constant 'two..five'
+                    definitions::make(Opcode::Constant, &[4], 1),
+                    // 0043 : Jump to the end of the match expression
+                    definitions::make(Opcode::Jump, &[82], 1),
+                    // 0046 : Duplicate the scrutinee expression
+                    definitions::make(Opcode::Dup, &[], 1),
+                    // 0047 : The constant '5'
+                    definitions::make(Opcode::Constant, &[5], 1),
+                    // 0050 : Instruction to compare the scrutinee and lower range 5
+                    definitions::make(Opcode::GreaterEq, &[], 1),
+                    // 0051 : Jump to the end of this pattern if scrutinee < lower range
+                    definitions::make(Opcode::JumpIfFalse, &[62], 1),
+                    // 0054 : Duplicate the scrutinee expression
+                    definitions::make(Opcode::Dup, &[], 1),
+                    // 0055 : The constant '10'
+                    definitions::make(Opcode::Constant, &[6], 1),
+                    // 0058 : Instruction to compare the scrutinee and inclusive upper range 10
+                    definitions::make(Opcode::Greater, &[], 1),
+                    // 0059 : Jump to the end of this pattern if scrutinee > inclusive upper range
+                    definitions::make(Opcode::JumpIfFalse, &[65], 1),
+                    // 0062 : Jump to next pattern
+                    definitions::make(Opcode::Jump, &[72], 1),
+                    // 0065 : Pop the original scrutinee expression
+                    definitions::make(Opcode::Pop, &[], 1),
+                    // 0066 : The constant 'five..ten'
+                    definitions::make(Opcode::Constant, &[7], 1),
+                    // 0069 : Jump to the end of the match expression
+                    definitions::make(Opcode::Jump, &[82], 1),
+                    // 0072 : Jump to next pattern
+                    definitions::make(Opcode::Jump, &[78], 1),
+                    // 0075 : Jump to the end of the match expression
+                    definitions::make(Opcode::Jump, &[82], 1),
+                    // 0078 : Pop the original scrutinee expression
+                    definitions::make(Opcode::Pop, &[], 1),
+                    // 0079 : The constant 'something else'
+                    definitions::make(Opcode::Constant, &[8], 1),
+                    // 0082 : Return the result of the match expression
+                    definitions::make(Opcode::ReturnValue, &[], 1),
+                ]),
+                0,
+                0,
+            ))),
+        ],
+        expected_instructions: vec![
+            // 0000 : The function
+            definitions::make(Opcode::Closure, &[9, 0], 1),
+            // 0004 : Define the global variable 'match_test'
+            definitions::make(Opcode::DefineGlobal, &[0], 1),
+        ],
+    }];
+    run_compiler_tests(&tests);
+}

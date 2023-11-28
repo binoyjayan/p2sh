@@ -113,6 +113,7 @@ impl Scanner {
                 &[('=', TokenType::GreaterEqual), ('>', TokenType::RightShift)],
             ),
             '"' => self.read_string(),
+            '\'' => self.read_char_token(),
             _ => {
                 if Self::is_identifier_first(self.ch) {
                     return self.read_identifier();
@@ -160,6 +161,32 @@ impl Scanner {
             self.read_char();
         }
         let identifier: String = self.input[position..self.position].iter().collect();
+        // Check for a byte literal
+        if self.ch == '\'' && identifier == "b" {
+            self.read_char();
+            let the_byte = self.input[self.position];
+            // Consume ending quote (')
+            self.read_char();
+            if self.ch == '\'' {
+                // advance
+                self.read_char();
+                // if the character is ascii, return a byte token
+                if the_byte.is_ascii() {
+                    return self.make_token(TokenType::Byte, &the_byte.to_string());
+                }
+            }
+            // If no immediate ending quote (') was found, return an illegal token
+            while self.ch != '\'' && self.ch != '\0' {
+                self.read_char();
+            }
+            if self.ch == '\'' {
+                self.read_char();
+            }
+            let tok: String = self.input[position..self.position].iter().collect();
+            return self.make_token(TokenType::Illegal, &tok);
+        }
+
+        // Proceed to process identifier
         let ttype = Self::lookup_identifier(identifier.clone());
         self.make_token(ttype, &identifier)
     }
@@ -215,13 +242,37 @@ impl Scanner {
         let position = self.position + 1;
         loop {
             self.read_char();
-
             if self.ch == '"' || self.ch == '\0' {
                 break;
             }
         }
         let the_str: String = self.input[position..self.position].iter().collect();
-        self.make_token(TokenType::Str, &the_str)
+        if self.ch == '"' {
+            self.make_token(TokenType::Str, &the_str)
+        } else {
+            // unterminated string
+            self.make_token(TokenType::Illegal, &the_str)
+        }
+    }
+
+    fn read_char_token(&mut self) -> Token {
+        let position = self.position;
+        // move past the opening quote (') character
+        self.read_char();
+        let the_char = self.input[self.position].to_string();
+        self.read_char();
+        if self.ch == '\'' {
+            return self.make_token(TokenType::Char, &the_char);
+        }
+        // If no immediate ending quote (') was found, return an illegal token
+        while self.ch != '\'' && self.ch != '\0' {
+            self.read_char();
+        }
+        if self.ch == '\'' {
+            self.read_char();
+        }
+        let tok: String = self.input[position..self.position].iter().collect();
+        return self.make_token(TokenType::Illegal, &tok);
     }
 
     // If current character is a dot, read next to see if it is

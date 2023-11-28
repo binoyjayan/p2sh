@@ -9,6 +9,8 @@ fn test_next_token() {
             let none = null;
             let five = 5;
             let ten = 10;
+            let ch = 'a';
+            let byte = b'a';
             let add = fn(x, y) {
                 x + y;
             }
@@ -59,6 +61,18 @@ fn test_next_token() {
         ExpectedToken(TokenType::Identifier, "ten"),
         ExpectedToken(TokenType::Assign, "="),
         ExpectedToken(TokenType::Integer, "10"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        // let ch = 'a';
+        ExpectedToken(TokenType::Let, "let"),
+        ExpectedToken(TokenType::Identifier, "ch"),
+        ExpectedToken(TokenType::Assign, "="),
+        ExpectedToken(TokenType::Char, "a"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        // let byte = b'a';
+        ExpectedToken(TokenType::Let, "let"),
+        ExpectedToken(TokenType::Identifier, "byte"),
+        ExpectedToken(TokenType::Assign, "="),
+        ExpectedToken(TokenType::Byte, "a"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // let add = fn(x, y) { x + y; }
         ExpectedToken(TokenType::Let, "let"),
@@ -245,8 +259,8 @@ fn test_next_token() {
         let token = scanner.next_token();
         if token.ttype != tt.0 {
             panic!(
-                "tests[{}] - tokentype wrong. expected='{}', got='{}'",
-                i, tt.0, token.ttype
+                "tests[{}] - tokentype wrong. expected='{}', got='{}[{}]'",
+                i, tt.0, token.ttype, token.literal
             );
         }
         if token.literal != tt.1 {

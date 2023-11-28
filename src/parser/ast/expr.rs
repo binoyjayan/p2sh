@@ -10,6 +10,8 @@ pub enum Expression {
     Integer(IntegerLiteral),
     Float(FloatLiteral),
     Str(StringLiteral),
+    Char(CharLiteral),
+    Byte(ByteLiteral),
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Bool(BooleanExpr),
@@ -64,6 +66,30 @@ pub struct StringLiteral {
 }
 
 impl fmt::Display for StringLiteral {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.token)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct CharLiteral {
+    pub token: Token,
+    pub value: char,
+}
+
+impl fmt::Display for CharLiteral {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.token)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ByteLiteral {
+    pub token: Token,
+    pub value: u8,
+}
+
+impl fmt::Display for ByteLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.token)
     }
@@ -221,7 +247,8 @@ impl fmt::Display for MatchArm {
             .map(|p| format!("{} | ", p))
             .collect::<String>();
         let pat_str = pat_str.trim_end_matches(|c| c == ' ' || c == ',');
-        write!(f, "{} => {{ {} }}", pat_str, self.body)?;
+        let body = format!("{}", self.body);
+        write!(f, " {} => {{ {} }}", pat_str, body.trim())?;
         Ok(())
     }
 }
@@ -241,11 +268,11 @@ pub struct MatchExpr {
 
 impl fmt::Display for MatchExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "match {} {{", self.expr)?;
+        write!(f, "match {} {{", self.expr)?;
         for arm in self.arms.iter() {
-            writeln!(f, "{}", arm)?;
+            write!(f, "{}", arm)?;
         }
-        writeln!(f, "}}")
+        write!(f, "}}")
     }
 }
 
@@ -366,7 +393,7 @@ pub struct RangeExpr {
 
 impl fmt::Display for RangeExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}{}", self.begin, self.token, self.end)
+        write!(f, "({}{}{})", self.begin, self.token, self.end)
     }
 }
 
@@ -379,6 +406,8 @@ impl Expression {
             Expression::Integer(num) => num.token.literal.clone(),
             Expression::Float(num) => num.token.literal.clone(),
             Expression::Str(s) => s.token.literal.clone(),
+            Expression::Char(c) => c.token.literal.clone(),
+            Expression::Byte(b) => b.token.literal.clone(),
             Expression::Unary(unary) => unary.token.literal.clone(),
             Expression::Binary(binary) => binary.token.literal.clone(),
             Expression::Bool(b) => b.token.literal.clone(),
@@ -405,6 +434,8 @@ impl fmt::Display for Expression {
             Expression::Integer(num) => write!(f, "{}", num),
             Expression::Float(num) => write!(f, "{}", num),
             Expression::Str(s) => write!(f, "{}", s),
+            Expression::Char(c) => write!(f, "{}", c),
+            Expression::Byte(b) => write!(f, "{}", b),
             Expression::Unary(prefix) => write!(f, "{}", prefix),
             Expression::Binary(binary) => write!(f, "{}", binary),
             Expression::Bool(b) => write!(f, "{}", b),

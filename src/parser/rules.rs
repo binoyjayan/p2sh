@@ -64,6 +64,10 @@ lazy_static! {
             ParseRule::new(Some(Parser::parse_float), None, Precedence::Lowest);
         rules[TokenType::Str as usize] =
             ParseRule::new(Some(Parser::parse_string), None, Precedence::Lowest);
+        rules[TokenType::Char as usize] =
+            ParseRule::new(Some(Parser::parse_char), None, Precedence::Lowest);
+        rules[TokenType::Byte as usize] =
+            ParseRule::new(Some(Parser::parse_byte), None, Precedence::Lowest);
         // Unary - Logical '!'
         rules[TokenType::Bang as usize] = ParseRule::new(
             Some(Parser::parse_prefix_expression),
@@ -317,6 +321,34 @@ impl Parser {
             })
         } else {
             let msg = format!("could not parse {} as a string", self.current.literal);
+            self.push_error(&msg);
+            Expression::Invalid
+        }
+    }
+
+    fn parse_char(&mut self) -> Expression {
+        self.peek_invalid_assignment(false);
+        if let Ok(value) = self.current.literal.parse() {
+            Expression::Char(CharLiteral {
+                token: self.current.clone(),
+                value,
+            })
+        } else {
+            let msg = format!("could not parse {} as a char", self.current.literal);
+            self.push_error(&msg);
+            Expression::Invalid
+        }
+    }
+
+    fn parse_byte(&mut self) -> Expression {
+        self.peek_invalid_assignment(false);
+        if let Some(value) = self.current.literal.bytes().next() {
+            Expression::Byte(ByteLiteral {
+                token: self.current.clone(),
+                value,
+            })
+        } else {
+            let msg = format!("could not parse {} as a byte", self.current.literal);
             self.push_error(&msg);
             Expression::Invalid
         }

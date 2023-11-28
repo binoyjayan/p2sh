@@ -10,6 +10,8 @@ enum Literal {
     Float(f64),
     Bool(bool),
     Str(&'static str),
+    Char(char),
+    Byte(u8),
     Range(i64, i64),
 }
 
@@ -81,6 +83,28 @@ fn test_string_literal(expr: &Expression, expected: &str) {
 }
 
 #[cfg(test)]
+fn test_char_literal(expr: &Expression, expected: char) {
+    if let Expression::Char(ch) = expr {
+        if ch.value != expected {
+            panic!("char.value not '{}'. got='{}'", expected, ch.value);
+        }
+    } else {
+        panic!("expr not a char. got={:?}", expr);
+    }
+}
+
+#[cfg(test)]
+fn test_byte_literal(expr: &Expression, expected: u8) {
+    if let Expression::Byte(b) = expr {
+        if b.value != expected {
+            panic!("byte.value not '{}'. got='{}'", expected, b.value);
+        }
+    } else {
+        panic!("expr not a byte. got={:?}", expr);
+    }
+}
+
+#[cfg(test)]
 fn test_boolean_literal(expr: &Expression, expected: bool) {
     if let Expression::Bool(num) = expr {
         if num.value != expected {
@@ -131,6 +155,12 @@ fn test_literal(expression: &Expression, value: Literal) {
         }
         Literal::Str(value) => {
             test_string_literal(expression, value);
+        }
+        Literal::Char(value) => {
+            test_char_literal(expression, value);
+        }
+        Literal::Byte(value) => {
+            test_byte_literal(expression, value);
         }
         Literal::Range(begin, end) => {
             test_integer_literal(expression, begin);
@@ -205,6 +235,21 @@ fn test_let_statements() {
             input: "let foobar = y;",
             expected_id: "foobar",
             expected_val: Literal::Ident("y"),
+        },
+        TestLet {
+            input: "let s = \"hello\";",
+            expected_id: "s",
+            expected_val: Literal::Str("hello"),
+        },
+        TestLet {
+            input: "let ch = 'c';",
+            expected_id: "ch",
+            expected_val: Literal::Char('c'),
+        },
+        TestLet {
+            input: "let byte = b'c';",
+            expected_id: "byte",
+            expected_val: Literal::Byte('c' as u8),
         },
     ];
 
@@ -388,6 +433,16 @@ fn test_parsing_prefix_expressions() {
             input: "~5",
             operator: "~",
             number: Literal::Integer(5),
+        },
+        PrefixTest {
+            input: "!'a'",
+            operator: "!",
+            number: Literal::Char('a'),
+        },
+        PrefixTest {
+            input: "!b'a'",
+            operator: "!",
+            number: Literal::Byte(b'a'),
         },
     ];
 
@@ -807,6 +862,11 @@ fn test_parsing_operator_precedence() {
         PrecedenceTest {
             input: "a && b == c || d",
             expected: "((a && (b == c)) || d)",
+            num_stmts: 1,
+        },
+        PrecedenceTest {
+            input: "match x { 1..2 | 5..=6 => {} }",
+            expected: "match x { (1..2) | (5..=6) | => {  } _ | => { null; }}",
             num_stmts: 1,
         },
     ];

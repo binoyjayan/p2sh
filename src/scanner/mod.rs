@@ -272,7 +272,7 @@ impl Scanner {
             self.read_char();
         }
         let tok: String = self.input[position..self.position].iter().collect();
-        return self.make_token(TokenType::Illegal, &tok);
+        self.make_token(TokenType::Illegal, &tok)
     }
 
     // If current character is a dot, read next to see if it is

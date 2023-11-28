@@ -525,6 +525,16 @@ impl Compiler {
                 let idx = self.add_constant(obj);
                 self.emit(Opcode::Constant, &[idx], s.token.line);
             }
+            Expression::Char(c) => {
+                let obj = Object::Char(c.value);
+                let idx = self.add_constant(obj);
+                self.emit(Opcode::Constant, &[idx], c.token.line);
+            }
+            Expression::Byte(b) => {
+                let obj = Object::Byte(b.value);
+                let idx = self.add_constant(obj);
+                self.emit(Opcode::Constant, &[idx], b.token.line);
+            }
             Expression::Array(arr) => {
                 let len = arr.elements.len();
                 for e in arr.elements {

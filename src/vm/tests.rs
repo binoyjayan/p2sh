@@ -41,6 +41,20 @@ fn test_expected_object(evaluated: Rc<Object>, expected: &Object) {
                 eval, exp
             );
         }
+        (Object::Char(eval), Object::Char(exp)) => {
+            assert_eq!(
+                eval, exp,
+                "object has wrong char value. got={}, want={}",
+                eval, exp
+            );
+        }
+        (Object::Byte(eval), Object::Byte(exp)) => {
+            assert_eq!(
+                eval, exp,
+                "object has wrong byte value. got={}, want={}",
+                eval, exp
+            );
+        }
         (Object::Bool(eval), Object::Bool(exp)) => {
             assert_eq!(
                 eval, exp,
@@ -272,6 +286,14 @@ fn test_unary_expressions_negative() {
         },
         VmTestCaseErr {
             input: r#"~"a""#,
+            expected: "bad operand type for unary '~'",
+        },
+        VmTestCaseErr {
+            input: r#"-'a'"#,
+            expected: "bad operand type for unary '-'",
+        },
+        VmTestCaseErr {
+            input: r#"~b'a'"#,
             expected: "bad operand type for unary '~'",
         },
     ];
@@ -513,6 +535,14 @@ fn test_boolean_expressions() {
             expected: Object::Bool(true),
         },
         VmTestCase {
+            input: "!!'a'",
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: "!b'a'",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
             input: "(10 + 50 + -5 - 5 * 2 / 2) < (100 - 35)",
             expected: Object::Bool(true),
         },
@@ -535,6 +565,14 @@ fn test_boolean_expressions() {
         VmTestCase {
             input: r#""a" >= "a""#,
             expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: r#"'a' <= 'a'"#,
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: r#"b'a' < b'a'"#,
+            expected: Object::Bool(false),
         },
     ];
 
@@ -775,6 +813,14 @@ fn test_index_expressions() {
         VmTestCase {
             input: r#"{"one": 1, "two": 2, "three": 3}["o" + "ne"]"#,
             expected: Object::Integer(1),
+        },
+        VmTestCase {
+            input: "{'a': 1, 'b': 2, 'c': 3}['b']",
+            expected: Object::Integer(2),
+        },
+        VmTestCase {
+            input: "{b'a': 1, b'b': 2, b'c': 3}[b'b']",
+            expected: Object::Integer(2),
         },
     ];
     run_vm_tests(&tests);
@@ -1626,8 +1672,8 @@ fn test_assignment_expressions() {
             expected: Object::Integer(2),
         },
         VmTestCase {
-            input: "let a = 1; a = 2; a",
-            expected: Object::Integer(2),
+            input: "let a = 1.; a = 2.; a",
+            expected: Object::Float(2.),
         },
         VmTestCase {
             input: "let a = true; a = false; a",

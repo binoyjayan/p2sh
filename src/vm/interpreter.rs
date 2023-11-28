@@ -513,6 +513,20 @@ impl VM {
                 BinaryOperation::Relational => self.push(Rc::new(op(&left, &right)), line),
                 _ => Err(RTError::new("Invalid operation on strings.", line)),
             },
+            (Object::Char(c1), Object::Char(c2)) => match optype {
+                BinaryOperation::Add => {
+                    self.push(Rc::new(Object::Str(format!("{}{}", c1, c2))), line)
+                }
+                BinaryOperation::Relational => self.push(Rc::new(op(&left, &right)), line),
+                _ => Err(RTError::new("Invalid operation on chars.", line)),
+            },
+            (Object::Byte(b1), Object::Byte(b2)) => match optype {
+                BinaryOperation::Add => {
+                    self.push(Rc::new(Object::Str(format!("{}{}", b1, b2))), line)
+                }
+                BinaryOperation::Relational => self.push(Rc::new(op(&left, &right)), line),
+                _ => Err(RTError::new("Invalid operation on bytes.", line)),
+            },
             (Object::Str(s), Object::Integer(n)) | (Object::Integer(n), Object::Str(s)) => {
                 if matches!(optype, BinaryOperation::Mul) {
                     self.push(Rc::new(Object::Str(s.repeat(*n as usize))), line)

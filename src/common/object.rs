@@ -12,6 +12,8 @@ use crate::code::definitions::Instructions;
 pub enum Object {
     Null,
     Str(String),
+    Char(char),
+    Byte(u8),
     Integer(i64),
     Float(f64),
     Bool(bool),
@@ -28,6 +30,8 @@ impl PartialEq for Object {
         match (self, other) {
             (Object::Null, Object::Null) => true,
             (Object::Str(a), Object::Str(b)) => a.eq(b),
+            (Object::Char(a), Object::Char(b)) => a.eq(b),
+            (Object::Byte(a), Object::Byte(b)) => a.eq(b),
             (Object::Integer(a), Object::Integer(b)) => a.eq(b),
             (Object::Float(a), Object::Float(b)) => a.eq(b),
             (Object::Bool(a), Object::Bool(b)) => a.eq(b),
@@ -48,6 +52,8 @@ impl PartialOrd for Object {
         match (self, other) {
             (Object::Null, Object::Null) => None,
             (Object::Str(a), Object::Str(b)) => a.partial_cmp(b),
+            (Object::Char(a), Object::Char(b)) => a.partial_cmp(b),
+            (Object::Byte(a), Object::Byte(b)) => a.partial_cmp(b),
             (Object::Integer(a), Object::Integer(b)) => a.partial_cmp(b),
             (Object::Float(a), Object::Float(b)) => a.partial_cmp(b),
             (Object::Bool(a), Object::Bool(b)) => a.partial_cmp(b),
@@ -61,6 +67,8 @@ impl Clone for Object {
         match self {
             Object::Null => Object::Null,
             Object::Str(s) => Object::Str(s.clone()),
+            Object::Char(c) => Object::Char(*c),
+            Object::Byte(b) => Object::Byte(*b),
             Object::Integer(n) => Object::Integer(*n),
             Object::Float(n) => Object::Float(*n),
             Object::Bool(b) => Object::Bool(*b),
@@ -96,6 +104,8 @@ impl Object {
             Object::Bool(false) | Object::Integer(0) | Object::Null => true,
             // floating point types cannot be used in patterns
             Object::Float(v) => *v == 0.,
+            Object::Char(c) => *c == '\0',
+            Object::Byte(b) => *b == 0,
             _ => false,
         }
     }
@@ -104,6 +114,8 @@ impl Object {
         matches!(
             self,
             Object::Str(_)
+                | Object::Char(_)
+                | Object::Byte(_)
                 | Object::Integer(_)
                 | Object::Float(_)
                 | Object::Bool(_)
@@ -118,6 +130,8 @@ impl fmt::Display for Object {
         match self {
             Self::Null => write!(f, "null"),
             Self::Str(s) => write!(f, "{}", s),
+            Self::Char(c) => write!(f, "{}", c),
+            Self::Byte(b) => write!(f, "{}", b),
             Self::Integer(val) => write!(f, "{}", val),
             Self::Float(val) => write!(f, "{}", val),
             Self::Bool(val) => write!(f, "{}", val),
@@ -267,6 +281,8 @@ impl Hash for Object {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
             Object::Integer(ref n) => n.hash(state),
+            Object::Char(ref ch) => ch.hash(state),
+            Object::Byte(ref b) => b.hash(state),
             Object::Float(ref f) => {
                 // Use the built-in hash function for f64
                 state.write_u64(f.to_bits());

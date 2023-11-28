@@ -49,6 +49,8 @@ pub fn test_constants(expected: &Vec<Object>, actual: &Vec<Rc<Object>>) {
             Object::Integer(e) => test_integer_object(got.clone(), e.clone()),
             Object::Float(e) => test_float_object(got.clone(), e.clone()),
             Object::Str(s) => test_string_object(got, &s.clone()),
+            Object::Char(c) => test_char_object(got.clone(), c.clone()),
+            Object::Byte(b) => test_byte_object(got.clone(), b.clone()),
             Object::Func(func) => test_function_object(&got.clone(), &func),
             _ => {}
         }
@@ -104,6 +106,32 @@ fn test_string_object(actual: &Object, expected: &str) {
         );
     } else {
         panic!("object is not Str. got={:?}", actual);
+    }
+}
+
+#[cfg(test)]
+fn test_char_object(actual: Rc<Object>, exp: char) {
+    if let Object::Char(act) = *actual.clone() {
+        assert_eq!(
+            act, exp,
+            "object has wrong value. got={}, want={}",
+            act, exp
+        );
+    } else {
+        panic!("object is not a char. got={}", actual);
+    }
+}
+
+#[cfg(test)]
+fn test_byte_object(actual: Rc<Object>, exp: u8) {
+    if let Object::Byte(act) = *actual.clone() {
+        assert_eq!(
+            act, exp,
+            "object has wrong value. got={}, want={}",
+            act, exp
+        );
+    } else {
+        panic!("object is not a byte. got={}", actual);
     }
 }
 

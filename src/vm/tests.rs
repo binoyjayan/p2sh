@@ -239,6 +239,42 @@ fn test_integer_arithmetic() {
 }
 
 #[test]
+fn test_mixed_arithmetic() {
+    let tests = vec![
+        VmTestCase {
+            input: "1. + 2",
+            expected: Object::Float(3.),
+        },
+        VmTestCase {
+            input: "1 + 2.",
+            expected: Object::Float(3.),
+        },
+        VmTestCase {
+            input: "1 + b'2'",
+            expected: Object::Integer(51),
+        },
+        VmTestCase {
+            input: "b'1' - 2",
+            expected: Object::Integer(47),
+        },
+        VmTestCase {
+            input: "1. + b'2'",
+            expected: Object::Float(51.),
+        },
+        VmTestCase {
+            input: "b'1' - 2.",
+            expected: Object::Float(47.),
+        },
+        VmTestCase {
+            input: "1. + 2.",
+            expected: Object::Float(3.),
+        },
+    ];
+
+    run_vm_tests(&tests);
+}
+
+#[test]
 fn test_division_by_zero() {
     let tests = vec![
         VmTestCaseErr {
@@ -291,6 +327,14 @@ fn test_unary_expressions_negative() {
         VmTestCaseErr {
             input: r#"-'a'"#,
             expected: "bad operand type for unary '-'",
+        },
+        VmTestCaseErr {
+            input: r#"-b'a'"#,
+            expected: "bad operand type for unary '-'",
+        },
+        VmTestCaseErr {
+            input: r#"~'a'"#,
+            expected: "bad operand type for unary '~'",
         },
         VmTestCaseErr {
             input: r#"~b'a'"#,
@@ -679,6 +723,29 @@ fn test_string_expressions() {
         VmTestCase {
             input: r#""p2" + "sh" + "banana""#,
             expected: Object::Str("p2shbanana".to_string()),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_char_and_byte_expressions() {
+    let tests = vec![
+        VmTestCase {
+            input: "'c'",
+            expected: Object::Char('c'),
+        },
+        VmTestCase {
+            input: "b'c'",
+            expected: Object::Byte(b'c'),
+        },
+        VmTestCase {
+            input: "'1' + '2'",
+            expected: Object::Str("12".to_string()),
+        },
+        VmTestCase {
+            input: "b'1' + b'2'",
+            expected: Object::Byte(99),
         },
     ];
     run_vm_tests(&tests);
@@ -1286,6 +1353,38 @@ fn test_builtin_functions() {
         VmTestCase {
             input: r#"round(3.141592653589793238, 2)"#,
             expected: Object::Float(3.14),
+        },
+        VmTestCase {
+            input: "int(b'1')",
+            expected: Object::Integer(49),
+        },
+        VmTestCase {
+            input: "int('1')",
+            expected: Object::Integer(49),
+        },
+        VmTestCase {
+            input: "float(b'1')",
+            expected: Object::Float(49.),
+        },
+        VmTestCase {
+            input: "float('1')",
+            expected: Object::Float(49.),
+        },
+        VmTestCase {
+            input: r#"str(b'1')"#,
+            expected: Object::Str(String::from("49")),
+        },
+        VmTestCase {
+            input: r#"str('1')"#,
+            expected: Object::Str(String::from("1")),
+        },
+        VmTestCase {
+            input: "char(b'1')",
+            expected: Object::Char('1'),
+        },
+        VmTestCase {
+            input: "byte('1')",
+            expected: Object::Byte(b'1'),
         },
     ];
     run_vm_tests(&tests);

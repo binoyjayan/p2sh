@@ -96,6 +96,7 @@ impl Object {
         match self {
             Object::Integer(n) => *n == 0,
             Object::Float(n) => *n == 0.,
+            Object::Byte(n) => *n == 0,
             _ => false,
         }
     }
@@ -154,6 +155,11 @@ impl ops::Add for &Object {
             (&Object::Float(a), &Object::Float(b)) => Object::Float(a + b),
             (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 + b),
             (&Object::Float(a), &Object::Integer(b)) => Object::Float(a + b as f64),
+            (&Object::Byte(a), &Object::Byte(b)) => Object::Byte(a + b),
+            (&Object::Integer(a), &Object::Byte(b)) => Object::Integer(a + b as i64),
+            (&Object::Byte(a), &Object::Integer(b)) => Object::Integer(a as i64 + b),
+            (&Object::Float(a), &Object::Byte(b)) => Object::Float(a + b as f64),
+            (&Object::Byte(a), &Object::Float(b)) => Object::Float(a as f64 + b),
             _ => panic!("Invalid binary operation"),
         }
     }
@@ -167,6 +173,11 @@ impl ops::Sub for &Object {
             (&Object::Float(a), &Object::Float(b)) => Object::Float(a - b),
             (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 - b),
             (&Object::Float(a), &Object::Integer(b)) => Object::Float(a - b as f64),
+            (&Object::Byte(a), &Object::Byte(b)) => Object::Byte(a - b),
+            (&Object::Integer(a), &Object::Byte(b)) => Object::Integer(a - b as i64),
+            (&Object::Byte(a), &Object::Integer(b)) => Object::Integer(a as i64 - b),
+            (&Object::Float(a), &Object::Byte(b)) => Object::Float(a - b as f64),
+            (&Object::Byte(a), &Object::Float(b)) => Object::Float(a as f64 - b),
             _ => panic!("Invalid binary operation"),
         }
     }
@@ -180,6 +191,11 @@ impl ops::Mul for &Object {
             (&Object::Float(a), &Object::Float(b)) => Object::Float(a * b),
             (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 * b),
             (&Object::Float(a), &Object::Integer(b)) => Object::Float(a * b as f64),
+            (&Object::Byte(a), &Object::Byte(b)) => Object::Byte(a * b),
+            (&Object::Integer(a), &Object::Byte(b)) => Object::Integer(a * b as i64),
+            (&Object::Byte(a), &Object::Integer(b)) => Object::Integer(a as i64 * b),
+            (&Object::Float(a), &Object::Byte(b)) => Object::Float(a * b as f64),
+            (&Object::Byte(a), &Object::Float(b)) => Object::Float(a as f64 * b),
             _ => panic!("Invalid binary operation"),
         }
     }
@@ -193,6 +209,11 @@ impl ops::Div for &Object {
             (&Object::Float(a), &Object::Float(b)) => Object::Float(a / b),
             (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 / b),
             (&Object::Float(a), &Object::Integer(b)) => Object::Float(a / b as f64),
+            (&Object::Byte(a), &Object::Byte(b)) => Object::Byte(a / b),
+            (&Object::Integer(a), &Object::Byte(b)) => Object::Integer(a / b as i64),
+            (&Object::Byte(a), &Object::Integer(b)) => Object::Integer(a as i64 / b),
+            (&Object::Float(a), &Object::Byte(b)) => Object::Float(a / b as f64),
+            (&Object::Byte(a), &Object::Float(b)) => Object::Float(a as f64 / b),
             _ => panic!("Invalid binary operation"),
         }
     }
@@ -206,6 +227,11 @@ impl ops::Rem for &Object {
             (&Object::Float(a), &Object::Float(b)) => Object::Float(a % b),
             (&Object::Integer(a), &Object::Float(b)) => Object::Float(a as f64 % b),
             (&Object::Float(a), &Object::Integer(b)) => Object::Float(a % b as f64),
+            (&Object::Byte(a), &Object::Byte(b)) => Object::Byte(a % b),
+            (&Object::Integer(a), &Object::Byte(b)) => Object::Integer(a % b as i64),
+            (&Object::Byte(a), &Object::Integer(b)) => Object::Integer(a as i64 % b),
+            (&Object::Float(a), &Object::Byte(b)) => Object::Float(a % b as f64),
+            (&Object::Byte(a), &Object::Float(b)) => Object::Float(a as f64 % b),
             _ => panic!("Invalid binary operation"),
         }
     }
@@ -228,6 +254,7 @@ impl ops::BitAnd for &Object {
     fn bitand(self, other: &Object) -> Object {
         match (self, other) {
             (&Object::Integer(a), &Object::Integer(b)) => Object::Integer(a & b),
+            (&Object::Byte(a), &Object::Byte(b)) => Object::Byte(a & b),
             _ => panic!("Invalid bitwise operation"),
         }
     }
@@ -239,6 +266,7 @@ impl ops::BitOr for &Object {
     fn bitor(self, other: &Object) -> Object {
         match (self, other) {
             (&Object::Integer(a), &Object::Integer(b)) => Object::Integer(a | b),
+            (&Object::Byte(a), &Object::Byte(b)) => Object::Byte(a | b),
             _ => panic!("Invalid bitwise operation"),
         }
     }
@@ -250,6 +278,7 @@ impl ops::BitXor for &Object {
     fn bitxor(self, other: &Object) -> Object {
         match (self, other) {
             (&Object::Integer(a), &Object::Integer(b)) => Object::Integer(a ^ b),
+            (&Object::Byte(a), &Object::Byte(b)) => Object::Byte(a ^ b),
             _ => panic!("Invalid bitwise operation"),
         }
     }
@@ -261,6 +290,7 @@ impl ops::Shl<&Object> for &Object {
     fn shl(self, rhs: &Object) -> Object {
         match (self, rhs) {
             (&Object::Integer(a), Object::Integer(b)) => Object::Integer(a << b),
+            (&Object::Byte(a), &Object::Byte(b)) => Object::Byte(a << b),
             _ => panic!("Invalid bitwise operation"),
         }
     }
@@ -272,6 +302,7 @@ impl ops::Shr<&Object> for &Object {
     fn shr(self, rhs: &Object) -> Object {
         match (self, rhs) {
             (&Object::Integer(a), Object::Integer(b)) => Object::Integer(a >> b),
+            (&Object::Byte(a), &Object::Byte(b)) => Object::Byte(a >> b),
             _ => panic!("Invalid bitwise operation"),
         }
     }

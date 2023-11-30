@@ -21,6 +21,8 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("str", builtin_str),
     BuiltinFunction::new("int", builtin_int),
     BuiltinFunction::new("float", builtin_float),
+    BuiltinFunction::new("char", builtin_char),
+    BuiltinFunction::new("byte", builtin_byte),
     BuiltinFunction::new("time", builtin_time),
     BuiltinFunction::new("exit", builtin_exit),
     BuiltinFunction::new("flush_stdout", flush_stdout),
@@ -185,6 +187,8 @@ fn builtin_str(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         Object::Null
             | Object::Str(_)
             | Object::Integer(_)
+            | Object::Char(_)
+            | Object::Byte(_)
             | Object::Bool(_)
             | Object::Arr(_)
             | Object::Map(_)
@@ -210,6 +214,8 @@ fn builtin_int(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         }
         Object::Integer(_) => Ok(Rc::clone(&args[0])),
         Object::Float(n) => Ok(Rc::new(Object::Integer(*n as i64))),
+        Object::Char(b) => Ok(Rc::new(Object::Integer(*b as i64))),
+        Object::Byte(b) => Ok(Rc::new(Object::Integer(*b as i64))),
         Object::Bool(b) => {
             if *b {
                 Ok(Rc::new(Object::Integer(1)))
@@ -237,11 +243,79 @@ fn builtin_float(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         }
         Object::Float(_) => Ok(Rc::clone(&args[0])),
         Object::Integer(n) => Ok(Rc::new(Object::Float(*n as f64))),
+        Object::Char(b) => Ok(Rc::new(Object::Float(*b as i64 as f64))),
+        Object::Byte(b) => Ok(Rc::new(Object::Float(*b as f64))),
         Object::Bool(b) => {
             if *b {
                 Ok(Rc::new(Object::Float(1.)))
             } else {
                 Ok(Rc::new(Object::Float(0.)))
+            }
+        }
+        _ => Err(String::from("unsupported argument")),
+    }
+}
+
+fn builtin_char(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+
+    let obj = args[0].as_ref();
+    match obj {
+        Object::Char(_) => Ok(Rc::clone(&args[0])),
+        Object::Byte(b) => {
+            if let Some(c) = std::char::from_u32(*b as u32) {
+                Ok(Rc::new(Object::Char(c)))
+            } else {
+                Err(String::from("failed to parse byte"))
+            }
+        }
+        Object::Integer(s) => {
+            if let Some(c) = std::char::from_u32(*s as u32) {
+                Ok(Rc::new(Object::Char(c)))
+            } else {
+                Err(String::from("failed to parse integer"))
+            }
+        }
+        Object::Float(n) => {
+            if let Some(c) = std::char::from_u32(*n as u32) {
+                Ok(Rc::new(Object::Char(c)))
+            } else {
+                Err(String::from("failed to parse float"))
+            }
+        }
+        _ => Err(String::from("unsupported argument")),
+    }
+}
+
+fn builtin_byte(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+    let obj = args[0].as_ref();
+    match obj {
+        Object::Byte(_) => Ok(Rc::clone(&args[0])),
+        Object::Char(c) => Ok(Rc::new(Object::Byte(*c as u8))),
+        Object::Bool(b) => {
+            if *b {
+                Ok(Rc::new(Object::Byte(1)))
+            } else {
+                Ok(Rc::new(Object::Byte(0)))
+            }
+        }
+        Object::Integer(s) => {
+            if let Some(b) = std::char::from_u32(*s as u32) {
+                Ok(Rc::new(Object::Byte(b as u8)))
+            } else {
+                Err(String::from("failed to parse integer"))
+            }
+        }
+        Object::Float(n) => {
+            if let Some(b) = std::char::from_u32(*n as u32) {
+                Ok(Rc::new(Object::Byte(b as u8)))
+            } else {
+                Err(String::from("failed to parse float"))
             }
         }
         _ => Err(String::from("unsupported argument")),

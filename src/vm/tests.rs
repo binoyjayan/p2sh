@@ -816,11 +816,11 @@ fn test_array_operations() {
 fn test_hash_literals() {
     let tests = vec![
         VmTestCase {
-            input: "{}",
+            input: "map {}",
             expected: Object::Map(Rc::new(HMap::default())),
         },
         VmTestCase {
-            input: "{1: 2, 2: 3}",
+            input: "map {1: 2, 2: 3}",
             expected: Object::Map({
                 let map = HMap::default();
                 map.insert(Rc::new(Object::Integer(1)), Rc::new(Object::Integer(2)));
@@ -829,7 +829,7 @@ fn test_hash_literals() {
             }),
         },
         VmTestCase {
-            input: "{1 + 1: 2 * 2, 3 + 3: 4 * 4}",
+            input: "map {1 + 1: 2 * 2, 3 + 3: 4 * 4}",
             expected: Object::Map({
                 let map = HMap::default();
                 map.insert(
@@ -851,11 +851,11 @@ fn test_hash_literals() {
 fn test_hash_literals_expressions_negative() {
     let tests = vec![
         VmTestCaseErr {
-            input: "{fn() {}: 2}",
+            input: "map {fn() {}: 2}",
             expected: "KeyError: not a valid key: <closure>.",
         },
         VmTestCaseErr {
-            input: "{fn() {}: fn() {}}",
+            input: "map {fn() {}: fn() {}}",
             expected: "KeyError: not a valid key: <closure>.",
         },
     ];
@@ -866,27 +866,27 @@ fn test_hash_literals_expressions_negative() {
 fn test_index_expressions() {
     let tests = vec![
         VmTestCase {
-            input: "{1: 1, 2: 2}[1]",
+            input: "map {1: 1, 2: 2}[1]",
             expected: Object::Integer(1),
         },
         VmTestCase {
-            input: "{1: 1, 2: 2}[2]",
+            input: "map {1: 1, 2: 2}[2]",
             expected: Object::Integer(2),
         },
         VmTestCase {
-            input: "{1.1: 1, 2.2: 2}[2.2]",
+            input: "map {1.1: 1, 2.2: 2}[2.2]",
             expected: Object::Integer(2),
         },
         VmTestCase {
-            input: r#"{"one": 1, "two": 2, "three": 3}["o" + "ne"]"#,
+            input: r#"map {"one": 1, "two": 2, "three": 3}["o" + "ne"]"#,
             expected: Object::Integer(1),
         },
         VmTestCase {
-            input: "{'a': 1, 'b': 2, 'c': 3}['b']",
+            input: "map {'a': 1, 'b': 2, 'c': 3}['b']",
             expected: Object::Integer(2),
         },
         VmTestCase {
-            input: "{b'a': 1, b'b': 2, b'c': 3}[b'b']",
+            input: "map {b'a': 1, b'b': 2, b'c': 3}[b'b']",
             expected: Object::Integer(2),
         },
     ];
@@ -901,15 +901,15 @@ fn test_index_expressions_negative() {
             expected: "IndexError: array index out of range.",
         },
         VmTestCaseErr {
-            input: "{1: 1}[0]",
+            input: "map {1: 1}[0]",
             expected: "KeyError: key not found.",
         },
         VmTestCaseErr {
-            input: "{}[fn(){}]",
+            input: "map {}[fn(){}]",
             expected: "KeyError: not a valid key: <closure>.",
         },
         VmTestCaseErr {
-            input: "{}[0]",
+            input: "map {}[0]",
             expected: "KeyError: key not found.",
         },
         VmTestCaseErr {
@@ -1200,11 +1200,11 @@ fn test_builtin_functions() {
             expected: Object::Integer(0),
         },
         VmTestCase {
-            input: r#"len({})"#,
+            input: r#"len(map {})"#,
             expected: Object::Integer(0),
         },
         VmTestCase {
-            input: r#"len({"a": 1, "b": 2})"#,
+            input: r#"len(map {"a": 1, "b": 2})"#,
             expected: Object::Integer(2),
         },
         VmTestCase {
@@ -1251,42 +1251,42 @@ fn test_builtin_functions() {
             expected: Object::Integer(2),
         },
         VmTestCase {
-            input: r#"contains({}, "k")"#,
+            input: r#"contains(map {}, "k")"#,
             expected: Object::Bool(false),
         },
         VmTestCase {
-            input: r#"let m = {"k1": 1, "k": 0, "k2": 2}; contains(m, "k")"#,
+            input: r#"let m = map {"k1": 1, "k": 0, "k2": 2}; contains(m, "k")"#,
             expected: Object::Bool(true),
         },
         VmTestCase {
-            input: r#"get({}, "k")"#,
+            input: r#"get(map {}, "k")"#,
             expected: Object::Null,
         },
         VmTestCase {
-            input: r#"let m = {"k1": 999, "k2": 888, "k3": 777}; get(m, "k2")"#,
+            input: r#"let m = map {"k1": 999, "k2": 888, "k3": 777}; get(m, "k2")"#,
             expected: Object::Integer(888),
         },
         VmTestCase {
-            input: r#"let m = {"k1": 999, "k2": 888, "k3": 777}; get(m, "k")"#,
+            input: r#"let m = map {"k1": 999, "k2": 888, "k3": 777}; get(m, "k")"#,
             expected: Object::Null,
         },
         VmTestCase {
-            input: r#"let m = {}; insert(m, "k", 1)"#,
+            input: r#"let m = map {}; insert(m, "k", 1)"#,
             // insert returns Null if key was not found already
             expected: Object::Null,
         },
         VmTestCase {
-            input: r#"let m = {"k1": 999, "k2": 888}; insert(m, "k3", 777)"#,
+            input: r#"let m = map {"k1": 999, "k2": 888}; insert(m, "k3", 777)"#,
             // insert returns Null if key was not found already
             expected: Object::Null,
         },
         VmTestCase {
-            input: r#"let m = {"k1": 999, "k2": 888}; insert(m, "k2", 777)"#,
+            input: r#"let m = map {"k1": 999, "k2": 888}; insert(m, "k2", 777)"#,
             // insert returns the previous value if key was found
             expected: Object::Integer(888),
         },
         VmTestCase {
-            input: r#"let m = {}; insert(m, "k", 1); m"#,
+            input: r#"let m = map {}; insert(m, "k", 1); m"#,
             expected: Object::Map({
                 let map = HMap::default();
                 map.insert(
@@ -1323,12 +1323,12 @@ fn test_builtin_functions() {
         },
         VmTestCase {
             // maps are unordered so use only a single item
-            input: r#"str({"a": 1})"#,
-            expected: Object::Str(String::from(r#"{"a": 1}"#)),
+            input: r#"str(map {"a": 1})"#,
+            expected: Object::Str(String::from(r#"map {"a": 1}"#)),
         },
         VmTestCase {
-            input: "str({})",
-            expected: Object::Str(String::from("{}")),
+            input: "str(map {})",
+            expected: Object::Str(String::from("map {}")),
         },
         VmTestCase {
             input: r#"int("999")"#,
@@ -1462,7 +1462,7 @@ fn test_builtin_function_failures() {
             expected: "int: unsupported argument",
         },
         VmTestCaseErr {
-            input: "int({})",
+            input: "int(map {})",
             expected: "int: unsupported argument",
         },
         VmTestCaseErr {
@@ -1796,7 +1796,7 @@ fn test_assignment_expressions() {
             })),
         },
         VmTestCase {
-            input: r#"let m = {"a": 1}; m = {"a": 222}; m"#,
+            input: r#"let m = map {"a": 1}; m = map {"a": 222}; m"#,
             expected: Object::Map({
                 let map = HMap::default();
                 map.insert(
@@ -1834,7 +1834,7 @@ fn test_assignment_expressions() {
             })),
         },
         VmTestCase {
-            input: r#"let m = {}; m[0] = m[1] = 222; [m[0], m[1]]"#,
+            input: r#"let m = map {}; m[0] = m[1] = 222; [m[0], m[1]]"#,
             expected: Object::Arr(Rc::new(Array {
                 elements: RefCell::new(vec![
                     Rc::new(Object::Integer(222)),
@@ -1880,7 +1880,7 @@ fn test_set_index_assignment_expressions() {
             })),
         },
         VmTestCase {
-            input: r#"let m = {}; m["a"] = 1; m"#,
+            input: r#"let m = map {}; m["a"] = 1; m"#,
             expected: Object::Map({
                 let map = HMap::default();
                 map.insert(
@@ -1891,7 +1891,7 @@ fn test_set_index_assignment_expressions() {
             }),
         },
         VmTestCase {
-            input: r#"let m = {"a": 1}; m["a"] = 111; m"#,
+            input: r#"let m = map {"a": 1}; m["a"] = 111; m"#,
             expected: Object::Map({
                 let map = HMap::default();
                 map.insert(

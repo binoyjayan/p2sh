@@ -191,7 +191,7 @@ lazy_static! {
         // Array literal (prefix) and index operator (infix) parser
         rules[TokenType::LeftBracket as usize] =
             ParseRule::new(Some(Parser::parse_array_literal), Some(Parser::parse_index_expression), Precedence::Call);
-        rules[TokenType::LeftBrace as usize] =
+        rules[TokenType::Map as usize] =
             ParseRule::new(Some(Parser::parse_hash_literal), None, Precedence::Lowest);
         // Assignment
         rules[TokenType::Assign as usize] = ParseRule::new_with_assoc(
@@ -783,9 +783,13 @@ impl Parser {
         })
     }
 
+    // Use the "map" keyword to create a hash map. Using a keyword helps
+    // disambiguate between a hash map and a block statement.
     fn parse_hash_literal(&mut self) -> Expression {
-        let token = self.current.clone();
         let mut pairs = Vec::new();
+        // Consume the 'map' keyword
+        self.next_token();
+        let token = self.current.clone();
 
         while !self.peek_token_is(&TokenType::RightBrace) {
             // consume the first '{' or a ',' in each iteration

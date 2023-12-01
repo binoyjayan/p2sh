@@ -31,7 +31,7 @@ fn test_next_token() {
             "foobar"
             "foo bar"
             [1, 2];
-            {"foo": "bar"}
+            map {"foo": "bar"}
             5. + .1;
             10.0 - 30e1;
             40e+1 * 50e-1;
@@ -163,7 +163,8 @@ fn test_next_token() {
         ExpectedToken(TokenType::Integer, "2"),
         ExpectedToken(TokenType::RightBracket, "]"),
         ExpectedToken(TokenType::Semicolon, ";"),
-        // {"foo": "bar"}
+        // map {"foo": "bar"}
+        ExpectedToken(TokenType::Map, "map"),
         ExpectedToken(TokenType::LeftBrace, "{"),
         ExpectedToken(TokenType::Str, "foo"),
         ExpectedToken(TokenType::Colon, ":"),

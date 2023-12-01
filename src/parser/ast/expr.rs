@@ -336,10 +336,10 @@ impl fmt::Display for ArrayLiteral {
 
 #[derive(Clone, Debug)]
 pub struct HashLiteral {
-    pub token: Token, // {
-    // A HashMap is not required here since this is just a literal
-    // that exists only during parsing. During evaluation, the
-    // literal maybe converted into a Object of type HashMap.
+    pub token: Token, // map token
+    // A HashMap is not required here since this is a literal
+    // that exists only as an initializer. During evaluation, the
+    // literal will be converted into a Object of type HashMap.
     pub pairs: Vec<(Expression, Expression)>,
 }
 

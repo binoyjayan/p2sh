@@ -860,7 +860,7 @@ fn test_array_literals() {
 fn test_hash_literals() {
     let tests = vec![
         CompilerTestCase {
-            input: "{}",
+            input: "map {}",
             expected_constants: vec![],
             expected_instructions: vec![
                 definitions::make(Opcode::Map, &[0], 1),
@@ -868,7 +868,7 @@ fn test_hash_literals() {
             ],
         },
         CompilerTestCase {
-            input: "{1: 2, 3: 4, 5: 6}",
+            input: "map {1: 2, 3: 4, 5: 6}",
             expected_constants: vec![
                 Object::Integer(1),
                 Object::Integer(2),
@@ -889,7 +889,7 @@ fn test_hash_literals() {
             ],
         },
         CompilerTestCase {
-            input: "{1: 2 + 3, 4: 5 * 6}",
+            input: "map {1: 2 + 3, 4: 5 * 6}",
             expected_constants: vec![
                 Object::Integer(1),
                 Object::Integer(2),
@@ -940,7 +940,7 @@ fn test_get_index_expressions() {
             ],
         },
         CompilerTestCase {
-            input: "{1: 2}[2 - 1]",
+            input: "map {1: 2}[2 - 1]",
             expected_constants: vec![
                 Object::Integer(1),
                 Object::Integer(2),
@@ -1018,7 +1018,7 @@ fn test_set_index_expressions() {
             ],
         },
         CompilerTestCase {
-            input: "{1: 2}[2 - 1] = 2 * 3",
+            input: "map {1: 2}[2 - 1] = 2 * 3",
             expected_constants: vec![
                 Object::Integer(2),
                 Object::Integer(3),
@@ -1972,7 +1972,7 @@ fn test_assignment_expressions() {
             ],
         },
         CompilerTestCase {
-            input: r#"let m = {"a": 1}; m = {"a": 2}"#,
+            input: r#"let m = map {"a": 1}; m = map {"a": 2}"#,
             expected_constants: vec![
                 Object::Str("a".to_string()),
                 Object::Integer(1),

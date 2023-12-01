@@ -464,7 +464,7 @@ impl fmt::Display for HMap {
             .map(|(k, v)| format!("{}: {}, ", k, v))
             .collect::<String>();
         let pairs_str = pairs_str.trim_end_matches(|c| c == ' ' || c == ',');
-        write!(f, "{{{}}}", pairs_str)
+        write!(f, "map {{{}}}", pairs_str)
     }
 }
 

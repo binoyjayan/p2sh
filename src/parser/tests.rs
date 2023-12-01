@@ -1209,7 +1209,7 @@ fn test_parsing_array_index_expression() {
 
 #[test]
 fn test_parsing_hash_literals_strings_keys() {
-    let input = r#"{ "one": 1, "two": 2, "three": 3}"#;
+    let input = r#"map { "one": 1, "two": 2, "three": 3}"#;
     let program = parse_test_program(input, 1);
 
     let stmt = &program.statements[0];
@@ -1253,7 +1253,7 @@ fn test_parsing_hash_literals_strings_keys() {
 
 #[test]
 fn test_parsing_empty_hash_literal() {
-    let input = "{}";
+    let input = "map {}";
     let program = parse_test_program(input, 1);
 
     let stmt = &program.statements[0];
@@ -1281,7 +1281,7 @@ fn test_parsing_empty_hash_literal() {
 
 #[test]
 fn test_parsing_hash_literals_with_exprs() {
-    let input = r#"{ "one": 0 + 1, "two": 10 - 8, "three": 15 / 5}"#;
+    let input = r#"map { "one": 0 + 1, "two": 10 - 8, "three": 15 / 5}"#;
     let program = parse_test_program(input, 1);
 
     let stmt = &program.statements[0];

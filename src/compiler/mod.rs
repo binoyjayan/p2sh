@@ -315,6 +315,9 @@ impl Compiler {
                 // So emit a Pop instruction to cleanup the stack.
                 self.emit(Opcode::Pop, &[0], stmt.token.line);
             }
+            Statement::Block(stmt) => {
+                self.compile_block_statement(stmt)?;
+            }
             Statement::Let(stmt) => {
                 // Defining the symbol before the value allows compiling
                 // recursive functions that has reference to its own name.

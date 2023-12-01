@@ -135,6 +135,7 @@ impl Parser {
             TokenType::Break => self.parse_break_statement(),
             TokenType::Continue => self.parse_continue_statement(),
             TokenType::Function => self.parse_function_statement(),
+            TokenType::LeftBrace => self.parse_block_begin(),
             _ => self.parse_expr_statement(),
         }
     }
@@ -202,6 +203,10 @@ impl Parser {
             value,
         };
         Ok(Statement::Return(ret_stmt))
+    }
+
+    fn parse_block_begin(&mut self) -> Result<Statement, ParseError> {
+        Ok(Statement::Block(self.parse_block_statement()))
     }
 
     fn parse_loop_statement(&mut self, label: Option<Token>) -> Result<Statement, ParseError> {

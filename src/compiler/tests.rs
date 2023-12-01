@@ -2255,6 +2255,164 @@ fn test_logical_or_expressions() {
 }
 
 #[test]
+fn test_block_statements() {
+    let tests = vec![
+        CompilerTestCase {
+            input: r#"
+                {
+                    1;
+                }
+                1111;
+            "#,
+            expected_constants: vec![Object::Integer(1), Object::Integer(1111)],
+            expected_instructions: vec![
+                // 0000 : The constant 1
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0003 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0004 : The constant 1111
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0007 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: r#"
+                let a = 1;
+                {
+                    let b = 100;
+                    if a == 1 {
+                        a * 100
+                    } else {
+                        b * 200;
+                    }
+                }
+                1111;
+            "#,
+            expected_constants: vec![
+                Object::Integer(1),
+                Object::Integer(100),
+                Object::Integer(1),
+                Object::Integer(100),
+                Object::Integer(200),
+                Object::Integer(1111),
+            ],
+            expected_instructions: vec![
+                // 0000 : The constant '1'
+                definitions::make(Opcode::Constant, &[0], 1),
+                // 0003 : Define the global variable 'a'
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                // 0006 : The constant '100'
+                definitions::make(Opcode::Constant, &[1], 1),
+                // 0009 : Define the global variable 'b'
+                definitions::make(Opcode::DefineGlobal, &[1], 1),
+                // 0012 : Get the value of 'a'
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                // 0015 : The constant '1'
+                definitions::make(Opcode::Constant, &[2], 1),
+                // 0018 : Instruction to compare 'a' and 1
+                definitions::make(Opcode::Equal, &[], 1),
+                // 0019 : Jump over the 'then' statement if condition is false
+                definitions::make(Opcode::JumpIfFalse, &[32], 1),
+                // 0022 : Get the value of 'a'
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                // 0025 : The constant '100'
+                definitions::make(Opcode::Constant, &[3], 1),
+                // 0028 : Instruction to multiply 'a' and 100
+                definitions::make(Opcode::Mul, &[], 1),
+                // 0029 : Jump to the end of the 'if' expression
+                definitions::make(Opcode::Jump, &[39], 1),
+                // 0032 : Get the value of 'b'
+                definitions::make(Opcode::GetGlobal, &[1], 1),
+                // 0035 : The constant '200'
+                definitions::make(Opcode::Constant, &[4], 1),
+                // 0038 : Instruction to multiply 'b' and 200
+                definitions::make(Opcode::Mul, &[], 1),
+                // 0039 : Pop the result of the 'if' expression
+                definitions::make(Opcode::Pop, &[], 1),
+                // 0040 : The constant '1111'
+                definitions::make(Opcode::Constant, &[5], 1),
+                // 0043 : Pop the result of the expression
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "
+                let v = [];
+                let a = 1;
+                push(v, a);
+
+                fn f() {
+                    let a = 2;
+                    push(v, a);
+                    {
+                        let a = 3;
+                        push(v, a);
+                    }
+                    push(v, a);
+                }
+
+                f();
+                push(v, a);
+            
+            ",
+            expected_constants: vec![
+                Object::Integer(1),
+                Object::Integer(2),
+                Object::Integer(3),
+                Object::Func(Rc::new(CompiledFunction::new(
+                    concat_instructions(&[
+                        definitions::make(Opcode::Constant, &[1], 1),
+                        definitions::make(Opcode::DefineLocal, &[0], 1),
+                        definitions::make(Opcode::GetBuiltinFn, &[5], 1),
+                        definitions::make(Opcode::GetGlobal, &[0], 1),
+                        definitions::make(Opcode::GetLocal, &[0], 1),
+                        definitions::make(Opcode::Call, &[2], 1),
+                        definitions::make(Opcode::Pop, &[], 1),
+                        definitions::make(Opcode::Constant, &[2], 1),
+                        definitions::make(Opcode::DefineLocal, &[1], 1),
+                        definitions::make(Opcode::GetBuiltinFn, &[5], 1),
+                        definitions::make(Opcode::GetGlobal, &[0], 1),
+                        definitions::make(Opcode::GetLocal, &[1], 1),
+                        definitions::make(Opcode::Call, &[2], 1),
+                        definitions::make(Opcode::Pop, &[], 1),
+                        definitions::make(Opcode::GetBuiltinFn, &[5], 1),
+                        definitions::make(Opcode::GetGlobal, &[0], 1),
+                        definitions::make(Opcode::GetLocal, &[0], 1),
+                        definitions::make(Opcode::Call, &[2], 1),
+                        definitions::make(Opcode::ReturnValue, &[], 1),
+                    ]),
+                    0,
+                    1,
+                ))),
+            ],
+            expected_instructions: vec![
+                definitions::make(Opcode::Array, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[1], 1),
+                definitions::make(Opcode::GetBuiltinFn, &[5], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[1], 1),
+                definitions::make(Opcode::Call, &[2], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+                definitions::make(Opcode::Closure, &[3, 0], 1),
+                definitions::make(Opcode::DefineGlobal, &[2], 1),
+                definitions::make(Opcode::GetGlobal, &[2], 1),
+                definitions::make(Opcode::Call, &[0], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+                definitions::make(Opcode::GetBuiltinFn, &[5], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[1], 1),
+                definitions::make(Opcode::Call, &[2], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+    run_compiler_tests(&tests);
+}
+
+#[test]
 fn test_loop_statements() {
     let tests = vec![
         CompilerTestCase {

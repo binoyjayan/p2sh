@@ -1542,6 +1542,54 @@ fn test_parsing_assignment_expressions_negative() {
 }
 
 #[test]
+fn test_block_statement_empty() {
+    let input = "{ }";
+    let program = parse_test_program(input, 1);
+    let stmt = &program.statements[0];
+    if let Statement::Block(stmt) = stmt {
+        let len = stmt.statements.len();
+        assert_eq!(len, 0, "found number of statements. got={}", len);
+    } else {
+        panic!(
+            "program.statements[0] is not a block statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
+fn test_block_statements() {
+    let input = "{ 1; 2 }";
+    let program = parse_test_program(input, 1);
+    let stmt = &program.statements[0];
+    if let Statement::Block(stmt) = stmt {
+        let len = stmt.statements.len();
+        assert_eq!(len, 2, "found number of statements. got={}", len);
+        if let Statement::Expr(expr) = &stmt.statements[0] {
+            test_literal(&expr.value, Literal::Integer(1));
+        } else {
+            panic!(
+                "stmt.statements[0] is not an expression statement. got={}",
+                stmt.statements[0]
+            );
+        }
+        if let Statement::Expr(expr) = &stmt.statements[1] {
+            test_literal(&expr.value, Literal::Integer(2));
+        } else {
+            panic!(
+                "stmt.statements[1] is not an expression statement. got={}",
+                stmt.statements[0]
+            );
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not a block statement. got={}",
+            stmt
+        );
+    }
+}
+
+#[test]
 fn test_loop_with_break_statement() {
     let input = "loop { break; }";
     let program = parse_test_program(input, 1);

@@ -1748,7 +1748,7 @@ fn test_closures_with_depth() {
         VmTestCase {
             input: r#"
                 fn(a) {
-                    if true {
+                    {
                         let a = 10;
                     }
                     fn(b) {
@@ -2085,6 +2085,52 @@ fn test_logical_expressions_combined() {
 }
 
 #[test]
+fn test_block_statements() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+            {
+                100;
+                200
+            }
+            "#,
+            expected: Object::Integer(200),
+        },
+        VmTestCase {
+            input: "
+            let v = [];
+            let a = 1;
+            push(v, a);
+
+            fn f() {
+                let a = 2;
+                push(v, a);
+                {
+                    let a = 3;
+                    push(v, a);
+                }
+                push(v, a);
+            }
+
+            f();
+            push(v, a);
+            v
+            ",
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Integer(1)),
+                    Rc::new(Object::Integer(2)),
+                    Rc::new(Object::Integer(3)),
+                    Rc::new(Object::Integer(2)),
+                    Rc::new(Object::Integer(1)),
+                ]),
+            })),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
 fn test_loop_with_break() {
     let tests = vec![
         VmTestCase {
@@ -2161,7 +2207,7 @@ fn test_scoped_global_variables() {
         VmTestCase {
             input: r#"
                 let a = 1;
-                if true {
+                {
                     let a = 10;
                     a
                 }
@@ -2172,7 +2218,7 @@ fn test_scoped_global_variables() {
         VmTestCase {
             input: r#"
                 let a = 1;
-                if true {
+                {
                     let a = 10;
                     a;
                 }
@@ -2190,7 +2236,7 @@ fn test_scoped_local_variables() {
             input: r#"
                 let f = fn() {
                     let a = 1;
-                    if true {
+                    {
                         let a = 10;
                         a
                     }
@@ -2203,7 +2249,7 @@ fn test_scoped_local_variables() {
             input: r#"
                 let f = fn() {
                     let a = 1;
-                    if true {
+                    {
                         let a = 10;
                         a
                     }

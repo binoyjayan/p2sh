@@ -130,7 +130,9 @@ impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
             Self::Null => write!(f, "null"),
-            Self::Str(s) => write!(f, "{}", s),
+            // Wrap the string in quotes while printing string expressions
+            // But do not use this in builtins "puts" and "print"
+            Self::Str(s) => write!(f, r#""{}""#, s),
             Self::Char(c) => write!(f, "{}", c),
             Self::Byte(b) => write!(f, "{}", b),
             Self::Integer(val) => write!(f, "{}", val),
@@ -459,7 +461,7 @@ impl fmt::Display for HMap {
             .pairs
             .borrow()
             .iter()
-            .map(|(k, v)| format!(r#""{}": {}, "#, k, v))
+            .map(|(k, v)| format!("{}: {}, ", k, v))
             .collect::<String>();
         let pairs_str = pairs_str.trim_end_matches(|c| c == ' ' || c == ',');
         write!(f, "{{{}}}", pairs_str)

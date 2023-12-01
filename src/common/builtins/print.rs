@@ -75,7 +75,16 @@ fn format_obj(
             }
         }
         NumberFormat::None => {
-            format!("{}", obj)
+            match obj {
+                Object::Str(t) => {
+                    // Do not use display trait to print the string as
+                    // it wraps the string in quotes
+                    t.to_string()
+                }
+                o => {
+                    format!("{}", o)
+                }
+            }
         }
     };
     // Use a default padding of spaces

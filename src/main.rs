@@ -97,7 +97,10 @@ pub fn run_prompt(args: Vec<String>) {
                 }
                 // Get the object at the top of the VM's stack
                 let stack_elem = vm.last_popped();
-                println!("{}", stack_elem);
+                // print last popped element if it is not null
+                if !matches!(stack_elem.as_ref(), Object::Null) {
+                    println!("{}", stack_elem);
+                }
                 globals = vm.globals;
                 symtab = compiler.symtab;
                 constants = compiler.constants;

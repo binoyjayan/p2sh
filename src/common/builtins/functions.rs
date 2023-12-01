@@ -182,20 +182,18 @@ fn builtin_str(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
 
     let obj = args[0].as_ref();
-    if !matches!(
-        obj,
+    match obj {
+        Object::Str(_) => Ok(Rc::clone(&args[0])),
         Object::Null
-            | Object::Str(_)
-            | Object::Integer(_)
-            | Object::Char(_)
-            | Object::Byte(_)
-            | Object::Bool(_)
-            | Object::Arr(_)
-            | Object::Map(_)
-    ) {
-        return Err(String::from("unsupported argument"));
+        | Object::Integer(_)
+        | Object::Char(_)
+        | Object::Byte(_)
+        | Object::Bool(_)
+        | Object::Arr(_)
+        | Object::Map(_) => Ok(Rc::new(Object::Str(obj.to_string()))),
+        _ => Err(String::from("unsupported argument")),
     }
-    Ok(Rc::new(Object::Str(obj.to_string())))
+    // Ok(Rc::new(Object::Str(obj.to_string())))
 }
 
 fn builtin_int(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {

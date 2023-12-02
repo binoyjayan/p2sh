@@ -24,6 +24,7 @@ lazy_static! {
         m.insert("break".into(), TokenType::Break);
         m.insert("continue".into(), TokenType::Continue);
         m.insert("match".into(), TokenType::Match);
+        m.insert("struct".into(), TokenType::Struct);
         m
     };
 }

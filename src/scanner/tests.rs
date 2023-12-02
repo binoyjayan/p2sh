@@ -41,6 +41,7 @@ fn test_next_token() {
             loop { break; while { continue; } }
             1..2 == 1 ..= 2;
             match x { 0 => 1, _ => 0, }
+            struct { x, y }
         "#;
 
     let tests = vec![
@@ -249,6 +250,13 @@ fn test_next_token() {
         ExpectedToken(TokenType::MatchArm, "=>"),
         ExpectedToken(TokenType::Integer, "0"),
         ExpectedToken(TokenType::Comma, ","),
+        ExpectedToken(TokenType::RightBrace, "}"),
+        // struct { x, y }
+        ExpectedToken(TokenType::Struct, "struct"),
+        ExpectedToken(TokenType::LeftBrace, "{"),
+        ExpectedToken(TokenType::Identifier, "x"),
+        ExpectedToken(TokenType::Comma, ","),
+        ExpectedToken(TokenType::Identifier, "y"),
         ExpectedToken(TokenType::RightBrace, "}"),
         // EOF
         ExpectedToken(TokenType::Eof, ""),

@@ -1,6 +1,6 @@
 #!/usr/bin/env p2sh
 
-let map = fn(arr, f) {
+fn mapfn(arr, f) {
     let iter = fn(arr, accumulated) {
         if len(arr) == 0 {
             accumulated;
@@ -10,9 +10,9 @@ let map = fn(arr, f) {
         }
     };
     iter(arr, []);
-};
+}
 
-let reduce = fn(arr, initial, f) {
+fn reduce(arr, initial, f) {
     let iter = fn(arr, result) {
         if len(arr) == 0 {
             result;
@@ -21,16 +21,16 @@ let reduce = fn(arr, initial, f) {
         }
     };
     iter(arr, initial);
-};
+}
 
-let sum = fn(arr) {
+fn sum(arr) {
     reduce(arr, 0, fn(initial, el) { initial + el });
-};
+}
 
 let double = fn(x) { x * 2; };
 
 
 let arr = [1, 2, 3, 4, 5];
-let arr_double = map(arr, double);
+let arr_double = mapfn(arr, double);
 let total = sum(arr_double);
 println("Sum = {}", total);

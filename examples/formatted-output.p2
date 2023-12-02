@@ -5,7 +5,7 @@
 //
 
 // print objects
-puts(1, " ", "hello", " ", true, " ", fn(){}, " ", [1,2,3], " ", {});
+puts(1, " ", "hello", " ", true, " ", fn(){}, " ", [1,2,3], " ", map {});
 
 // print newline
 puts();

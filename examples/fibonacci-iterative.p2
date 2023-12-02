@@ -3,10 +3,8 @@
 let fibonacci = fn(n) {
     if n == 0 {
         return 0;
-    } else {
-        if n == 1 {
-            return 1;
-        }
+    } else if n == 1 {
+        return 1;
     }
 
     let a = 0;
@@ -14,11 +12,7 @@ let fibonacci = fn(n) {
     let result = 0;
     let i = 2;
 
-    loop {
-        if i > n {
-            break;
-        }
-
+    while i <= n {
         result = a + b;
         a = b;
         b = result;

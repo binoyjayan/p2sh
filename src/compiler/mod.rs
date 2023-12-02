@@ -771,7 +771,7 @@ impl Compiler {
             // Compile the patterns for this arm
             for pattern_variant in &arm.patterns {
                 match pattern_variant {
-                    MatchPatternVariant::Integer(num) => {
+                    MatchPattern::Integer(num) => {
                         // Duplicate the scrutinee expression on the stack
                         self.emit(Opcode::Dup, &[0], arm.token.line);
                         // Push the integer pattern variant onto the stack
@@ -785,7 +785,7 @@ impl Compiler {
                         let jump_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], num.token.line);
                         jump_body_v.push(jump_pos);
                     }
-                    MatchPatternVariant::Str(s) => {
+                    MatchPattern::Str(s) => {
                         self.emit(Opcode::Dup, &[0], arm.token.line);
                         let idx = self.add_constant(Object::Str(s.value.clone()));
                         self.emit(Opcode::Constant, &[idx], s.token.line);
@@ -793,7 +793,23 @@ impl Compiler {
                         let jump_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], s.token.line);
                         jump_body_v.push(jump_pos);
                     }
-                    MatchPatternVariant::Range(r) => {
+                    MatchPattern::Char(ch) => {
+                        self.emit(Opcode::Dup, &[0], arm.token.line);
+                        let idx = self.add_constant(Object::Char(ch.value));
+                        self.emit(Opcode::Constant, &[idx], ch.token.line);
+                        self.emit(Opcode::NotEqual, &[0], ch.token.line);
+                        let jump_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], ch.token.line);
+                        jump_body_v.push(jump_pos);
+                    }
+                    MatchPattern::Byte(b) => {
+                        self.emit(Opcode::Dup, &[0], arm.token.line);
+                        let idx = self.add_constant(Object::Byte(b.value));
+                        self.emit(Opcode::Constant, &[idx], b.token.line);
+                        self.emit(Opcode::NotEqual, &[0], b.token.line);
+                        let jump_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], b.token.line);
+                        jump_body_v.push(jump_pos);
+                    }
+                    MatchPattern::Range(r) => {
                         let (idx_beg, idx_end) = match (&*r.begin, &*r.end) {
                             (Expression::Integer(begin), Expression::Integer(end)) => (
                                 self.add_constant(Object::Integer(begin.value)),
@@ -802,6 +818,14 @@ impl Compiler {
                             (Expression::Str(begin), Expression::Str(end)) => (
                                 self.add_constant(Object::Str(begin.value.clone())),
                                 self.add_constant(Object::Str(end.value.clone())),
+                            ),
+                            (Expression::Char(begin), Expression::Char(end)) => (
+                                self.add_constant(Object::Char(begin.value)),
+                                self.add_constant(Object::Char(end.value)),
+                            ),
+                            (Expression::Byte(begin), Expression::Byte(end)) => (
+                                self.add_constant(Object::Byte(begin.value)),
+                                self.add_constant(Object::Byte(end.value)),
                             ),
                             _ => {
                                 return Err(CompileError::new(
@@ -834,7 +858,7 @@ impl Compiler {
                         // If the value is not in the range, then do nothing (continue to next pattern)
                         self.patch_jump(jump_end);
                     }
-                    MatchPatternVariant::Default(u) => {
+                    MatchPattern::Default(u) => {
                         // The condition is always true; jump to the block statement
                         let jump_pos = self.emit(Opcode::Jump, &[0xFFFF], u.token.line);
                         jump_body_v.push(jump_pos);

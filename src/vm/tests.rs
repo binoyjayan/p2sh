@@ -2501,16 +2501,17 @@ fn test_match_expressions_strings() {
     let tests = vec![VmTestCase {
         input: r#"
                 fn lang(p) {
-                    match p {
-                        "a" | "e" | "i" | "o" | "u" | "A" | "E" | "I" | "O" | "U" => {  "vowel" }
-                        "b"..="z" | "B"..="Z" => "consonant",
+                    match tolower(p) {
+                        "a" | "e" | "i" | "o" | "u" => {  "vowel" }
+                        "b"..="z" => "consonant",
                         _ => {  "others" }
                       }
                 }
                 [
-                    lang("a"), lang("e"), lang("i"), lang("o"), lang("u"), lang("A"), lang("E"), lang("I"), lang("O"), lang("U"),
-                    lang("b"), lang("c"), lang("d"), lang("f"), lang("z"), lang("B"), lang("C"), lang("D"), lang("F"), lang("Z"),
-                    lang("1"), lang("3"), lang("5"), lang("9"), lang("0"), lang(" "), lang(","), lang(";"), lang("'"), lang("+")
+                    lang("a"), lang("E"), lang("i"), lang("O"), lang("u"),
+                    lang("b"), lang("C"), lang("d"), lang("F"), lang("z"),
+                    lang("1"), lang("3"), lang("5"), lang("9"), lang("0"),
+                    lang(" "), lang(","), lang(";"), lang("'"), lang("+")
                 ]
             "#,
         expected: Object::Arr(Rc::new(Array {
@@ -2520,6 +2521,47 @@ fn test_match_expressions_strings() {
                 Rc::new(Object::Str("vowel".to_string())),
                 Rc::new(Object::Str("vowel".to_string())),
                 Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+            ]),
+        })),
+    }];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_match_expressions_char() {
+    let tests = vec![VmTestCase {
+        input: r#"
+                fn lang(p) {
+                    match tolower(p) {
+                        'a' | 'e' | 'i' | 'o' | 'u' => {  "vowel" }
+                        'b'..='z' => "consonant",
+                        _ => {  "others" }
+                      }
+                }
+                [
+                    lang('a'), lang('E'), lang('i'), lang('O'), lang('u'),
+                    lang('b'), lang('C'), lang('d'), lang('F'), lang('z'),
+                    lang('1'), lang('3'), lang('5'), lang('9'), lang('0'),
+                    lang(' '), lang(','), lang(';'), lang('-'), lang('+')
+                ]
+            "#,
+        expected: Object::Arr(Rc::new(Array {
+            elements: RefCell::new(vec![
                 Rc::new(Object::Str("vowel".to_string())),
                 Rc::new(Object::Str("vowel".to_string())),
                 Rc::new(Object::Str("vowel".to_string())),
@@ -2530,6 +2572,47 @@ fn test_match_expressions_strings() {
                 Rc::new(Object::Str("consonant".to_string())),
                 Rc::new(Object::Str("consonant".to_string())),
                 Rc::new(Object::Str("consonant".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+                Rc::new(Object::Str("others".to_string())),
+            ]),
+        })),
+    }];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_match_expressions_byte() {
+    let tests = vec![VmTestCase {
+        input: r#"
+                fn lang(p) {
+                    match toupper(p) {
+                        b'A' | b'E' | b'I' | b'O' | b'U' => {  "vowel" }
+                        b'B'..=b'Z' => "consonant",
+                        _ => {  "others" }
+                      }
+                }
+                [
+                    lang(b'a'), lang(b'E'), lang(b'i'), lang(b'O'), lang(b'u'),
+                    lang(b'b'), lang(b'C'), lang(b'd'), lang(b'F'), lang(b'z'),
+                    lang(b'1'), lang(b'3'), lang(b'5'), lang(b'9'), lang(b'0'),
+                    lang(b' '), lang(b','), lang(b';'), lang(b'-'), lang(b'+')
+                ]
+            "#,
+        expected: Object::Arr(Rc::new(Array {
+            elements: RefCell::new(vec![
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
+                Rc::new(Object::Str("vowel".to_string())),
                 Rc::new(Object::Str("consonant".to_string())),
                 Rc::new(Object::Str("consonant".to_string())),
                 Rc::new(Object::Str("consonant".to_string())),

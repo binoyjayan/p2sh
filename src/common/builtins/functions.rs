@@ -34,6 +34,8 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("eprintln", builtin_eprintln),
     BuiltinFunction::new("round", builtin_round),
     BuiltinFunction::new("sleep", builtin_sleep),
+    BuiltinFunction::new("tolower", builtin_tolower),
+    BuiltinFunction::new("toupper", builtin_toupper),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -464,6 +466,50 @@ fn builtin_sleep(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         Object::Integer(n) => {
             thread::sleep(time::Duration::from_secs(*n as u64));
             Ok(Rc::new(Object::Null))
+        }
+        _ => Err(String::from("argument should be an integer")),
+    }
+}
+
+fn builtin_tolower(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+
+    match args[0].as_ref() {
+        Object::Char(c) => {
+            let c = c.to_ascii_lowercase();
+            Ok(Rc::new(Object::Char(c)))
+        }
+        Object::Byte(b) => {
+            let b = b.to_ascii_lowercase();
+            Ok(Rc::new(Object::Byte(b)))
+        }
+        Object::Str(s) => {
+            let s = s.to_ascii_lowercase();
+            Ok(Rc::new(Object::Str(s)))
+        }
+        _ => Err(String::from("argument should be an integer")),
+    }
+}
+
+fn builtin_toupper(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+
+    match args[0].as_ref() {
+        Object::Char(c) => {
+            let c = c.to_ascii_uppercase();
+            Ok(Rc::new(Object::Char(c)))
+        }
+        Object::Byte(b) => {
+            let b = b.to_ascii_uppercase();
+            Ok(Rc::new(Object::Byte(b)))
+        }
+        Object::Str(s) => {
+            let s = s.to_ascii_uppercase();
+            Ok(Rc::new(Object::Str(s)))
         }
         _ => Err(String::from("argument should be an integer")),
     }

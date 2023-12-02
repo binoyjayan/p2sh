@@ -207,34 +207,38 @@ impl fmt::Display for IfExpr {
 }
 
 #[derive(Clone, Debug)]
-pub enum MatchPatternVariant {
+pub enum MatchPattern {
     Integer(IntegerLiteral),
+    Char(CharLiteral),
+    Byte(ByteLiteral),
     Str(StringLiteral),
     Range(RangeExpr),
     Default(Underscore),
 }
 
-impl fmt::Display for MatchPatternVariant {
+impl fmt::Display for MatchPattern {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            MatchPatternVariant::Integer(num) => write!(f, "{}", num),
-            MatchPatternVariant::Str(s) => write!(f, "{}", s),
-            MatchPatternVariant::Range(r) => write!(f, "{}", r),
-            MatchPatternVariant::Default(u) => write!(f, "{}", u),
+            MatchPattern::Integer(num) => write!(f, "{}", num),
+            MatchPattern::Str(s) => write!(f, "{}", s),
+            MatchPattern::Char(c) => write!(f, "{}", c),
+            MatchPattern::Byte(b) => write!(f, "{}", b),
+            MatchPattern::Range(r) => write!(f, "{}", r),
+            MatchPattern::Default(u) => write!(f, "{}", u),
         }
     }
 }
 
-impl MatchPatternVariant {
+impl MatchPattern {
     pub fn is_default(&self) -> bool {
-        matches!(self, MatchPatternVariant::Default(_))
+        matches!(self, MatchPattern::Default(_))
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct MatchArm {
     pub token: Token, // token '=>'
-    pub patterns: Vec<MatchPatternVariant>,
+    pub patterns: Vec<MatchPattern>,
     pub body: BlockStatement,
 }
 

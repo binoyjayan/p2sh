@@ -1722,14 +1722,14 @@ fn test_match_arm(arm: MatchArm, expected_pattern: Vec<Literal>, expected_body: 
     for (i, pattern) in arm.patterns.iter().enumerate() {
         let exp = expected_pattern[i].clone();
         match (pattern, exp) {
-            (MatchPatternVariant::Integer(m), Literal::Integer(n)) => {
+            (MatchPattern::Integer(m), Literal::Integer(n)) => {
                 assert_eq!(m.value, n, "[{}] wrong integer literal. got={}", i, m)
             }
-            (MatchPatternVariant::Str(s1), Literal::Str(s2)) => {
+            (MatchPattern::Str(s1), Literal::Str(s2)) => {
                 assert_eq!(s1.value, s2, "[{}] wrong integer string. got={}", i, s1)
             }
-            (MatchPatternVariant::Default(d), Literal::Str(s)) => assert_eq!(d.value, s),
-            (MatchPatternVariant::Range(r), Literal::Range(b, e)) => {
+            (MatchPattern::Default(d), Literal::Str(s)) => assert_eq!(d.value, s),
+            (MatchPattern::Range(r), Literal::Range(b, e)) => {
                 test_literal(&r.begin, Literal::Integer(b));
                 test_literal(&r.end, Literal::Integer(e));
             }

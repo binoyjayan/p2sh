@@ -543,7 +543,7 @@ impl Parser {
             // of the default (_) pattern is a null expression statement.
             let default_arm = MatchArm {
                 token: Token::new(TokenType::Underscore, "_", token.line),
-                patterns: vec![MatchPatternVariant::Default(Underscore {
+                patterns: vec![MatchPattern::Default(Underscore {
                     token: Token::new(TokenType::Underscore, "_", token.line),
                     value: "_".to_string(),
                 })],
@@ -577,7 +577,7 @@ impl Parser {
     // 'in_match_pattern' to true to indicate that the parser is currently
     // parsing a match pattern. This helps use different precedence for
     // involving bitwise OR and match pattern OR tokens.
-    fn parse_match_pattern(&mut self) -> Result<Vec<MatchPatternVariant>, String> {
+    fn parse_match_pattern(&mut self) -> Result<Vec<MatchPattern>, String> {
         self.in_match_pattern = true;
         let pattern = self.parse_expression(Precedence::Assignment);
         self.in_match_pattern = false;
@@ -602,13 +602,15 @@ impl Parser {
     // Convert the expression to a vector of MatchPatternVariant's by recursively
     // parsing the bitwise OR expressions. These operands are are converted to
     // MatchPatternVariant's and pushed to the vector. The vector is returned.
-    fn convert_to_pattern_list(expr: Expression) -> Result<Vec<MatchPatternVariant>, String> {
+    fn convert_to_pattern_list(expr: Expression) -> Result<Vec<MatchPattern>, String> {
         let mut patterns = Vec::new();
         let pattern_exp = match expr {
-            Expression::Score(expr) => MatchPatternVariant::Default(expr),
-            Expression::Integer(expr) => MatchPatternVariant::Integer(expr),
-            Expression::Str(expr) => MatchPatternVariant::Str(expr),
-            Expression::Range(expr) => MatchPatternVariant::Range(expr),
+            Expression::Score(expr) => MatchPattern::Default(expr),
+            Expression::Integer(expr) => MatchPattern::Integer(expr),
+            Expression::Char(expr) => MatchPattern::Char(expr),
+            Expression::Byte(expr) => MatchPattern::Byte(expr),
+            Expression::Str(expr) => MatchPattern::Str(expr),
+            Expression::Range(expr) => MatchPattern::Range(expr),
             Expression::Binary(expr) => {
                 // convert the bitwise or expression to patterns recursively
                 match expr.operator.as_ref() {
@@ -857,6 +859,8 @@ impl Parser {
             (&left, &right),
             (&Expression::Integer(_), &Expression::Integer(_))
                 | (&Expression::Str(_), &Expression::Str(_))
+                | (&Expression::Char(_), &Expression::Char(_))
+                | (&Expression::Byte(_), &Expression::Byte(_))
                 | (&Expression::Ident(_), &Expression::Ident(_))
         );
 

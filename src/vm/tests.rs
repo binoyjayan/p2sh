@@ -2545,11 +2545,12 @@ fn test_match_expressions_strings() {
 #[test]
 fn test_match_expressions_char() {
     let tests = vec![VmTestCase {
+        // Test match expressions with char patterns and a mix of range expressions
         input: r#"
                 fn lang(p) {
                     match tolower(p) {
                         'a' | 'e' | 'i' | 'o' | 'u' => {  "vowel" }
-                        'b'..='z' => "consonant",
+                        'b' | 'c'..='y' | 'z' => "consonant",
                         _ => {  "others" }
                       }
                 }
@@ -2591,11 +2592,12 @@ fn test_match_expressions_char() {
 #[test]
 fn test_match_expressions_byte() {
     let tests = vec![VmTestCase {
+        // Test match expressions with byte patterns and a mix of range expressions
         input: r#"
                 fn lang(p) {
                     match toupper(p) {
                         b'A' | b'E' | b'I' | b'O' | b'U' => {  "vowel" }
-                        b'B'..=b'Z' => "consonant",
+                        b'B' | b'C'..=b'Y' | b'Z' => "consonant",
                         _ => {  "others" }
                       }
                 }

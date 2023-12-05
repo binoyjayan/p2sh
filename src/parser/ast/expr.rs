@@ -233,6 +233,69 @@ impl MatchPattern {
     pub fn is_default(&self) -> bool {
         matches!(self, MatchPattern::Default(_))
     }
+
+    // Compare two patterns of match expression and return true if both
+    // patterns have the same type. Otherswise, return false.
+    pub fn matches_type(&self, other: &MatchPattern) -> bool {
+        if self.is_default() || other.is_default() {
+            return true;
+        }
+
+        match (self, other) {
+            (MatchPattern::Integer(_), MatchPattern::Integer(_))
+            | (MatchPattern::Str(_), MatchPattern::Str(_))
+            | (MatchPattern::Char(_), MatchPattern::Char(_))
+            | (MatchPattern::Byte(_), MatchPattern::Byte(_)) => true,
+            (MatchPattern::Range(r1), MatchPattern::Range(r2)) => {
+                matches!(
+                    (&*r1.begin, &*r1.end, &*r2.begin, &*r2.end),
+                    (
+                        Expression::Integer(_),
+                        Expression::Integer(_),
+                        Expression::Integer(_),
+                        Expression::Integer(_),
+                    ) | (
+                        Expression::Str(_),
+                        Expression::Str(_),
+                        Expression::Str(_),
+                        Expression::Str(_),
+                    ) | (
+                        Expression::Char(_),
+                        Expression::Char(_),
+                        Expression::Char(_),
+                        Expression::Char(_),
+                    ) | (
+                        Expression::Byte(_),
+                        Expression::Byte(_),
+                        Expression::Byte(_),
+                        Expression::Byte(_),
+                    )
+                )
+            }
+            (MatchPattern::Default(_), _) | (_, MatchPattern::Default(_)) => true,
+            (MatchPattern::Range(r), o) | (o, MatchPattern::Range(r)) => {
+                matches!(
+                    (&*r.begin, &*r.end, o),
+                    (
+                        Expression::Integer(_),
+                        Expression::Integer(_),
+                        MatchPattern::Integer(_)
+                    ) | (Expression::Str(_), Expression::Str(_), MatchPattern::Str(_))
+                        | (
+                            Expression::Char(_),
+                            Expression::Char(_),
+                            MatchPattern::Char(_)
+                        )
+                        | (
+                            Expression::Byte(_),
+                            Expression::Byte(_),
+                            MatchPattern::Byte(_)
+                        )
+                )
+            }
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

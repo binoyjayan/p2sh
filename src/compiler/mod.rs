@@ -762,6 +762,10 @@ impl Compiler {
         // before executing the block statement corresponding to the arm.
         self.compile_expression(*match_expr.expr)?;
 
+        // The parser should have added atleast the default arm and
+        // atleast one pattern in the arm. So it is safe to unwrap.
+        let first = match_expr.arms.first().unwrap().patterns.first().unwrap();
+
         // MatchIfFalse consumes the result of 'condition'.
         // Compile each arm of the match expression
         for (idx, arm) in match_expr.arms.iter().enumerate() {
@@ -770,6 +774,13 @@ impl Compiler {
             let mut jump_body_v = Vec::new();
             // Compile the patterns for this arm
             for pattern_variant in &arm.patterns {
+                // compare type of the first pattern with all the other patterns
+                if !first.matches_type(pattern_variant) {
+                    return Err(CompileError::new(
+                        "all patterns in the match expresion must have the same type",
+                        arm.token.line,
+                    ));
+                }
                 match pattern_variant {
                     MatchPattern::Integer(num) => {
                         // Duplicate the scrutinee expression on the stack

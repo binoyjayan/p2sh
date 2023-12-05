@@ -189,13 +189,13 @@ fn test_instructions(expected: &[Instructions], actual: &Instructions) {
 #[cfg(test)]
 fn run_compiler_tests(tests: &[CompilerTestCase]) {
     for (n, t) in tests.iter().enumerate() {
+        println!("[{}] Compiler Test", n);
         let program = parse_program(&t.input);
         let mut compiler = Compiler::new();
         let result = compiler.compile(program);
         if let Err(err) = result {
             panic!("[{}] {}", n, err);
         }
-        println!("[{}] Compiler Test", n);
         let bytecode = compiler.bytecode();
         test_instructions(&t.expected_instructions, &bytecode.instructions);
         test_constants(&t.expected_constants, &bytecode.constants);
@@ -204,13 +204,16 @@ fn run_compiler_tests(tests: &[CompilerTestCase]) {
 
 #[cfg(test)]
 fn run_compiler_failed_tests(tests: &[CompilerTestCaseErrors]) {
-    for t in tests.iter() {
+    for (n, t) in tests.iter().enumerate() {
+        println!("[{}] Compiler Test", n);
         let program = parse_program(&t.input);
         let mut compiler = Compiler::new();
         let result = compiler.compile(program);
         if let Err(err) = result {
             let serr = format!("{}", err);
             assert_eq!(serr, t.error);
+        } else {
+            panic!("[{}] Expected error but got none", n);
         }
     }
 }
@@ -3220,4 +3223,69 @@ fn test_match_expressions() {
         ],
     }];
     run_compiler_tests(&tests);
+}
+
+#[test]
+fn test_match_expressions_negative() {
+    let tests = vec![
+        CompilerTestCaseErrors {
+            input: r#"
+                let x = 1;
+                match x {
+                    1 | 'a' => { "1" }
+                    _ => { "0" }
+                }
+            "#,
+            error: "[line 4] compile error: all patterns in the match expresion must have the same type",
+        },
+        CompilerTestCaseErrors {
+            input: r#"
+                let x = 1;
+                match x {
+                    1 => { "1" }
+                    'a' => { "a" }
+                }
+            "#,
+            error: "[line 5] compile error: all patterns in the match expresion must have the same type",
+        },
+        CompilerTestCaseErrors {
+            input: r#"
+                let x = 1;
+                match x {
+                    "a" => { "a" }
+                    b'1' => { "1" }
+                }
+            "#,
+            error: "[line 5] compile error: all patterns in the match expresion must have the same type",
+        },
+        CompilerTestCaseErrors {
+            input: r#"
+                let x = 1;
+                match x {
+                    0..=8 | '9' => { "number" }
+                }
+            "#,
+            error: "[line 4] compile error: all patterns in the match expresion must have the same type",
+        },
+        CompilerTestCaseErrors {
+            input: r#"
+                let x = 1;
+                match x {
+                    '0'..='8' | 9 => { "number" }
+                }
+            "#,
+            error: "[line 4] compile error: all patterns in the match expresion must have the same type",
+        },
+        CompilerTestCaseErrors {
+            input: r#"
+                let x = 1;
+                match x {
+                    0..=9 => { "number" }
+                    '0'..='9' => { "number" }
+                }
+            "#,
+            error: "[line 5] compile error: all patterns in the match expresion must have the same type",
+        },
+    ];
+    run_compiler_failed_tests(&tests);
 }

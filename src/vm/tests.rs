@@ -1503,6 +1503,18 @@ fn test_builtin_functions_file_io() {
             input: r#"decode_utf8([b'H', b'e', b'l', b'l', b'o'])"#,
             expected: Object::Str(String::from("Hello")),
         },
+        VmTestCase {
+            input: r#"encode_utf8("Hello")"#,
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Byte(b'H')),
+                    Rc::new(Object::Byte(b'e')),
+                    Rc::new(Object::Byte(b'l')),
+                    Rc::new(Object::Byte(b'l')),
+                    Rc::new(Object::Byte(b'o')),
+                ]),
+            })),
+        },
     ];
     run_vm_tests(&tests);
 }

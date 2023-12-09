@@ -42,6 +42,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("read", builtin_read),
     BuiltinFunction::new("read_to_string", builtin_read_to_string),
     BuiltinFunction::new("decode_utf8", decode_utf8),
+    BuiltinFunction::new("encode_utf8", encode_utf8),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -660,5 +661,21 @@ fn decode_utf8(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         }
     } else {
         Err(String::from("argument should be an array of bytes"))
+    }
+}
+
+fn encode_utf8(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+
+    if let Object::Str(s) = args[0].as_ref() {
+        let mut bytes = Vec::new();
+        for b in s.as_bytes() {
+            bytes.push(Rc::new(Object::Byte(*b)));
+        }
+        Ok(Rc::new(Object::Arr(Rc::new(Array::new(bytes)))))
+    } else {
+        Err(String::from("argument should be a string"))
     }
 }

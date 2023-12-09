@@ -524,6 +524,13 @@ fn builtin_toupper(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
 }
 
+/// Opens a file handle
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing the path to the file (Object::Str) and an optional
+///           second argument specifying the mode (Object::Str).
+/// # Returns
+/// Returns a Result containing a file handle wrapped in an Object::File,
+/// or an error message if the operation fails.
 fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.is_empty() || args.len() > 2 {
         return Err(format!("takes one or two arguments. got={}", args.len()));
@@ -735,6 +742,12 @@ fn decode_utf8(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
 }
 
+/// Encodes a string into a UTF-8 encoded byte array
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing a string wrapped in an Object::Str.
+/// # Returns
+/// Returns a Result containing an array of Object::Byte variants wrapped in an Object::Arr,
+/// or an error message if the operation fails.
 fn encode_utf8(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.len() != 1 {
         return Err(format!("takes one argument. got={}", args.len()));
@@ -751,6 +764,13 @@ fn encode_utf8(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
 }
 
+/// Writes a byte or an array of bytes to a file handle
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing the file handle (Object::File) and a byte or an
+///           array of bytes (Object::Byte or Object::Arr).
+/// # Returns
+/// Returns a Result containing the number of bytes written wrapped in an Object::Integer,
+/// or an error message if the operation fails.
 fn builtin_write(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.len() != 2 {
         return Err(format!("takes two arguments. got={}", args.len()));

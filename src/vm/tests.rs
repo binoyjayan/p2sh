@@ -1463,71 +1463,75 @@ fn test_builtin_functions_file_io() {
     let tests = vec![
         VmTestCase {
             input: r#"
-              let f = open("/tmp/__p2sh_test.txt", "w");
-              write(f, "Hey")
+               let f = open("/tmp/__p2sh_test.txt", "w");
+               write(f, "Hey")
             "#,
             expected: Object::Integer(3),
         },
         VmTestCase {
             input: r#"
-              let f = open("/tmp/__p2sh_test.txt", "T");
-              write(f, "Hello")
+                let f = open("/tmp/__p2sh_test.txt", "T");
+                write(f, "Hello")
             "#,
             expected: Object::Integer(5),
         },
         VmTestCase {
             input: r#"
-              let f = open("/tmp/__p2sh_test.txt", "a");
-              let n1 = write(f, [b' ', b'W', b'o', b'r', b'l', b'd', b'!']);
-              let n2 = write(f, byte(10));
-              n1 + n2
+                let f = open("/tmp/__p2sh_test.txt", "a");
+                let n1 = write(f, [b' ', b'W', b'o', b'r', b'l', b'd', b'!']);
+                let n2 = write(f, byte(10));
+                n1 + n2
             "#,
             expected: Object::Integer(8),
         },
         VmTestCase {
             input: r#"
-              let f = open("/tmp/__p2sh_test.txt");
-              let a = read(f, 5);
-              decode_utf8(a)
+                let f = open("/tmp/__p2sh_test.txt");
+                let a1 = read(f, 5);
+                read(f, 1);
+                let a2 = read(f, 5);
+                let s1 = decode_utf8(a1);
+                let s2 = decode_utf8(a2);
+                s1 + s2
             "#,
-            expected: Object::Str(String::from("Hello")),
+            expected: Object::Str(String::from("HelloWorld")),
         },
         VmTestCase {
             input: r#"
-              let f = open("/tmp/__p2sh_test.txt");
-              let a = read(f);
-              decode_utf8(a)
+                let f = open("/tmp/__p2sh_test.txt");
+                let a = read(f);
+                decode_utf8(a)
             "#,
             expected: Object::Str(String::from("Hello World!\n")),
         },
         VmTestCase {
             input: r#"
-              let n = 0;
-              let f = open("/tmp/__p2sh_test.txt");
-              loop {
-                let a = read(f, 1);
-                if len(a) < 1 {
-                    break;
+                let n = 0;
+                let f = open("/tmp/__p2sh_test.txt");
+                loop {
+                  let a = read(f, 1);
+                  if len(a) < 1 {
+                      break;
+                  }
+                  n = n + 1;
                 }
-                n = n + 1;
-              }
-              n
+                n
             "#,
             expected: Object::Integer(13),
         },
         // Write without truncation
         VmTestCase {
             input: r#"
-              let f = open("/tmp/__p2sh_test.txt", "w");
-              write(f, "Hey  ")
+                let f = open("/tmp/__p2sh_test.txt", "w");
+                write(f, "Hey  ")
             "#,
             expected: Object::Integer(5),
         },
         VmTestCase {
             input: r#"
-              let f = open("/tmp/__p2sh_test.txt");
-              let a = read(f);
-              decode_utf8(a)
+                let f = open("/tmp/__p2sh_test.txt");
+                let a = read(f);
+                decode_utf8(a)
             "#,
             expected: Object::Str(String::from("Hey   World!\n")),
         },

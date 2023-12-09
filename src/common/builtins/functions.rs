@@ -29,6 +29,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("exit", builtin_exit),
     BuiltinFunction::new("flush_stdout", flush_stdout),
     BuiltinFunction::new("flush_stderr", flush_stderr),
+    BuiltinFunction::new("flush", builtin_flush),
     BuiltinFunction::new("format", builtin_format),
     BuiltinFunction::new("print", builtin_print),
     BuiltinFunction::new("println", builtin_println),
@@ -371,6 +372,20 @@ fn flush_stderr(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         return Err(format!("takes no argument(s). got={}", args.len()));
     }
     io::stderr().flush().expect("Failed to flush stderr");
+    Ok(Rc::new(Object::Null))
+}
+
+fn builtin_flush(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+    match args[0].as_ref() {
+        Object::File(f) => {
+            let mut file = f.file.borrow_mut();
+            file.flush().expect("Failed to flush file");
+        }
+        _ => return Err(String::from("argument should be a file handle")),
+    }
     Ok(Rc::new(Object::Null))
 }
 

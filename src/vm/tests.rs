@@ -1177,7 +1177,7 @@ fn test_wrong_number_of_arguments() {
 }
 
 #[test]
-fn test_builtin_functions() {
+fn test_builtin_function_len() {
     let tests = vec![
         VmTestCase {
             input: r#"len("")"#,
@@ -1207,6 +1207,13 @@ fn test_builtin_functions() {
             input: r#"len(map {"a": 1, "b": 2})"#,
             expected: Object::Integer(2),
         },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_builtin_functions_arrays() {
+    let tests = vec![
         VmTestCase {
             input: r#"first([1, 2, 3])"#,
             expected: Object::Integer(1),
@@ -1250,6 +1257,13 @@ fn test_builtin_functions() {
             "#,
             expected: Object::Integer(2),
         },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_builtin_functions_maps() {
+    let tests = vec![
         VmTestCase {
             input: r#"contains(map {}, "k")"#,
             expected: Object::Bool(false),
@@ -1296,6 +1310,13 @@ fn test_builtin_functions() {
                 Rc::new(map)
             }),
         },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_builtin_functions_conversions() {
+    let tests = vec![
         VmTestCase {
             // rest([]) is Null
             input: "str(rest([]))",
@@ -1351,10 +1372,6 @@ fn test_builtin_functions() {
             expected: Object::Integer(0),
         },
         VmTestCase {
-            input: r#"round(3.141592653589793238, 2)"#,
-            expected: Object::Float(3.14),
-        },
-        VmTestCase {
             input: "int(b'1')",
             expected: Object::Integer(49),
         },
@@ -1387,6 +1404,15 @@ fn test_builtin_functions() {
             expected: Object::Byte(b'1'),
         },
     ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_builtin_functions_math() {
+    let tests = vec![VmTestCase {
+        input: r#"round(3.141592653589793238, 2)"#,
+        expected: Object::Float(3.14),
+    }];
     run_vm_tests(&tests);
 }
 
@@ -1425,6 +1451,57 @@ fn test_builtin_functions_display() {
                 "Hello", 1, true, 10, 65535
             )"#,
             expected: Object::Integer(40),
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_builtin_functions_file_io() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+              let f = open("Cargo.toml");
+              let a = read(f, 9);
+              let s = decode_utf8(a);
+            "#,
+            expected: Object::Str(String::from("[package]")),
+        },
+        VmTestCase {
+            input: r#"
+              let f = open("Cargo.toml");
+              let a = read(f);
+              let s = decode_utf8(a);
+              len(s) > 250
+            "#,
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: r#"
+              let f = open("Cargo.toml");
+              let s = read_to_string(f);
+              len(s) > 250
+            "#,
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: r#"
+              let n = 0;
+              let f = open("Cargo.toml");
+              loop {
+                let a = read(f, 1);
+                if len(a) < 1 {
+                    break;
+                }
+                n = n + 1;
+              }
+              n > 250
+            "#,
+            expected: Object::Bool(true),
+        },
+        VmTestCase {
+            input: r#"decode_utf8([b'H', b'e', b'l', b'l', b'o'])"#,
+            expected: Object::Str(String::from("Hello")),
         },
     ];
     run_vm_tests(&tests);
@@ -1472,6 +1549,14 @@ fn test_builtin_function_failures() {
         VmTestCaseErr {
             input: r#"float("a")"#,
             expected: "float: failed to parse string into a float",
+        },
+        VmTestCaseErr {
+            input: r#"open()"#,
+            expected: "open: takes one argument. got=0",
+        },
+        VmTestCaseErr {
+            input: r#"read()"#,
+            expected: "read: takes one or two arguments. got=0",
         },
     ];
 

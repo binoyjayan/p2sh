@@ -40,9 +40,11 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("toupper", builtin_toupper),
     BuiltinFunction::new("open", builtin_open),
     BuiltinFunction::new("read", builtin_read),
+    BuiltinFunction::new("write", builtin_write),
     BuiltinFunction::new("read_to_string", builtin_read_to_string),
     BuiltinFunction::new("decode_utf8", decode_utf8),
     BuiltinFunction::new("encode_utf8", encode_utf8),
+    BuiltinFunction::new("read_line", builtin_read_line),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -523,21 +525,90 @@ fn builtin_toupper(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 }
 
 fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
-    if args.len() != 1 {
-        return Err(format!("takes one argument. got={}", args.len()));
+    if args.is_empty() || args.len() > 2 {
+        return Err(format!("takes one or two arguments. got={}", args.len()));
     }
 
-    if let Object::Str(s) = args[0].as_ref() {
-        let path = s.to_ascii_uppercase();
-        match fs::File::open(&path) {
-            Ok(file) => {
-                let handle = FileHandle::new(file);
-                Ok(Rc::new(Object::File(Rc::new(handle))))
-            }
-            Err(e) => Err(format!("failed to open file: {}", e)),
+    let path = if let Object::Str(s) = args[0].as_ref() {
+        s
+    } else {
+        return Err(String::from("argument should be a string"));
+    };
+
+    let mode = if args.len() == 2 {
+        if let Object::Str(s) = args[1].as_ref() {
+            s
+        } else {
+            return Err(String::from("second argument should be a string"));
         }
     } else {
-        Err(String::from("argument should be a string"))
+        "r"
+    };
+
+    match mode {
+        "r" => {
+            // opens a file for reading, error if the file does not exist
+            let file = fs::File::open(path);
+            match file {
+                Ok(file) => {
+                    let handle = FileHandle::new(file);
+                    Ok(Rc::new(Object::File(Rc::new(handle))))
+                }
+                Err(_) => Err("failed to open file for reading".to_string()),
+            }
+        }
+        "a" => {
+            // open a file for appending, create the file if it does not exist
+            let file = fs::OpenOptions::new().append(true).open(path);
+            match file {
+                Ok(file) => {
+                    let handle = FileHandle::new(file);
+                    Ok(Rc::new(Object::File(Rc::new(handle))))
+                }
+                Err(_) => Err("failed to open file for appending".to_string()),
+            }
+        }
+        "w" => {
+            // open a file for writing, create the file if it does not exist
+            let file = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(false)
+                .open(path);
+            match file {
+                Ok(file) => {
+                    let handle = FileHandle::new(file);
+                    Ok(Rc::new(Object::File(Rc::new(handle))))
+                }
+                Err(_) => Err("failed to open file for writing".to_string()),
+            }
+        }
+        "x" => {
+            // create the specified file, returns an error if the file exist
+            let file = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(path);
+            match file {
+                Ok(file) => {
+                    let handle = FileHandle::new(file);
+                    Ok(Rc::new(Object::File(Rc::new(handle))))
+                }
+                Err(_) => Err("failed to create file".to_string()),
+            }
+        }
+        "T" => {
+            // open a file for writing, with truncation
+            let file = fs::OpenOptions::new().write(true).truncate(true).open(path);
+            match file {
+                Ok(file) => {
+                    let handle = FileHandle::new(file);
+                    Ok(Rc::new(Object::File(Rc::new(handle))))
+                }
+                Err(_) => Err("failed to open file for truncation".to_string()),
+            }
+        }
+        _ => Err(String::from("invalid file open mode")),
     }
 }
 
@@ -678,4 +749,69 @@ fn encode_utf8(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     } else {
         Err(String::from("argument should be a string"))
     }
+}
+
+fn builtin_write(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 2 {
+        return Err(format!("takes two arguments. got={}", args.len()));
+    }
+
+    if let Object::File(f) = args[0].as_ref() {
+        let mut file = f.file.borrow_mut();
+        match args[1].as_ref() {
+            Object::Byte(b) => {
+                let buf = [*b];
+                match file.write(&buf) {
+                    // Return number of bytes written
+                    Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
+                    Err(e) => Err(format!("failed to write to file: {}", e)),
+                }
+            }
+            // Handle array of bytes
+            Object::Arr(arr) => {
+                let mut buf = Vec::new();
+                for obj in arr.elements.borrow().iter() {
+                    if let Object::Byte(b) = obj.as_ref() {
+                        buf.push(*b);
+                    } else {
+                        return Err(String::from("array should contain only bytes"));
+                    }
+                }
+                match file.write(&buf) {
+                    Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
+                    Err(e) => Err(format!("failed to write to file: {}", e)),
+                }
+            }
+            Object::Str(s) => {
+                let bytes = s.as_bytes();
+                match file.write(bytes) {
+                    Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
+                    Err(e) => Err(format!("failed to write to file: {}", e)),
+                }
+            }
+            _ => Err(String::from("second argument should be a byte or string")),
+        }
+    } else {
+        Err(String::from("first argument should be a file handle"))
+    }
+}
+
+/// Reads a line from stdin
+/// # Returns
+/// Returns a Result containing a string wrapped in an Object::Str,
+/// or an error message if the operation fails.
+fn builtin_read_line(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if !args.is_empty() {
+        return Err(format!("takes no argument(s). got={}", args.len()));
+    }
+
+    let mut input = String::new();
+    match io::stdin().read_line(&mut input) {
+        Ok(_) => {}
+        Err(e) => {
+            return Err(format!("failed to read from stdin: {}", e));
+        }
+    }
+
+    Ok(Rc::new(Object::Str(input)))
 }

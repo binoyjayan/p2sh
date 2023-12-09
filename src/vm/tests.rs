@@ -136,6 +136,7 @@ fn test_compile(input: &str) -> Bytecode {
 #[cfg(test)]
 fn run_vm_tests(tests: &[VmTestCase]) {
     for (i, t) in tests.iter().enumerate() {
+        println!("[{}] VM Test", i);
         let bytecode = test_compile(t.input);
         let mut vm = VM::new(bytecode);
         let arr = Rc::new(Object::Arr(Rc::new(Array::new(Vec::new()))));
@@ -1458,36 +1459,51 @@ fn test_builtin_functions_display() {
 
 #[test]
 fn test_builtin_functions_file_io() {
+    // Preserve the sequence of tests here
     let tests = vec![
         VmTestCase {
             input: r#"
-              let f = open("Cargo.toml");
-              let a = read(f, 9);
-              let s = decode_utf8(a);
+              let f = open("/tmp/__p2sh_test.txt", "w");
+              write(f, "Hey")
             "#,
-            expected: Object::Str(String::from("[package]")),
+            expected: Object::Integer(3),
         },
         VmTestCase {
             input: r#"
-              let f = open("Cargo.toml");
+              let f = open("/tmp/__p2sh_test.txt", "T");
+              write(f, "Hello")
+            "#,
+            expected: Object::Integer(5),
+        },
+        VmTestCase {
+            input: r#"
+              let f = open("/tmp/__p2sh_test.txt", "a");
+              let n1 = write(f, [b' ', b'W', b'o', b'r', b'l', b'd', b'!']);
+              let n2 = write(f, byte(10));
+              n1 + n2
+            "#,
+            expected: Object::Integer(8),
+        },
+        VmTestCase {
+            input: r#"
+              let f = open("/tmp/__p2sh_test.txt");
+              let a = read(f, 5);
+              decode_utf8(a)
+            "#,
+            expected: Object::Str(String::from("Hello")),
+        },
+        VmTestCase {
+            input: r#"
+              let f = open("/tmp/__p2sh_test.txt");
               let a = read(f);
-              let s = decode_utf8(a);
-              len(s) > 250
+              decode_utf8(a)
             "#,
-            expected: Object::Bool(true),
-        },
-        VmTestCase {
-            input: r#"
-              let f = open("Cargo.toml");
-              let s = read_to_string(f);
-              len(s) > 250
-            "#,
-            expected: Object::Bool(true),
+            expected: Object::Str(String::from("Hello World!\n")),
         },
         VmTestCase {
             input: r#"
               let n = 0;
-              let f = open("Cargo.toml");
+              let f = open("/tmp/__p2sh_test.txt");
               loop {
                 let a = read(f, 1);
                 if len(a) < 1 {
@@ -1495,9 +1511,25 @@ fn test_builtin_functions_file_io() {
                 }
                 n = n + 1;
               }
-              n > 250
+              n
             "#,
-            expected: Object::Bool(true),
+            expected: Object::Integer(13),
+        },
+        // Write without truncation
+        VmTestCase {
+            input: r#"
+              let f = open("/tmp/__p2sh_test.txt", "w");
+              write(f, "Hey  ")
+            "#,
+            expected: Object::Integer(5),
+        },
+        VmTestCase {
+            input: r#"
+              let f = open("/tmp/__p2sh_test.txt");
+              let a = read(f);
+              decode_utf8(a)
+            "#,
+            expected: Object::Str(String::from("Hey   World!\n")),
         },
         VmTestCase {
             input: r#"decode_utf8([b'H', b'e', b'l', b'l', b'o'])"#,
@@ -1564,7 +1596,7 @@ fn test_builtin_function_failures() {
         },
         VmTestCaseErr {
             input: r#"open()"#,
-            expected: "open: takes one argument. got=0",
+            expected: "open: takes one or two arguments. got=0",
         },
         VmTestCaseErr {
             input: r#"read()"#,

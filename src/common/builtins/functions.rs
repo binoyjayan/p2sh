@@ -1,3 +1,5 @@
+use std::fs;
+use std::io::Read;
 use std::io::{self, Write};
 use std::process;
 use std::rc::Rc;
@@ -36,6 +38,10 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("sleep", builtin_sleep),
     BuiltinFunction::new("tolower", builtin_tolower),
     BuiltinFunction::new("toupper", builtin_toupper),
+    BuiltinFunction::new("open", builtin_open),
+    BuiltinFunction::new("read", builtin_read),
+    BuiltinFunction::new("read_to_string", builtin_read_to_string),
+    BuiltinFunction::new("decode_utf8", decode_utf8),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -512,5 +518,147 @@ fn builtin_toupper(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             Ok(Rc::new(Object::Str(s)))
         }
         _ => Err(String::from("argument should be an integer")),
+    }
+}
+
+fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+
+    if let Object::Str(s) = args[0].as_ref() {
+        let path = s.to_ascii_uppercase();
+        match fs::File::open(&path) {
+            Ok(file) => {
+                let handle = FileHandle::new(file);
+                Ok(Rc::new(Object::File(Rc::new(handle))))
+            }
+            Err(e) => Err(format!("failed to open file: {}", e)),
+        }
+    } else {
+        Err(String::from("argument should be a string"))
+    }
+}
+
+/// Reads bytes from a file handle into an array of Object::Byte variants.
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing the file handle (Object::File) and an optional
+///            second argument specifying the number of bytes to read (Object::Integer).
+/// # Returns
+/// Returns a Result containing an array of Object::Byte variants wrapped in an Object::Arr,
+/// or an error message if the operation fails.
+///
+fn builtin_read(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.is_empty() || args.len() > 2 {
+        return Err(format!("takes one or two arguments. got={}", args.len()));
+    }
+
+    if let Object::File(f) = args[0].as_ref() {
+        let mut file = f.file.borrow_mut();
+        let mut total_bytes_read = 0;
+        // Read in chunks of 4096 bytes
+        let mut buffer = [0; 4096];
+
+        let num_bytes_to_read = if args.len() == 2 {
+            if let Object::Integer(num) = args[1].as_ref() {
+                *num as usize
+            } else {
+                return Err(String::from("second argument should be an integer"));
+            }
+        } else {
+            // Read until the end of the file
+            usize::MAX
+        };
+
+        let mut result_bytes = Vec::new();
+
+        while total_bytes_read < num_bytes_to_read {
+            let bytes_remaining = num_bytes_to_read - total_bytes_read;
+            let read_len = buffer.len().min(bytes_remaining);
+            let buf_slice = &mut buffer[..read_len];
+            match file.read(buf_slice) {
+                Ok(bytes_read) => {
+                    if bytes_read == 0 {
+                        break; // EOF
+                    }
+                    // Copy bytes off
+                    for byte in buf_slice.iter().take(bytes_read) {
+                        result_bytes.push(Rc::new(Object::Byte(*byte)));
+                    }
+                    // Got less bytes than requested, so we're done
+                    if bytes_read < read_len {
+                        break;
+                    }
+                    total_bytes_read += bytes_read;
+                }
+                Err(e) => {
+                    return Err(format!("failed to read file: {}", e));
+                }
+            }
+        }
+
+        Ok(Rc::new(Object::Arr(Rc::new(Array::new(result_bytes)))))
+    } else {
+        Err(String::from("first argument should be a file handle"))
+    }
+}
+
+/// Reads bytes from a file handle and return it as a string
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing the file handle (Object::File).
+/// # Returns
+/// Returns a Result containing a string wrapped in an Object::Str,
+/// or an error message if the operation fails.
+fn builtin_read_to_string(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+
+    if let Object::File(f) = args[0].as_ref() {
+        let mut file = f.file.borrow_mut();
+        // Read all data
+        let mut result_bytes = Vec::new();
+        match file.read_to_end(&mut result_bytes) {
+            Ok(_) => {}
+            Err(e) => {
+                return Err(format!("failed to read file: {}", e));
+            }
+        }
+
+        match String::from_utf8(result_bytes) {
+            Ok(s) => Ok(Rc::new(Object::Str(s))),
+            Err(e) => Err(format!("failed to decode bytes: {}", e)),
+        }
+    } else {
+        Err(String::from("first argument should be a file handle"))
+    }
+}
+
+/// Decodes a UTF-8 encoded byte array into a string
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing an array of Object::Byte variants.
+/// # Returns
+/// Returns a Result containing a string wrapped in an Object::Str,
+/// or an error message if the operation fails.
+fn decode_utf8(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+
+    if let Object::Arr(arr) = args[0].as_ref() {
+        let mut bytes = Vec::new();
+        for obj in arr.elements.borrow().iter() {
+            if let Object::Byte(b) = obj.as_ref() {
+                bytes.push(*b);
+            } else {
+                return Err(String::from("array should contain only bytes"));
+            }
+        }
+        match String::from_utf8(bytes) {
+            Ok(s) => Ok(Rc::new(Object::Str(s))),
+            Err(e) => Err(format!("failed to decode bytes: {}", e)),
+        }
+    } else {
+        Err(String::from("argument should be an array of bytes"))
     }
 }

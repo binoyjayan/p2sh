@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
+use std::fs;
 use std::hash::{Hash, Hasher};
 use std::ops;
 use std::rc::Rc;
@@ -23,6 +24,7 @@ pub enum Object {
     Arr(Rc<Array>),
     Map(Rc<HMap>),
     Clos(Rc<Closure>),
+    File(Rc<FileHandle>),
 }
 
 impl PartialEq for Object {
@@ -58,26 +60,6 @@ impl PartialOrd for Object {
             (Object::Float(a), Object::Float(b)) => a.partial_cmp(b),
             (Object::Bool(a), Object::Bool(b)) => a.partial_cmp(b),
             _ => None,
-        }
-    }
-}
-
-impl Clone for Object {
-    fn clone(&self) -> Self {
-        match self {
-            Object::Null => Object::Null,
-            Object::Str(s) => Object::Str(s.clone()),
-            Object::Char(c) => Object::Char(*c),
-            Object::Byte(b) => Object::Byte(*b),
-            Object::Integer(n) => Object::Integer(*n),
-            Object::Float(n) => Object::Float(*n),
-            Object::Bool(b) => Object::Bool(*b),
-            Object::Return(r) => Object::Return(r.clone()),
-            Object::Builtin(f) => Object::Builtin(f.clone()),
-            Object::Arr(a) => Object::Arr(a.clone()),
-            Object::Map(m) => Object::Map(m.clone()),
-            Object::Func(f) => Object::Func(f.clone()),
-            Object::Clos(f) => Object::Clos(f.clone()),
         }
     }
 }
@@ -144,6 +126,7 @@ impl fmt::Display for Object {
             Self::Arr(val) => write!(f, "{}", val),
             Self::Map(val) => write!(f, "{}", val),
             Self::Clos(val) => write!(f, "{}", val),
+            Self::File(val) => write!(f, "{}", val),
         }
     }
 }
@@ -564,5 +547,24 @@ impl fmt::Display for Closure {
 impl PartialEq for Closure {
     fn eq(&self, other: &Self) -> bool {
         self.func == other.func
+    }
+}
+
+#[derive(Debug)]
+pub struct FileHandle {
+    pub file: RefCell<fs::File>,
+}
+
+impl FileHandle {
+    pub fn new(file: fs::File) -> Self {
+        Self {
+            file: RefCell::new(file),
+        }
+    }
+}
+
+impl fmt::Display for FileHandle {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<file-handle>")
     }
 }

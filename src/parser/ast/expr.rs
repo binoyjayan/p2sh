@@ -7,6 +7,7 @@ pub enum Expression {
     Null(NullLiteral),
     Score(Underscore),
     Ident(Identifier),
+    Builtin(BuiltinID),
     Integer(IntegerLiteral),
     Float(FloatLiteral),
     Str(StringLiteral),
@@ -56,6 +57,19 @@ pub struct Identifier {
 impl fmt::Display for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.token)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct BuiltinID {
+    pub token: Token,
+    pub value: String,
+    pub access: AccessType,
+}
+
+impl fmt::Display for BuiltinID {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "builtin<{}>", self.token)
     }
 }
 
@@ -470,6 +484,7 @@ impl Expression {
         match &self {
             Expression::Score(u) => u.token.literal.clone(),
             Expression::Ident(ident) => ident.token.literal.clone(),
+            Expression::Builtin(bid) => bid.token.literal.clone(),
             Expression::Integer(num) => num.token.literal.clone(),
             Expression::Float(num) => num.token.literal.clone(),
             Expression::Str(s) => s.token.literal.clone(),
@@ -498,6 +513,7 @@ impl fmt::Display for Expression {
         match &self {
             Expression::Score(u) => write!(f, "{}", u),
             Expression::Ident(ident) => write!(f, "{}", ident),
+            Expression::Builtin(bid) => write!(f, "{}", bid),
             Expression::Integer(num) => write!(f, "{}", num),
             Expression::Float(num) => write!(f, "{}", num),
             Expression::Str(s) => write!(f, "{}", s),

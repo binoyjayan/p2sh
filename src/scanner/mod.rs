@@ -25,6 +25,9 @@ lazy_static! {
         m.insert("continue".into(), TokenType::Continue);
         m.insert("match".into(), TokenType::Match);
         m.insert("struct".into(), TokenType::Struct);
+        m.insert("stdin".into(), TokenType::Stdin);
+        m.insert("stdout".into(), TokenType::Stdout);
+        m.insert("stderr".into(), TokenType::Stderr);
         m
     };
 }

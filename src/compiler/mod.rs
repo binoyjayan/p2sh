@@ -9,6 +9,7 @@ use crate::common::builtins::variables::BuiltinVarType;
 use crate::common::error::CompileError;
 use crate::common::object::CompiledFunction;
 use crate::common::object::Object;
+use crate::common::object::StdHandle;
 use crate::compiler::symtab::SymbolTable;
 use crate::parser::ast::expr::*;
 use crate::parser::ast::stmt::BlockStatement;
@@ -512,6 +513,19 @@ impl Compiler {
             }
             Expression::Null(null) => {
                 self.emit(Opcode::Null, &[0], null.token.line);
+            }
+            Expression::Builtin(bid) => {
+                // Builtins identifiers
+                let obj = match bid.value.as_str() {
+                    "stdin" => Object::StdFile(StdHandle::Stdin),
+                    "stdout" => Object::StdFile(StdHandle::Stdout),
+                    "stderr" => Object::StdFile(StdHandle::Stderr),
+                    _ => {
+                        panic!("invalid builtin identifier {}", bid.token.line);
+                    }
+                };
+                let idx = self.add_constant(obj);
+                self.emit(Opcode::Constant, &[idx], bid.token.line);
             }
             Expression::Integer(num) => {
                 let obj = Object::Integer(num.value);

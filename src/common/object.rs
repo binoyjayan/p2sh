@@ -25,6 +25,7 @@ pub enum Object {
     Map(Rc<HMap>),
     Clos(Rc<Closure>),
     File(Rc<FileHandle>),
+    StdFile(StdHandle),
 }
 
 impl PartialEq for Object {
@@ -127,6 +128,7 @@ impl fmt::Display for Object {
             Self::Map(val) => write!(f, "{}", val),
             Self::Clos(val) => write!(f, "{}", val),
             Self::File(val) => write!(f, "{}", val),
+            Self::StdFile(val) => write!(f, "{}", val),
         }
     }
 }
@@ -566,5 +568,22 @@ impl FileHandle {
 impl fmt::Display for FileHandle {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<file-handle>")
+    }
+}
+
+#[derive(Debug)]
+pub enum StdHandle {
+    Stdin,
+    Stdout,
+    Stderr,
+}
+
+impl fmt::Display for StdHandle {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Stdin => write!(f, "<stdin>"),
+            Self::Stdout => write!(f, "<stdout>"),
+            Self::Stderr => write!(f, "<stderr>"),
+        }
     }
 }

@@ -39,6 +39,9 @@ impl Default for Token {
 pub enum TokenType {
     Illegal = 0,
     Null,
+    Stdin,
+    Stdout,
+    Stderr,
     Eof,
     // Identifiers + literals
     Underscore,
@@ -107,6 +110,9 @@ impl From<TokenType> for &'static str {
         match ttype {
             TokenType::Illegal => "ILLEGAL",
             TokenType::Null => "NULL",
+            TokenType::Stdin => "STDIN",
+            TokenType::Stdout => "STDOUT",
+            TokenType::Stderr => "STDERR",
             TokenType::Eof => "EOF",
             TokenType::Underscore => "_",
             TokenType::Identifier => "IDENTIFIER",

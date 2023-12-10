@@ -382,3 +382,23 @@ fn test_tokens_struct() {
 
     run_scanner_tests(input, tests);
 }
+
+#[test]
+fn test_tokens_std_files() {
+    let input = r#"
+        stdin;
+        stdout;
+        stderr;
+    "#;
+    let tests = vec![
+        ExpectedToken(TokenType::Stdin, "stdin"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::Stdout, "stdout"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::Stderr, "stderr"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        // EOF
+        ExpectedToken(TokenType::Eof, ""),
+    ];
+    run_scanner_tests(input, tests);
+}

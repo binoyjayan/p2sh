@@ -68,6 +68,12 @@ lazy_static! {
             ParseRule::new(Some(Parser::parse_char), None, Precedence::Lowest);
         rules[TokenType::Byte as usize] =
             ParseRule::new(Some(Parser::parse_byte), None, Precedence::Lowest);
+        rules[TokenType::Stdin as usize] =
+            ParseRule::new(Some(Parser::parse_builtin_id), None, Precedence::Lowest);
+        rules[TokenType::Stdout as usize] =
+            ParseRule::new(Some(Parser::parse_builtin_id), None, Precedence::Lowest);
+        rules[TokenType::Stderr as usize] =
+            ParseRule::new(Some(Parser::parse_builtin_id), None, Precedence::Lowest);
         // Unary - Logical '!'
         rules[TokenType::Bang as usize] = ParseRule::new(
             Some(Parser::parse_prefix_expression),
@@ -278,6 +284,15 @@ impl Parser {
     fn parse_identifier(&mut self) -> Expression {
         let access = self.peek_access_type();
         Expression::Ident(Identifier {
+            token: self.current.clone(),
+            value: self.current.literal.clone(),
+            access,
+        })
+    }
+
+    fn parse_builtin_id(&mut self) -> Expression {
+        let access = self.peek_access_type();
+        Expression::Builtin(BuiltinID {
             token: self.current.clone(),
             value: self.current.literal.clone(),
             access,

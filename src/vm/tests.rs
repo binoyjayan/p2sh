@@ -1536,6 +1536,31 @@ fn test_builtin_functions_file_io() {
             expected: Object::Str(String::from("Hey   World!\n")),
         },
         VmTestCase {
+            input: r#"
+                let f = open("/tmp/__p2sh_test.txt", "a");
+                let n1 = write(f, "EOF");
+                let n2 = write(f, byte(10));
+                n1 + n2
+            "#,
+            expected: Object::Integer(4),
+        },
+        VmTestCase {
+            input: r#"
+                let a = null;
+                let all = "";
+                let f = open("/tmp/__p2sh_test.txt");
+                while a = read(f) {
+                    if len(a) == 0 {
+                      break;
+                    }
+                    let s = decode_utf8(a);
+                    all = all + s;
+                }
+                all
+            "#,
+            expected: Object::Str(String::from("Hey   World!\nEOF\n")),
+        },
+        VmTestCase {
             input: r#"decode_utf8([b'H', b'e', b'l', b'l', b'o'])"#,
             expected: Object::Str(String::from("Hello")),
         },
@@ -1605,6 +1630,10 @@ fn test_builtin_function_failures() {
         VmTestCaseErr {
             input: r#"read()"#,
             expected: "read: takes one or two arguments. got=0",
+        },
+        VmTestCaseErr {
+            input: r#"read_line()"#,
+            expected: "read_line: takes one argument. got=0",
         },
     ];
 

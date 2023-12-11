@@ -44,6 +44,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("decode_utf8", decode_utf8),
     BuiltinFunction::new("encode_utf8", encode_utf8),
     BuiltinFunction::new("read_line", builtin_read_line),
+    BuiltinFunction::new("input", builtin_input),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -638,7 +639,7 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 /// Helper to read bytes from a file handle into an array of Object::Byte variants.
 /// # Arguments
 /// * `reader` - A reference to a Read trait object.
-/// * `args` - A vector of Rc<Object> containing the file handle (Object::File) and an optional
+/// * `args` - A vector of Rc<Object> containing the file handle and an optional
 ///            second argument specifying the number of bytes to read (Object::Integer).
 /// # Returns
 /// Returns a Result containing an array of Object::Byte variants wrapped in an Object::Arr,
@@ -681,7 +682,7 @@ fn read_from_file<R: Read>(
 
 /// Reads bytes from a file handle into an array of Object::Byte variants.
 /// # Arguments
-/// * `args` - A vector of Rc<Object> containing the file handle (Object::File) and an optional
+/// * `args` - A vector of Rc<Object> containing the file handle and an optional
 ///            second argument specifying the number of bytes to read (Object::Integer).
 /// # Returns
 /// Returns a Result containing an array of Object::Byte variants wrapped in an Object::Arr,
@@ -730,7 +731,7 @@ fn builtin_read(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 
 /// Reads bytes from a file handle and return it as a string
 /// # Arguments
-/// * `args` - A vector of Rc<Object> containing the file handle (Object::File).
+/// * `args` - A vector of Rc<Object> containing the file handle
 /// # Returns
 /// Returns a Result containing a string wrapped in an Object::Str,
 /// or an error message if the operation fails.
@@ -817,7 +818,7 @@ fn encode_utf8(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 
 /// Writes a byte or an array of bytes to a file handle
 /// # Arguments
-/// * `args` - A vector of Rc<Object> containing the file handle (Object::File) and a byte or an
+/// * `args` - A vector of Rc<Object> containing the file handle and a byte or an
 ///           array of bytes (Object::Byte or Object::Arr).
 /// # Returns
 /// Returns a Result containing the number of bytes written wrapped in an Object::Integer,
@@ -915,9 +916,9 @@ fn builtin_write(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
 }
 
-/// Reads a line from stdin
+/// Reads a line from stdin or a file handle
 /// # Arguments
-/// * `args` - A vector of Rc<Object> containing the file handle (Object::File).
+/// * `args` - A vector of Rc<Object> containing the file handle
 /// # Returns
 /// Returns a Result containing a string wrapped in an Object::Str,
 /// or an error message if the operation fails.
@@ -945,5 +946,31 @@ fn builtin_read_line(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             FileHandle::Stderr => Err(String::from("cannot read from stderr")),
         },
         _ => Err(String::from("argument should be a file handle")),
+    }
+}
+
+/// Reads a line from stdin
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing the prompt (Object::Str).
+/// # Returns
+/// Returns a Result containing a string wrapped in an Object::Str,
+/// or an error message if the operation fails.
+fn builtin_input(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() > 1 {
+        return Err(format!("takes one or no arguments. got={}", args.len()));
+    }
+    // display the prompt only if args has atleast one element
+    if args.len() == 1 {
+        if let Object::Str(s) = args[0].as_ref() {
+            print!("{}", s);
+            io::stdout().flush().expect("Failed to flush stdout");
+        } else {
+            return Err(String::from("argument should be a string"));
+        }
+    }
+    let mut line = String::new();
+    match io::stdin().read_line(&mut line) {
+        Ok(_) => Ok(Rc::new(Object::Str(line.trim().to_string()))),
+        Err(e) => Err(format!("failed to read from stdin: {}", e)),
     }
 }

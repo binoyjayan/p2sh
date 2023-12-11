@@ -588,6 +588,18 @@ fn test_boolean_expressions() {
             expected: Object::Bool(false),
         },
         VmTestCase {
+            input: r#"!!"""#,
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "!![]",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
+            input: "!!map {}",
+            expected: Object::Bool(false),
+        },
+        VmTestCase {
             input: "(10 + 50 + -5 - 5 * 2 / 2) < (100 - 35)",
             expected: Object::Bool(true),
         },
@@ -1463,21 +1475,21 @@ fn test_builtin_functions_file_io() {
     let tests = vec![
         VmTestCase {
             input: r#"
-               let f = open("/tmp/__p2sh_test.txt", "w");
+               let f = open("/tmp/__p2sh_test1.txt", "w");
                write(f, "Hey")
             "#,
             expected: Object::Integer(3),
         },
         VmTestCase {
             input: r#"
-                let f = open("/tmp/__p2sh_test.txt", "T");
+                let f = open("/tmp/__p2sh_test1.txt", "T");
                 write(f, "Hello")
             "#,
             expected: Object::Integer(5),
         },
         VmTestCase {
             input: r#"
-                let f = open("/tmp/__p2sh_test.txt", "a");
+                let f = open("/tmp/__p2sh_test1.txt", "a");
                 let n1 = write(f, [b' ', b'W', b'o', b'r', b'l', b'd', b'!']);
                 let n2 = write(f, byte(10));
                 n1 + n2
@@ -1486,7 +1498,7 @@ fn test_builtin_functions_file_io() {
         },
         VmTestCase {
             input: r#"
-                let f = open("/tmp/__p2sh_test.txt");
+                let f = open("/tmp/__p2sh_test1.txt");
                 let a1 = read(f, 5);
                 read(f, 1);
                 let a2 = read(f, 5);
@@ -1498,7 +1510,7 @@ fn test_builtin_functions_file_io() {
         },
         VmTestCase {
             input: r#"
-                let f = open("/tmp/__p2sh_test.txt");
+                let f = open("/tmp/__p2sh_test1.txt");
                 let a = read(f);
                 decode_utf8(a)
             "#,
@@ -1507,9 +1519,9 @@ fn test_builtin_functions_file_io() {
         VmTestCase {
             input: r#"
                 let n = 0;
-                let f = open("/tmp/__p2sh_test.txt");
-                loop {
-                  let a = read(f, 1);
+                let a = null;
+                let f = open("/tmp/__p2sh_test1.txt");
+                while a = read(f, 1) {
                   if len(a) < 1 {
                       break;
                   }
@@ -1522,14 +1534,14 @@ fn test_builtin_functions_file_io() {
         // Write without truncation
         VmTestCase {
             input: r#"
-                let f = open("/tmp/__p2sh_test.txt", "w");
+                let f = open("/tmp/__p2sh_test1.txt", "w");
                 write(f, "Hey  ")
             "#,
             expected: Object::Integer(5),
         },
         VmTestCase {
             input: r#"
-                let f = open("/tmp/__p2sh_test.txt");
+                let f = open("/tmp/__p2sh_test1.txt");
                 let a = read(f);
                 decode_utf8(a)
             "#,
@@ -1537,7 +1549,7 @@ fn test_builtin_functions_file_io() {
         },
         VmTestCase {
             input: r#"
-                let f = open("/tmp/__p2sh_test.txt", "a");
+                let f = open("/tmp/__p2sh_test1.txt", "a");
                 let n1 = write(f, "EOF");
                 let n2 = write(f, byte(10));
                 n1 + n2
@@ -1546,14 +1558,10 @@ fn test_builtin_functions_file_io() {
         },
         VmTestCase {
             input: r#"
-                let a = null;
+                let s = null;
                 let all = "";
-                let f = open("/tmp/__p2sh_test.txt");
-                while a = read(f) {
-                    if len(a) == 0 {
-                      break;
-                    }
-                    let s = decode_utf8(a);
+                let f = open("/tmp/__p2sh_test1.txt");
+                while s = read_line(f) {
                     all = all + s;
                 }
                 all
@@ -1623,6 +1631,14 @@ fn test_builtin_function_failures() {
             input: r#"float("a")"#,
             expected: "float: failed to parse string into a float",
         },
+    ];
+
+    run_vm_negative_tests(&tests);
+}
+
+#[test]
+fn test_builtin_function_failures_file_io() {
+    let tests: Vec<VmTestCaseErr> = vec![
         VmTestCaseErr {
             input: r#"open()"#,
             expected: "open: takes one or two arguments. got=0",
@@ -1634,6 +1650,50 @@ fn test_builtin_function_failures() {
         VmTestCaseErr {
             input: r#"read_line()"#,
             expected: "read_line: takes one argument. got=0",
+        },
+        VmTestCaseErr {
+            input: "flush(stdin)",
+            expected: "flush: cannot flush stdin",
+        },
+        VmTestCaseErr {
+            input: r#"write(stdin, "test")"#,
+            expected: "write: cannot write to stdin",
+        },
+        VmTestCaseErr {
+            input: "read(stdout)",
+            expected: "read: cannot read from stdout",
+        },
+        VmTestCaseErr {
+            input: "read(stderr)",
+            expected: "read: cannot read from stderr",
+        },
+        VmTestCaseErr {
+            input: r#"
+                let f = open("/tmp/__p2sh_test2.txt", "w");
+                read(f)
+            "#,
+            expected: "read: cannot read from a writer",
+        },
+        VmTestCaseErr {
+            input: r#"
+                let f = open("/tmp/__p2sh_test2.txt", "a");
+                read(f)
+            "#,
+            expected: "read: cannot read from a writer",
+        },
+        VmTestCaseErr {
+            input: r#"
+                let f = open("/tmp/__p2sh_test2.txt", "r");
+                write(f, "test")
+            "#,
+            expected: "write: cannot write to a reader",
+        },
+        VmTestCaseErr {
+            input: r#"
+                let f = open("/tmp/__p2sh_test2.txt", "r");
+                flush(f)
+            "#,
+            expected: "flush: cannot flush a reader",
         },
     ];
 

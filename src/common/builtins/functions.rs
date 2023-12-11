@@ -1,5 +1,6 @@
 use std::fs;
-use std::io::{self, Read, Write};
+use std::io;
+use std::io::{BufRead, Read, Write};
 use std::process;
 use std::rc::Rc;
 use std::thread;
@@ -361,19 +362,22 @@ fn builtin_flush(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         return Err(format!("takes one argument. got={}", args.len()));
     }
     match args[0].as_ref() {
-        Object::File(f) => {
-            let mut file = f.file.borrow_mut();
-            file.flush().expect("Failed to flush file");
-        }
-        Object::StdFile(f) => match f {
-            StdHandle::Stdout => {
+        Object::File(f) => match f.as_ref() {
+            FileHandle::Reader(_) => {
+                return Err("cannot flush a reader".to_string());
+            }
+            FileHandle::Writer(writer) => {
+                let mut writer = writer.borrow_mut();
+                writer.flush().expect("Failed to flush file");
+            }
+            FileHandle::Stdin => {
+                return Err("cannot flush stdin".to_string());
+            }
+            FileHandle::Stdout => {
                 io::stdout().flush().expect("Failed to flush stdout");
             }
-            StdHandle::Stderr => {
+            FileHandle::Stderr => {
                 io::stderr().flush().expect("Failed to flush stderr");
-            }
-            StdHandle::Stdin => {
-                return Err("Cannot flush stdin".to_string());
             }
         },
         _ => return Err(String::from("argument should be a file handle")),
@@ -565,7 +569,8 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             let file = fs::File::open(path);
             match file {
                 Ok(file) => {
-                    let handle = FileHandle::new(file);
+                    let reader = io::BufReader::new(file);
+                    let handle = FileHandle::new_reader(reader);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
                 Err(_) => Err("failed to open file for reading".to_string()),
@@ -576,7 +581,8 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             let file = fs::OpenOptions::new().append(true).open(path);
             match file {
                 Ok(file) => {
-                    let handle = FileHandle::new(file);
+                    let writer = io::BufWriter::new(file);
+                    let handle = FileHandle::new_writer(writer);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
                 Err(_) => Err("failed to open file for appending".to_string()),
@@ -591,7 +597,8 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                 .open(path);
             match file {
                 Ok(file) => {
-                    let handle = FileHandle::new(file);
+                    let writer = io::BufWriter::new(file);
+                    let handle = FileHandle::new_writer(writer);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
                 Err(_) => Err("failed to open file for writing".to_string()),
@@ -605,7 +612,8 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                 .open(path);
             match file {
                 Ok(file) => {
-                    let handle = FileHandle::new(file);
+                    let writer = io::BufWriter::new(file);
+                    let handle = FileHandle::new_writer(writer);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
                 Err(_) => Err("failed to create file".to_string()),
@@ -616,7 +624,8 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             let file = fs::OpenOptions::new().write(true).truncate(true).open(path);
             match file {
                 Ok(file) => {
-                    let handle = FileHandle::new(file);
+                    let writer = io::BufWriter::new(file);
+                    let handle = FileHandle::new_writer(writer);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
                 Err(_) => Err("failed to open file for truncation".to_string()),
@@ -683,22 +692,23 @@ fn builtin_read(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
 
     match args[0].as_ref() {
-        Object::File(f) => {
-            let mut file = f.file.borrow_mut();
-            let num_bytes_to_read = if args.len() == 2 {
-                match args[1].as_ref() {
-                    Object::Integer(num) => *num as usize,
-                    _ => return Err(String::from("second argument should be an integer")),
-                }
-            } else {
-                usize::MAX
-            };
+        Object::File(f) => match f.as_ref() {
+            FileHandle::Reader(reader) => {
+                let mut file = reader.borrow_mut();
+                let num_bytes_to_read = if args.len() == 2 {
+                    match args[1].as_ref() {
+                        Object::Integer(num) => *num as usize,
+                        _ => return Err(String::from("second argument should be an integer")),
+                    }
+                } else {
+                    usize::MAX
+                };
 
-            let result_bytes = read_from_file(&mut *file, num_bytes_to_read)?;
-            Ok(Rc::new(Object::Arr(Rc::new(Array::new(result_bytes)))))
-        }
-        Object::StdFile(f) => match f {
-            StdHandle::Stdin => {
+                let result_bytes = read_from_file(&mut *file, num_bytes_to_read)?;
+                Ok(Rc::new(Object::Arr(Rc::new(Array::new(result_bytes)))))
+            }
+            FileHandle::Writer(_) => Err(String::from("cannot read from a writer")),
+            FileHandle::Stdin => {
                 let num_bytes_to_read = if args.len() == 2 {
                     match args[1].as_ref() {
                         Object::Integer(num) => *num as usize,
@@ -711,8 +721,8 @@ fn builtin_read(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                 let result_bytes = read_from_file(&mut io::stdin(), num_bytes_to_read)?;
                 Ok(Rc::new(Object::Arr(Rc::new(Array::new(result_bytes)))))
             }
-            StdHandle::Stdout => Err("Cannot read from stdout".to_string()),
-            StdHandle::Stderr => Err("Cannot read from stderr".to_string()),
+            FileHandle::Stdout => Err(String::from("cannot read from stdout")),
+            FileHandle::Stderr => Err(String::from("cannot read from stderr")),
         },
         _ => Err(String::from("first argument should be a file handle")),
     }
@@ -730,19 +740,24 @@ fn builtin_read_to_string(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
 
     if let Object::File(f) = args[0].as_ref() {
-        let mut file = f.file.borrow_mut();
-        // Read all data
-        let mut result_bytes = Vec::new();
-        match file.read_to_end(&mut result_bytes) {
-            Ok(_) => {}
-            Err(e) => {
-                return Err(format!("failed to read file: {}", e));
+        match f.as_ref() {
+            FileHandle::Reader(reader) => {
+                let mut file = reader.borrow_mut();
+                // Read all data
+                let mut result_bytes = Vec::new();
+                match file.read_to_end(&mut result_bytes) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        return Err(format!("failed to read file: {}", e));
+                    }
+                }
+                match String::from_utf8(result_bytes) {
+                    Ok(s) => Ok(Rc::new(Object::Str(s))),
+                    Err(e) => Err(format!("failed to decode bytes: {}", e)),
+                }
             }
-        }
-
-        match String::from_utf8(result_bytes) {
-            Ok(s) => Ok(Rc::new(Object::Str(s))),
-            Err(e) => Err(format!("failed to decode bytes: {}", e)),
+            FileHandle::Writer(_) => Err(String::from("cannot read from a writer")),
+            _ => Err(String::from("invalid file handle")),
         }
     } else {
         Err(String::from("first argument should be a file handle"))
@@ -814,85 +829,88 @@ fn builtin_write(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 
     match args[0].as_ref() {
         Object::File(f) => {
-            let mut file = f.file.borrow_mut();
-            match args[1].as_ref() {
-                Object::Byte(b) => {
-                    let buf = [*b];
-                    match file.write(&buf) {
-                        // Return number of bytes written
-                        Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
-                        Err(e) => Err(format!("failed to write to file: {}", e)),
-                    }
-                }
-                Object::Arr(arr) => {
-                    let mut buf = Vec::new();
-                    for obj in arr.elements.borrow().iter() {
-                        if let Object::Byte(b) = obj.as_ref() {
-                            buf.push(*b);
-                        } else {
-                            return Err(String::from("array should contain only bytes"));
+            match f.as_ref() {
+                FileHandle::Reader(_) => Err(String::from("cannot write to a reader")),
+                FileHandle::Writer(writer) => {
+                    let mut file = writer.borrow_mut();
+                    match args[1].as_ref() {
+                        Object::Byte(b) => {
+                            let buf = [*b];
+                            match file.write(&buf) {
+                                // Return number of bytes written
+                                Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
+                                Err(e) => Err(format!("failed to write to file: {}", e)),
+                            }
                         }
-                    }
-                    match file.write(&buf) {
-                        Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
-                        Err(e) => Err(format!("failed to write to file: {}", e)),
+                        Object::Arr(arr) => {
+                            let mut buf = Vec::new();
+                            for obj in arr.elements.borrow().iter() {
+                                if let Object::Byte(b) = obj.as_ref() {
+                                    buf.push(*b);
+                                } else {
+                                    return Err(String::from("array should contain only bytes"));
+                                }
+                            }
+                            match file.write(&buf) {
+                                Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
+                                Err(e) => Err(format!("failed to write to file: {}", e)),
+                            }
+                        }
+                        Object::Str(s) => {
+                            let bytes = s.as_bytes();
+                            match file.write(bytes) {
+                                Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
+                                Err(e) => Err(format!("failed to write to file: {}", e)),
+                            }
+                        }
+                        _ => Err(String::from("second argument should be a byte or string")),
                     }
                 }
-                Object::Str(s) => {
-                    let bytes = s.as_bytes();
-                    match file.write(bytes) {
-                        Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
-                        Err(e) => Err(format!("failed to write to file: {}", e)),
+                FileHandle::Stdin => Err("cannot write to stdin".to_string()),
+                FileHandle::Stdout => match args[1].as_ref() {
+                    Object::Byte(b) => {
+                        print!("{}", *b as char);
+                        Ok(Rc::new(Object::Integer(1)))
                     }
-                }
-                _ => Err(String::from("second argument should be a byte or string")),
+                    Object::Arr(arr) => {
+                        for obj in arr.elements.borrow().iter() {
+                            if let Object::Byte(b) = obj.as_ref() {
+                                print!("{}", *b as char);
+                            } else {
+                                return Err(String::from("array should contain only bytes"));
+                            }
+                        }
+                        Ok(Rc::new(Object::Integer(arr.elements.borrow().len() as i64)))
+                    }
+                    Object::Str(s) => {
+                        print!("{}", s);
+                        Ok(Rc::new(Object::Integer(s.len() as i64)))
+                    }
+                    _ => Err(String::from("second argument should be a byte or string")),
+                },
+                FileHandle::Stderr => match args[1].as_ref() {
+                    Object::Byte(b) => {
+                        eprint!("{}", *b as char);
+                        Ok(Rc::new(Object::Integer(1)))
+                    }
+                    Object::Arr(arr) => {
+                        for obj in arr.elements.borrow().iter() {
+                            if let Object::Byte(b) = obj.as_ref() {
+                                eprint!("{}", *b as char);
+                            } else {
+                                return Err(String::from("array should contain only bytes"));
+                            }
+                        }
+                        Ok(Rc::new(Object::Integer(arr.elements.borrow().len() as i64)))
+                    }
+                    Object::Str(s) => {
+                        eprint!("{}", s);
+                        Ok(Rc::new(Object::Integer(s.len() as i64)))
+                    }
+                    _ => Err(String::from("second argument should be a byte or string")),
+                },
             }
         }
-        Object::StdFile(f) => match f {
-            StdHandle::Stdout => match args[1].as_ref() {
-                Object::Byte(b) => {
-                    print!("{}", *b as char);
-                    Ok(Rc::new(Object::Integer(1)))
-                }
-                Object::Arr(arr) => {
-                    for obj in arr.elements.borrow().iter() {
-                        if let Object::Byte(b) = obj.as_ref() {
-                            print!("{}", *b as char);
-                        } else {
-                            return Err(String::from("array should contain only bytes"));
-                        }
-                    }
-                    Ok(Rc::new(Object::Integer(arr.elements.borrow().len() as i64)))
-                }
-                Object::Str(s) => {
-                    print!("{}", s);
-                    Ok(Rc::new(Object::Integer(s.len() as i64)))
-                }
-                _ => Err(String::from("second argument should be a byte or string")),
-            },
-            StdHandle::Stderr => match args[1].as_ref() {
-                Object::Byte(b) => {
-                    eprint!("{}", *b as char);
-                    Ok(Rc::new(Object::Integer(1)))
-                }
-                Object::Arr(arr) => {
-                    for obj in arr.elements.borrow().iter() {
-                        if let Object::Byte(b) = obj.as_ref() {
-                            eprint!("{}", *b as char);
-                        } else {
-                            return Err(String::from("array should contain only bytes"));
-                        }
-                    }
-                    Ok(Rc::new(Object::Integer(arr.elements.borrow().len() as i64)))
-                }
-                Object::Str(s) => {
-                    eprint!("{}", s);
-                    Ok(Rc::new(Object::Integer(s.len() as i64)))
-                }
-                _ => Err(String::from("second argument should be a byte or string")),
-            },
-            StdHandle::Stdin => Err("Cannot write to stdin".to_string()),
-        },
         _ => Err(String::from("first argument should be a file handle")),
     }
 }
@@ -910,14 +928,22 @@ fn builtin_read_line(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 
     let mut line = String::new();
     match args[0].as_ref() {
-        Object::StdFile(f) => match f {
-            StdHandle::Stdin => match io::stdin().read_line(&mut line) {
+        Object::File(f) => match f.as_ref() {
+            FileHandle::Reader(reader) => {
+                let mut file = reader.borrow_mut();
+                match file.read_line(&mut line) {
+                    Ok(_) => Ok(Rc::new(Object::Str(line))),
+                    Err(e) => Err(format!("failed to read from file: {}", e)),
+                }
+            }
+            FileHandle::Writer(_) => Err(String::from("cannot read from a writer")),
+            FileHandle::Stdin => match io::stdin().read_line(&mut line) {
                 Ok(_) => Ok(Rc::new(Object::Str(line))),
                 Err(e) => Err(format!("failed to read from stdin: {}", e)),
             },
-            StdHandle::Stdout => Err("cannot read from stdout".to_string()),
-            StdHandle::Stderr => Err(String::from("cannot read from stderr")),
+            FileHandle::Stdout => Err(String::from("cannot read from stdout")),
+            FileHandle::Stderr => Err(String::from("cannot read from stderr")),
         },
-        _ => Err(String::from("argument should be stdin")),
+        _ => Err(String::from("argument should be a file handle")),
     }
 }

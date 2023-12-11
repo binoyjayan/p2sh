@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 use std::hash::{Hash, Hasher};
+use std::io;
 use std::ops;
 use std::rc::Rc;
 
@@ -25,7 +26,6 @@ pub enum Object {
     Map(Rc<HMap>),
     Clos(Rc<Closure>),
     File(Rc<FileHandle>),
-    StdFile(StdHandle),
 }
 
 impl PartialEq for Object {
@@ -90,6 +90,9 @@ impl Object {
             Object::Float(v) => *v == 0.,
             Object::Char(c) => *c == '\0',
             Object::Byte(b) => *b == 0,
+            Object::Str(s) => s.is_empty(),
+            Object::Arr(a) => a.elements.borrow().is_empty(),
+            Object::Map(m) => m.pairs.borrow().is_empty(),
             _ => false,
         }
     }
@@ -128,7 +131,6 @@ impl fmt::Display for Object {
             Self::Map(val) => write!(f, "{}", val),
             Self::Clos(val) => write!(f, "{}", val),
             Self::File(val) => write!(f, "{}", val),
-            Self::StdFile(val) => write!(f, "{}", val),
         }
     }
 }
@@ -553,34 +555,28 @@ impl PartialEq for Closure {
 }
 
 #[derive(Debug)]
-pub struct FileHandle {
-    pub file: RefCell<fs::File>,
-}
-
-impl FileHandle {
-    pub fn new(file: fs::File) -> Self {
-        Self {
-            file: RefCell::new(file),
-        }
-    }
-}
-
-impl fmt::Display for FileHandle {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<file-handle>")
-    }
-}
-
-#[derive(Debug)]
-pub enum StdHandle {
+pub enum FileHandle {
+    Reader(RefCell<io::BufReader<fs::File>>),
+    Writer(RefCell<io::BufWriter<fs::File>>),
     Stdin,
     Stdout,
     Stderr,
 }
 
-impl fmt::Display for StdHandle {
+impl FileHandle {
+    pub fn new_reader(reader: io::BufReader<fs::File>) -> Self {
+        Self::Reader(RefCell::new(reader))
+    }
+    pub fn new_writer(writer: io::BufWriter<fs::File>) -> Self {
+        Self::Writer(RefCell::new(writer))
+    }
+}
+
+impl fmt::Display for FileHandle {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
+        match &self {
+            Self::Reader(_) => write!(f, "<file: reader>"),
+            Self::Writer(_) => write!(f, "<file: writer>"),
             Self::Stdin => write!(f, "<stdin>"),
             Self::Stdout => write!(f, "<stdout>"),
             Self::Stderr => write!(f, "<stderr>"),

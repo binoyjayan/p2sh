@@ -4,9 +4,12 @@
 
 🦀 🦀 🦀 Interpreter for the p2sh programming language 🦀 🦀 🦀
 
+The project served as a way for me to learn Rust, so many parts of the code may not be idiomatic.
+
 ## Dependencies
 
-The p2sh interpreter is compiled using a Rust compiler v1.65.0. Any version later than that should work. Please visit the Rust website for installation.
+The p2sh interpreter is compiled using a Rust compiler v1.65.0. Any version later than that should work.
+Please visit the Rust website for installation.
 
 ## Build and test
 
@@ -135,4 +138,4 @@ OR
 ## More Information
 
 - **Examples** may be found in the  [examples](./examples) directory
-- Language features are documented [here](./docs)
+- **Documentation** can be found [here](./docs)

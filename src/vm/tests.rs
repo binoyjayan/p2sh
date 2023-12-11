@@ -1522,9 +1522,6 @@ fn test_builtin_functions_file_io() {
                 let a = null;
                 let f = open("/tmp/__p2sh_test1.txt");
                 while a = read(f, 1) {
-                  if len(a) < 1 {
-                      break;
-                  }
                   n = n + 1;
                 }
                 n

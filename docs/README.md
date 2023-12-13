@@ -10,3 +10,4 @@ are yet to be added. For a brief overview of the language's features, you can
 find a quick walkthrough here.
 
 - [Tutorial](./tutorial)
+- [Language Refrerence](./language)

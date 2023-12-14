@@ -40,6 +40,8 @@ The following table lists the builtin functions available.
 | [**encode_utf8**](#encode_utf8) | Encode a string to a UTF-8 byte sequence |
 | [**read_line**](#read_line) | Read a line from the standard input or a file |
 | [**input**](#input) | Read a line from the standard input and return it as a string |
+| [**get_errno**](#get_errno) | get last os error number |
+| [**strerror**](#strerror) | convert an os error number to a string |
 
 ### Description
 
@@ -247,10 +249,9 @@ Modes supported
 | mode | Description |
 |------|-------------|
 | r | Open file for reading. Return null if the file does not exist |
-| w | Open file for writing. Does not truncate the file, but create it if it does not exist |
+| w | Open or create file for writing. Truncate if exists |
 | a | Open file for writing to the end of the file. Create it if it does not exist |
 | x | Create a file and open it for writing. Return null if it exits |
-| T | Open an existing file for writing after truncating it. Return null if it does not exit |
 
 ### <a name="read"></a>read
 Read from a file or stdin.
@@ -323,6 +324,22 @@ let line = input("-->> ");
 ```
 
 Note that this function is not supported in the REPL.
+
+### <a name="get_errno"></a>get_errno
+Get the last os error number
+
+Example:
+```
+get_errno()
+```
+
+### <a name="strerror"></a>strerror
+Convert an os error number to a string
+
+Example:
+```
+strerror(2)
+```
 
 ## Builtin variables
 

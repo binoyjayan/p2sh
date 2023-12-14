@@ -206,7 +206,6 @@ fn builtin_str(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         | Object::Map(_) => Ok(Rc::new(Object::Str(obj.to_string()))),
         _ => Err(String::from("unsupported argument")),
     }
-    // Ok(Rc::new(Object::Str(obj.to_string())))
 }
 
 fn builtin_int(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -220,7 +219,8 @@ fn builtin_int(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             if let Ok(num) = s.parse::<i64>() {
                 Ok(Rc::new(Object::Integer(num)))
             } else {
-                Err(String::from("failed to parse string into an int"))
+                // failed to parse string into an int
+                Ok(Rc::new(Object::Null))
             }
         }
         Object::Integer(_) => Ok(Rc::clone(&args[0])),
@@ -249,7 +249,8 @@ fn builtin_float(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             if let Ok(num) = s.parse::<f64>() {
                 Ok(Rc::new(Object::Float(num)))
             } else {
-                Err(String::from("failed to parse string into a float"))
+                // failed to parse string into a float
+                Ok(Rc::new(Object::Null))
             }
         }
         Object::Float(_) => Ok(Rc::clone(&args[0])),
@@ -279,21 +280,24 @@ fn builtin_char(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             if let Some(c) = std::char::from_u32(*b as u32) {
                 Ok(Rc::new(Object::Char(c)))
             } else {
-                Err(String::from("failed to parse byte"))
+                // failed to parse byte
+                Ok(Rc::new(Object::Null))
             }
         }
         Object::Integer(s) => {
             if let Some(c) = std::char::from_u32(*s as u32) {
                 Ok(Rc::new(Object::Char(c)))
             } else {
-                Err(String::from("failed to parse integer"))
+                // failed to parse integer
+                Ok(Rc::new(Object::Null))
             }
         }
         Object::Float(n) => {
             if let Some(c) = std::char::from_u32(*n as u32) {
                 Ok(Rc::new(Object::Char(c)))
             } else {
-                Err(String::from("failed to parse float"))
+                // failed to parse float
+                Ok(Rc::new(Object::Null))
             }
         }
         _ => Err(String::from("unsupported argument")),
@@ -319,14 +323,16 @@ fn builtin_byte(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             if let Some(b) = std::char::from_u32(*s as u32) {
                 Ok(Rc::new(Object::Byte(b as u8)))
             } else {
-                Err(String::from("failed to parse integer"))
+                // failed to parse integer
+                Ok(Rc::new(Object::Null))
             }
         }
         Object::Float(n) => {
             if let Some(b) = std::char::from_u32(*n as u32) {
                 Ok(Rc::new(Object::Byte(b as u8)))
             } else {
-                Err(String::from("failed to parse float"))
+                // failed to parse float
+                Ok(Rc::new(Object::Null))
             }
         }
         _ => Err(String::from("unsupported argument")),

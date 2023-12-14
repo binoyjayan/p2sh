@@ -45,6 +45,8 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("encode_utf8", encode_utf8),
     BuiltinFunction::new("read_line", builtin_read_line),
     BuiltinFunction::new("input", builtin_input),
+    BuiltinFunction::new("get_errno", builtin_get_errno),
+    BuiltinFunction::new("strerror", builtin_strerror),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -542,7 +544,8 @@ fn builtin_toupper(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 ///           second argument specifying the mode (Object::Str).
 /// # Returns
 /// Returns a Result containing a file handle wrapped in an Object::File,
-/// or an error message if the operation fails.
+/// or a null if the operation fails. An I/O error will result in the last
+/// error being set which can be retrieved using get_errno().
 fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.is_empty() || args.len() > 2 {
         return Err(format!("takes one or two arguments. got={}", args.len()));
@@ -566,7 +569,7 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 
     match mode {
         "r" => {
-            // opens a file for reading, error if the file does not exist
+            // opens a file for reading, returns null if the file does not exist
             let file = fs::File::open(path);
             match file {
                 Ok(file) => {
@@ -574,7 +577,7 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                     let handle = FileHandle::new_reader(reader);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
-                Err(_) => Err("failed to open file for reading".to_string()),
+                Err(_) => Ok(Rc::new(Object::Null)),
             }
         }
         "a" => {
@@ -586,15 +589,16 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                     let handle = FileHandle::new_writer(writer);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
-                Err(_) => Err("failed to open file for appending".to_string()),
+                Err(_) => Ok(Rc::new(Object::Null)),
             }
         }
         "w" => {
-            // open a file for writing, create the file if it does not exist
+            // open a file for writing, create the file if it does not exist,
+            // truncate the file if it exists. return null if the operation fails.
             let file = fs::OpenOptions::new()
                 .write(true)
                 .create(true)
-                .truncate(false)
+                .truncate(true)
                 .open(path);
             match file {
                 Ok(file) => {
@@ -602,11 +606,12 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                     let handle = FileHandle::new_writer(writer);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
-                Err(_) => Err("failed to open file for writing".to_string()),
+                Err(_) => Ok(Rc::new(Object::Null)),
             }
         }
         "x" => {
-            // create the specified file, returns an error if the file exist
+            // create the specified file, returns null if the file exist
+            // return null if the operation fails.
             let file = fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
@@ -617,19 +622,7 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                     let handle = FileHandle::new_writer(writer);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
-                Err(_) => Err("failed to create file".to_string()),
-            }
-        }
-        "T" => {
-            // open a file for writing, with truncation
-            let file = fs::OpenOptions::new().write(true).truncate(true).open(path);
-            match file {
-                Ok(file) => {
-                    let writer = io::BufWriter::new(file);
-                    let handle = FileHandle::new_writer(writer);
-                    Ok(Rc::new(Object::File(Rc::new(handle))))
-                }
-                Err(_) => Err("failed to open file for truncation".to_string()),
+                Err(_) => Ok(Rc::new(Object::Null)),
             }
         }
         _ => Err(String::from("invalid file open mode")),
@@ -642,12 +635,10 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 /// * `args` - A vector of Rc<Object> containing the file handle and an optional
 ///            second argument specifying the number of bytes to read (Object::Integer).
 /// # Returns
-/// Returns a Result containing an array of Object::Byte variants wrapped in an Object::Arr,
-/// or an error message if the operation fails.
-fn read_from_file<R: Read>(
-    reader: &mut R,
-    num_bytes_to_read: usize,
-) -> Result<Vec<Rc<Object>>, String> {
+/// Returns an array of Object::Byte variants wrapped in an Object::Arr,
+/// or a null if the operation fails. An I/O error will result in the last
+/// error being set which can be retrieved using get_errno().
+fn read_from_file<R: Read>(reader: &mut R, num_bytes_to_read: usize) -> Rc<Object> {
     let mut total_bytes_read = 0;
     let mut buffer = [0; 4096];
     let mut result_bytes = Vec::new();
@@ -671,13 +662,14 @@ fn read_from_file<R: Read>(
                 }
                 total_bytes_read += bytes_read;
             }
-            Err(e) => {
-                return Err(format!("failed to read: {}", e));
+            Err(_) => {
+                // This should set last error which can be retrieved using get_errno()
+                return Rc::new(Object::Null);
             }
         }
     }
 
-    Ok(result_bytes)
+    Rc::new(Object::Arr(Rc::new(Array::new(result_bytes))))
 }
 
 /// Reads bytes from a file handle into an array of Object::Byte variants.
@@ -686,7 +678,8 @@ fn read_from_file<R: Read>(
 ///            second argument specifying the number of bytes to read (Object::Integer).
 /// # Returns
 /// Returns a Result containing an array of Object::Byte variants wrapped in an Object::Arr,
-/// or an error message if the operation fails.
+/// or a null if the operation fails. An I/O error will result in the last
+/// error being set which can be retrieved using get_errno().
 fn builtin_read(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.is_empty() || args.len() > 2 {
         return Err(format!("takes one or two arguments. got={}", args.len()));
@@ -704,9 +697,7 @@ fn builtin_read(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                 } else {
                     usize::MAX
                 };
-
-                let result_bytes = read_from_file(&mut *file, num_bytes_to_read)?;
-                Ok(Rc::new(Object::Arr(Rc::new(Array::new(result_bytes)))))
+                Ok(read_from_file(&mut *file, num_bytes_to_read))
             }
             FileHandle::Writer(_) => Err(String::from("cannot read from a writer")),
             FileHandle::Stdin => {
@@ -719,8 +710,7 @@ fn builtin_read(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                     usize::MAX
                 };
 
-                let result_bytes = read_from_file(&mut io::stdin(), num_bytes_to_read)?;
-                Ok(Rc::new(Object::Arr(Rc::new(Array::new(result_bytes)))))
+                Ok(read_from_file(&mut io::stdin(), num_bytes_to_read))
             }
             FileHandle::Stdout => Err(String::from("cannot read from stdout")),
             FileHandle::Stderr => Err(String::from("cannot read from stderr")),
@@ -734,7 +724,8 @@ fn builtin_read(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 /// * `args` - A vector of Rc<Object> containing the file handle
 /// # Returns
 /// Returns a Result containing a string wrapped in an Object::Str,
-/// or an error message if the operation fails.
+/// or a null if the operation fails.  An I/O error will result in the last
+/// error being set which can be retrieved using get_errno().
 fn builtin_read_to_string(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.len() != 1 {
         return Err(format!("takes one argument. got={}", args.len()));
@@ -748,8 +739,9 @@ fn builtin_read_to_string(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                 let mut result_bytes = Vec::new();
                 match file.read_to_end(&mut result_bytes) {
                     Ok(_) => {}
-                    Err(e) => {
-                        return Err(format!("failed to read file: {}", e));
+                    Err(_) => {
+                        // This should set last error which can be retrieved using get_errno()
+                        return Ok(Rc::new(Object::Null));
                     }
                 }
                 match String::from_utf8(result_bytes) {
@@ -973,4 +965,35 @@ fn builtin_input(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         Ok(_) => Ok(Rc::new(Object::Str(line.trim().to_string()))),
         Err(e) => Err(format!("failed to read from stdin: {}", e)),
     }
+}
+
+/// Get last os error code
+/// # Returns
+/// Returns a Result containing an integer wrapped in an Object::Integer,
+/// or a null value if there is no error.
+fn builtin_get_errno(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if !args.is_empty() {
+        return Err(format!("takes no arguments. got={}", args.len()));
+    }
+    if let Some(err_code) = io::Error::last_os_error().raw_os_error() {
+        Ok(Rc::new(Object::Integer(err_code as i64)))
+    } else {
+        Ok(Rc::new(Object::Null))
+    }
+}
+
+fn builtin_strerror(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+    let obj = args[0].as_ref();
+    match obj {
+        Object::Integer(n) => {
+            let s = io::Error::from_raw_os_error(*n as i32).to_string();
+            Ok(Rc::new(Object::Str(s)))
+        }
+        _ => Err(String::from("unsupported argument")),
+    }
+
+    // Ok(Rc::new(Object::Null))
 }

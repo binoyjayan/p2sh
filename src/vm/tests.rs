@@ -1476,14 +1476,7 @@ fn test_builtin_functions_file_io() {
         VmTestCase {
             input: r#"
                let f = open("/tmp/__p2sh_test1.txt", "w");
-               write(f, "Hey")
-            "#,
-            expected: Object::Integer(3),
-        },
-        VmTestCase {
-            input: r#"
-                let f = open("/tmp/__p2sh_test1.txt", "T");
-                write(f, "Hello")
+               write(f, "Hello")
             "#,
             expected: Object::Integer(5),
         },
@@ -1528,22 +1521,6 @@ fn test_builtin_functions_file_io() {
             "#,
             expected: Object::Integer(13),
         },
-        // Write without truncation
-        VmTestCase {
-            input: r#"
-                let f = open("/tmp/__p2sh_test1.txt", "w");
-                write(f, "Hey  ")
-            "#,
-            expected: Object::Integer(5),
-        },
-        VmTestCase {
-            input: r#"
-                let f = open("/tmp/__p2sh_test1.txt");
-                let a = read(f);
-                decode_utf8(a)
-            "#,
-            expected: Object::Str(String::from("Hey   World!\n")),
-        },
         VmTestCase {
             input: r#"
                 let f = open("/tmp/__p2sh_test1.txt", "a");
@@ -1563,7 +1540,7 @@ fn test_builtin_functions_file_io() {
                 }
                 all
             "#,
-            expected: Object::Str(String::from("Hey   World!\nEOF\n")),
+            expected: Object::Str(String::from("Hello World!\nEOF\n")),
         },
         VmTestCase {
             input: r#"decode_utf8([b'H', b'e', b'l', b'l', b'o'])"#,

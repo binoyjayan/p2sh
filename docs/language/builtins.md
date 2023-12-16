@@ -12,6 +12,7 @@ The following table lists the builtin functions available.
 | [**last**](#last) | Get the last element in an array |
 | [**rest**](#rest) | Get all but the first element in an array |
 | [**push**](#push) | Add an element to the end of an array |
+| [**pop**](#pop) | Remove an element from the end of an array |
 | [**get**](#get) | Get an array element or a value in map |
 | [**contains**](#contains) | Check if a map contains a specific element |
 | [**insert**](#insert) | Insert a key-value pair into a map |
@@ -94,7 +95,16 @@ Add an element to the end of an array.
 Example:
 ```
 let a = [1, 2, 3];
-rest(a, 4);
+push(a, 4);
+```
+
+### <a name="pop"></a>push
+Remove an element from the end of an array
+
+Example:
+```
+let a = [1, 2, 3];
+pop(a);
 ```
 
 ### <a name="get"></a>get

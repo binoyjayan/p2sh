@@ -41,6 +41,8 @@ fn main() {
 pub fn run_prompt(args: Vec<String>) {
     println!("{} v{}", PKG_DESC, PKG_VERSION);
     println!("Type quit to quit REPL");
+    let mut cmds = vec!["quit".to_string()];
+
     let mut constants = vec![];
     let data = Rc::new(Object::Null);
     let mut globals = vec![data; GLOBALS_SIZE];
@@ -49,14 +51,16 @@ pub fn run_prompt(args: Vec<String>) {
     for (i, sym) in BUILTINFNS.iter().enumerate() {
         // Define the built-in function via an index into the 'BUILTINS' array
         symtab.define_builtin_fn(i, sym.name);
+        cmds.push(sym.name.to_string());
     }
     // Define the built-in variables
     for n in BuiltinVarType::range() {
         let name: &str = BuiltinVarType::from(n).into();
         symtab.define_builtin_var(n, name);
+        cmds.push(name.to_string());
     }
 
-    let mut prompt = prompt::Prompt::new(HISTORY_LINES);
+    let mut prompt = prompt::Prompt::new(HISTORY_LINES, cmds.as_slice());
     loop {
         if let Ok(line) = prompt.show() {
             if line == "quit" {

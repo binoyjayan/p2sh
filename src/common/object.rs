@@ -26,6 +26,7 @@ pub enum Object {
     Map(Rc<HMap>),
     Clos(Rc<Closure>),
     File(Rc<FileHandle>),
+    Err(Error),
 }
 
 impl PartialEq for Object {
@@ -110,6 +111,10 @@ impl Object {
                 | Object::Builtin(_)
         )
     }
+
+    pub fn is_error(&self) -> bool {
+        matches!(self, Object::Err(_))
+    }
 }
 
 impl fmt::Display for Object {
@@ -131,6 +136,7 @@ impl fmt::Display for Object {
             Self::Map(val) => write!(f, "{}", val),
             Self::Clos(val) => write!(f, "{}", val),
             Self::File(val) => write!(f, "{}", val),
+            Self::Err(val) => write!(f, "{}", val),
         }
     }
 }
@@ -580,6 +586,21 @@ impl fmt::Display for FileHandle {
             Self::Stdin => write!(f, "<stdin>"),
             Self::Stdout => write!(f, "<stdout>"),
             Self::Stderr => write!(f, "<stderr>"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    IO(io::Error),
+    Utf8(std::string::FromUtf8Error),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            Self::IO(e) => write!(f, "io-error: {e}"),
+            Self::Utf8(e) => write!(f, "utf8-error: {e}"),
         }
     }
 }

@@ -48,6 +48,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("input", builtin_input),
     BuiltinFunction::new("get_errno", builtin_get_errno),
     BuiltinFunction::new("strerror", builtin_strerror),
+    BuiltinFunction::new("is_error", builtin_is_error),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -222,6 +223,7 @@ fn builtin_str(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         | Object::Byte(_)
         | Object::Bool(_)
         | Object::Arr(_)
+        | Object::Err(_)
         | Object::Map(_) => Ok(Rc::new(Object::Str(obj.to_string()))),
         _ => Err(String::from("unsupported argument")),
     }
@@ -602,7 +604,7 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                     let handle = FileHandle::new_reader(reader);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
-                Err(_) => Ok(Rc::new(Object::Null)),
+                Err(e) => Ok(Rc::new(Object::Err(Error::IO(e)))),
             }
         }
         "a" => {
@@ -614,7 +616,7 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                     let handle = FileHandle::new_writer(writer);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
-                Err(_) => Ok(Rc::new(Object::Null)),
+                Err(e) => Ok(Rc::new(Object::Err(Error::IO(e)))),
             }
         }
         "w" => {
@@ -631,7 +633,7 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                     let handle = FileHandle::new_writer(writer);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
-                Err(_) => Ok(Rc::new(Object::Null)),
+                Err(e) => Ok(Rc::new(Object::Err(Error::IO(e)))),
             }
         }
         "x" => {
@@ -647,7 +649,7 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                     let handle = FileHandle::new_writer(writer);
                     Ok(Rc::new(Object::File(Rc::new(handle))))
                 }
-                Err(_) => Ok(Rc::new(Object::Null)),
+                Err(e) => Ok(Rc::new(Object::Err(Error::IO(e)))),
             }
         }
         _ => Err(String::from("invalid file open mode")),
@@ -687,9 +689,9 @@ fn read_from_file<R: Read>(reader: &mut R, num_bytes_to_read: usize) -> Rc<Objec
                 }
                 total_bytes_read += bytes_read;
             }
-            Err(_) => {
+            Err(e) => {
                 // This should set last error which can be retrieved using get_errno()
-                return Rc::new(Object::Null);
+                return Rc::new(Object::Err(Error::IO(e)));
             }
         }
     }
@@ -764,14 +766,13 @@ fn builtin_read_to_string(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                 let mut result_bytes = Vec::new();
                 match file.read_to_end(&mut result_bytes) {
                     Ok(_) => {}
-                    Err(_) => {
-                        // This should set last error which can be retrieved using get_errno()
-                        return Ok(Rc::new(Object::Null));
+                    Err(e) => {
+                        return Ok(Rc::new(Object::Err(Error::IO(e))));
                     }
                 }
                 match String::from_utf8(result_bytes) {
                     Ok(s) => Ok(Rc::new(Object::Str(s))),
-                    Err(e) => Err(format!("failed to decode bytes: {}", e)),
+                    Err(e) => Ok(Rc::new(Object::Err(Error::Utf8(e)))),
                 }
             }
             FileHandle::Writer(_) => Err(String::from("cannot read from a writer")),
@@ -804,7 +805,7 @@ fn decode_utf8(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         }
         match String::from_utf8(bytes) {
             Ok(s) => Ok(Rc::new(Object::Str(s))),
-            Err(e) => Err(format!("failed to decode bytes: {}", e)),
+            Err(e) => Ok(Rc::new(Object::Err(Error::Utf8(e)))),
         }
     } else {
         Err(String::from("argument should be an array of bytes"))
@@ -857,7 +858,7 @@ fn builtin_write(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                             match file.write(&buf) {
                                 // Return number of bytes written
                                 Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
-                                Err(e) => Err(format!("failed to write to file: {}", e)),
+                                Err(e) => Ok(Rc::new(Object::Err(Error::IO(e)))),
                             }
                         }
                         Object::Arr(arr) => {
@@ -871,14 +872,14 @@ fn builtin_write(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                             }
                             match file.write(&buf) {
                                 Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
-                                Err(e) => Err(format!("failed to write to file: {}", e)),
+                                Err(e) => Ok(Rc::new(Object::Err(Error::IO(e)))),
                             }
                         }
                         Object::Str(s) => {
                             let bytes = s.as_bytes();
                             match file.write(bytes) {
                                 Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
-                                Err(e) => Err(format!("failed to write to file: {}", e)),
+                                Err(e) => Ok(Rc::new(Object::Err(Error::IO(e)))),
                             }
                         }
                         _ => Err(String::from("second argument should be a byte or string")),
@@ -951,13 +952,13 @@ fn builtin_read_line(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                 let mut file = reader.borrow_mut();
                 match file.read_line(&mut line) {
                     Ok(_) => Ok(Rc::new(Object::Str(line))),
-                    Err(e) => Err(format!("failed to read from file: {}", e)),
+                    Err(e) => Ok(Rc::new(Object::Err(Error::IO(e)))),
                 }
             }
             FileHandle::Writer(_) => Err(String::from("cannot read from a writer")),
             FileHandle::Stdin => match io::stdin().read_line(&mut line) {
                 Ok(_) => Ok(Rc::new(Object::Str(line))),
-                Err(e) => Err(format!("failed to read from stdin: {}", e)),
+                Err(e) => Ok(Rc::new(Object::Err(Error::IO(e)))),
             },
             FileHandle::Stdout => Err(String::from("cannot read from stdout")),
             FileHandle::Stderr => Err(String::from("cannot read from stderr")),
@@ -988,7 +989,7 @@ fn builtin_input(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     let mut line = String::new();
     match io::stdin().read_line(&mut line) {
         Ok(_) => Ok(Rc::new(Object::Str(line.trim().to_string()))),
-        Err(e) => Err(format!("failed to read from stdin: {}", e)),
+        Err(e) => Ok(Rc::new(Object::Err(Error::IO(e)))),
     }
 }
 
@@ -1019,6 +1020,15 @@ fn builtin_strerror(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         }
         _ => Err(String::from("unsupported argument")),
     }
+}
 
-    // Ok(Rc::new(Object::Null))
+fn builtin_is_error(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+    let obj = args[0].as_ref();
+    match obj {
+        Object::Err(_) => Ok(Rc::new(Object::Bool(true))),
+        _ => Ok(Rc::new(Object::Bool(false))),
+    }
 }

@@ -1270,6 +1270,16 @@ fn test_builtin_functions_arrays() {
             "#,
             expected: Object::Integer(2),
         },
+        VmTestCase {
+            input: r#"sort([3, 1, 2])"#,
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Integer(1)),
+                    Rc::new(Object::Integer(2)),
+                    Rc::new(Object::Integer(3)),
+                ]),
+            })),
+        },
     ];
     run_vm_tests(&tests);
 }

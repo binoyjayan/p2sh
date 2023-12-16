@@ -66,6 +66,16 @@ impl PartialOrd for Object {
     }
 }
 
+impl Ord for Object {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap_or_else(|| {
+            // Handle the case where the objects are not comparable.
+            // For simplicity, we'll just return Ordering::Equal.
+            std::cmp::Ordering::Equal
+        })
+    }
+}
+
 impl Object {
     pub fn is_null(&self) -> bool {
         matches!(self, Object::Null)

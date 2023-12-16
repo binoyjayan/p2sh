@@ -49,6 +49,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("get_errno", builtin_get_errno),
     BuiltinFunction::new("strerror", builtin_strerror),
     BuiltinFunction::new("is_error", builtin_is_error),
+    BuiltinFunction::new("sort", builtin_sort),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -1008,6 +1009,7 @@ fn builtin_get_errno(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
 }
 
+/// Convert an os error code to a string
 fn builtin_strerror(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.len() != 1 {
         return Err(format!("takes one argument. got={}", args.len()));
@@ -1022,6 +1024,7 @@ fn builtin_strerror(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     }
 }
 
+/// Check if an object is an error
 fn builtin_is_error(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.len() != 1 {
         return Err(format!("takes one argument. got={}", args.len()));
@@ -1030,5 +1033,20 @@ fn builtin_is_error(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     match obj {
         Object::Err(_) => Ok(Rc::new(Object::Bool(true))),
         _ => Ok(Rc::new(Object::Bool(false))),
+    }
+}
+
+/// Sort the elements of an array
+fn builtin_sort(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+    let obj = args[0].as_ref();
+    match obj {
+        Object::Arr(arr) => {
+            arr.elements.borrow_mut().sort();
+            Ok(Rc::clone(&args[0]))
+        }
+        _ => Ok(Rc::new(Object::Null)),
     }
 }

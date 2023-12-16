@@ -1,7 +1,5 @@
 use std::env;
 use std::fs;
-use std::io;
-use std::io::{BufRead, Write};
 use std::rc::Rc;
 
 use common::builtins::functions::BUILTINFNS;
@@ -20,9 +18,11 @@ mod code;
 mod common;
 mod compiler;
 mod parser;
+mod prompt;
 mod scanner;
 mod vm;
 
+const HISTORY_LINES: usize = 16;
 const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 const PKG_DESC: &str = env!("CARGO_PKG_DESCRIPTION");
 
@@ -38,16 +38,9 @@ fn main() {
     }
 }
 
-fn show_prompt() {
-    print!(">> ");
-    io::stdout().flush().unwrap();
-}
-
 pub fn run_prompt(args: Vec<String>) {
     println!("{} v{}", PKG_DESC, PKG_VERSION);
-    println!("Ctrl+D to quit");
-    // Define globals outside REPL loop so the environment is retained
-    let stdin = io::stdin();
+    println!("Type quit to quit REPL");
     let mut constants = vec![];
     let data = Rc::new(Object::Null);
     let mut globals = vec![data; GLOBALS_SIZE];
@@ -63,14 +56,16 @@ pub fn run_prompt(args: Vec<String>) {
         symtab.define_builtin_var(n, name);
     }
 
-    show_prompt();
-    for line in stdin.lock().lines() {
-        if let Ok(line) = line {
+    let mut prompt = prompt::Prompt::new(HISTORY_LINES);
+    loop {
+        if let Ok(line) = prompt.show() {
+            if line == "quit" {
+                break;
+            }
             if !line.trim().is_empty() {
                 let program = match parse_program(&line) {
                     Some(program) => program,
                     None => {
-                        show_prompt();
                         continue;
                     }
                 };
@@ -80,7 +75,6 @@ pub fn run_prompt(args: Vec<String>) {
                     eprintln!("{}", e);
                     symtab = compiler.symtab;
                     constants = compiler.constants;
-                    show_prompt();
                     continue;
                 }
                 let bytecode = compiler.bytecode();
@@ -92,7 +86,6 @@ pub fn run_prompt(args: Vec<String>) {
                     globals = vm.globals;
                     symtab = compiler.symtab;
                     constants = compiler.constants;
-                    show_prompt();
                     continue;
                 }
                 // Get the object at the top of the VM's stack
@@ -106,7 +99,6 @@ pub fn run_prompt(args: Vec<String>) {
                 constants = compiler.constants;
             }
         }
-        show_prompt();
     }
     println!("\nExiting...");
 }

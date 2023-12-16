@@ -323,8 +323,6 @@ Example:
 let line = input("-->> ");
 ```
 
-Note that this function is not supported in the REPL.
-
 ### <a name="get_errno"></a>get_errno
 Get the last os error number
 

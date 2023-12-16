@@ -134,7 +134,7 @@ impl fmt::Display for Object {
             // Wrap the string in quotes while printing string expressions
             // But do not use this in builtins "puts" and "print"
             Self::Str(s) => write!(f, r#""{}""#, s),
-            Self::Char(c) => write!(f, "{}", c),
+            Self::Char(c) => write!(f, "'{}'", c),
             Self::Byte(b) => write!(f, "{}", b),
             Self::Integer(val) => write!(f, "{}", val),
             Self::Float(val) => write!(f, "{}", val),

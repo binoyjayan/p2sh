@@ -45,6 +45,7 @@ The following table lists the builtin functions available.
 | [**strerror**](#strerror) | convert an os error number to a string |
 | [**is_error**](#is_error) | Check if an object is an error object |
 | [**sort**](#sort) | Sort an object |
+| [**chars**](#chars) | Convert a string to an array of chars |
 
 ### Description
 
@@ -365,6 +366,14 @@ Sort an array object
 Example:
 ```
 sort([3, 2, 1])
+```
+
+### <a name="chars"></a>chars
+Sort an array object
+
+Example:
+```
+chars("Hello")
 ```
 
 ## Builtin variables

@@ -50,6 +50,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("strerror", builtin_strerror),
     BuiltinFunction::new("is_error", builtin_is_error),
     BuiltinFunction::new("sort", builtin_sort),
+    BuiltinFunction::new("chars", builtin_chars),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -220,12 +221,12 @@ fn builtin_str(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         Object::Str(_) => Ok(Rc::clone(&args[0])),
         Object::Null
         | Object::Integer(_)
-        | Object::Char(_)
-        | Object::Byte(_)
         | Object::Bool(_)
         | Object::Arr(_)
         | Object::Err(_)
         | Object::Map(_) => Ok(Rc::new(Object::Str(obj.to_string()))),
+        Object::Char(c) => Ok(Rc::new(Object::Str(c.to_string()))),
+        Object::Byte(b) => Ok(Rc::new(Object::Str(b.to_string()))),
         _ => Err(String::from("unsupported argument")),
     }
 }
@@ -1047,6 +1048,20 @@ fn builtin_sort(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             arr.elements.borrow_mut().sort();
             Ok(Rc::clone(&args[0]))
         }
+        _ => Ok(Rc::new(Object::Null)),
+    }
+}
+
+/// Convert string to array of chars
+fn builtin_chars(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+    let obj = args[0].as_ref();
+    match obj {
+        Object::Str(s) => Ok(Rc::new(Object::Arr(Rc::new(Array::new(
+            s.chars().map(|c| Rc::new(Object::Char(c))).collect(),
+        ))))),
         _ => Ok(Rc::new(Object::Null)),
     }
 }

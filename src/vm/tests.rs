@@ -1426,6 +1426,18 @@ fn test_builtin_functions_conversions() {
             input: "byte('1')",
             expected: Object::Byte(b'1'),
         },
+        VmTestCase {
+            input: r#"chars("hello")"#,
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Char('h')),
+                    Rc::new(Object::Char('e')),
+                    Rc::new(Object::Char('l')),
+                    Rc::new(Object::Char('l')),
+                    Rc::new(Object::Char('o')),
+                ]),
+            })),
+        },
     ];
     run_vm_tests(&tests);
 }

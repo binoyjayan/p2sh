@@ -46,6 +46,7 @@ The following table lists the builtin functions available.
 | [**is_error**](#is_error) | Check if an object is an error object |
 | [**sort**](#sort) | Sort an object |
 | [**chars**](#chars) | Convert a string to an array of chars |
+| [**join**](#join) | Join an array of characters |
 
 ### Description
 
@@ -374,6 +375,16 @@ Sort an array object
 Example:
 ```
 chars("Hello")
+```
+
+### <a name="join"></a>join
+Join an array of characters into a string
+
+Examples:
+```
+join(['h', 'e', 'l', 'l', 'o']);
+join(['h', 'e', 'l', 'l', 'o'], ' ');
+join(['h', 'e', 'l', 'l', 'o'], ", ");
 ```
 
 ## Builtin variables

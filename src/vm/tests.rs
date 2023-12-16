@@ -1438,6 +1438,10 @@ fn test_builtin_functions_conversions() {
                 ]),
             })),
         },
+        VmTestCase {
+            input: r#"join(['h', 'e', 'l', 'l', 'o'])"#,
+            expected: Object::Str(String::from("hello")),
+        },
     ];
     run_vm_tests(&tests);
 }

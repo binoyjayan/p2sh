@@ -51,6 +51,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("is_error", builtin_is_error),
     BuiltinFunction::new("sort", builtin_sort),
     BuiltinFunction::new("chars", builtin_chars),
+    BuiltinFunction::new("join", builtin_join),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -1062,6 +1063,44 @@ fn builtin_chars(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         Object::Str(s) => Ok(Rc::new(Object::Arr(Rc::new(Array::new(
             s.chars().map(|c| Rc::new(Object::Char(c))).collect(),
         ))))),
+        _ => Ok(Rc::new(Object::Null)),
+    }
+}
+
+// Join an array of chars into a string, optionally delimited by
+// a character or a string
+fn builtin_join(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() < 1 || args.len() > 2 {
+        return Err(format!("takes one or two arguments. got={}", args.len()));
+    }
+    let obj = args[0].as_ref();
+    match obj {
+        Object::Arr(arr) => {
+            let mut delim = String::new();
+            if args.len() == 2 {
+                if let Object::Str(s) = args[1].as_ref() {
+                    delim = s.clone();
+                } else if let Object::Char(c) = args[1].as_ref() {
+                    delim.push(*c);
+                } else {
+                    return Err(String::from("second argument should be a string or a char"));
+                }
+            }
+            let mut s = String::new();
+            let mut first = true;
+            for obj in arr.elements.borrow().iter() {
+                if let Object::Char(c) = obj.as_ref() {
+                    if !first {
+                        s.push_str(&delim);
+                    }
+                    s.push(*c);
+                    first = false;
+                } else {
+                    return Err(String::from("array should contain only chars"));
+                }
+            }
+            Ok(Rc::new(Object::Str(s)))
+        }
         _ => Ok(Rc::new(Object::Null)),
     }
 }

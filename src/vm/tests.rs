@@ -1257,7 +1257,7 @@ fn test_builtin_functions_arrays() {
             expected: Object::Null,
         },
         VmTestCase {
-            input: r#"let a = []; push(a, 1); a"#,
+            input: r#"let a = [1]; push(a, 2); pop(a); a"#,
             expected: Object::Arr(Rc::new(Array {
                 elements: RefCell::new(vec![Rc::new(Object::Integer(1))]),
             })),

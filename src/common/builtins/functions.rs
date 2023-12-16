@@ -17,6 +17,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("last", builtin_last),
     BuiltinFunction::new("rest", builtin_rest),
     BuiltinFunction::new("push", builtin_push),
+    BuiltinFunction::new("pop", builtin_pop),
     BuiltinFunction::new("get", builtin_get),
     BuiltinFunction::new("contains", builtin_contains),
     BuiltinFunction::new("insert", builtin_insert),
@@ -130,6 +131,24 @@ fn builtin_push(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         Object::Arr(arr) => {
             arr.push(args[1].clone());
             Ok(Rc::new(Object::Null))
+        }
+        _ => Err(String::from("unsupported argument")),
+    }
+}
+
+// Remove value from the end of an array
+fn builtin_pop(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+
+    match args[0].as_ref() {
+        Object::Arr(arr) => {
+            let obj = arr.elements.borrow_mut().pop();
+            match obj {
+                Some(obj) => Ok(obj),
+                None => Ok(Rc::new(Object::Null)),
+            }
         }
         _ => Err(String::from("unsupported argument")),
     }

@@ -26,9 +26,9 @@ cargo test
 ### Run examples
 
 ```bash
-cargo run --release examples/formatted-output.p2
-cargo run --release examples/fibonacci-recursive.p2
-cargo run --release examples/fibonacci-iterative.p2
+cargo run --release examples/formatting/formatted-output.p2
+cargo run --release examples/algorithms/fibonacci-recursive.p2
+cargo run --release examples/algorithms/fibonacci-iterative.p2
 ```
 
 ### Run the REPL

@@ -1,6 +1,6 @@
 # Documentation
 
-As the name suggests, P2SH is an easy-to-learn, powerful programming language
+As the name suggests, `p2sh` is an easy-to-learn, powerful programming language
 designed for packet processing. Its elegant syntax and dynamic typing, together
 with its interpreted nature, make it an ideal language for developing tools and
 utilities meant to process packets effectively. It has efficient high-level

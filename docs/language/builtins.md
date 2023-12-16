@@ -43,6 +43,8 @@ The following table lists the builtin functions available.
 | [**input**](#input) | Read a line from the standard input and return it as a string |
 | [**get_errno**](#get_errno) | get last os error number |
 | [**strerror**](#strerror) | convert an os error number to a string |
+| [**is_error**](#is_error) | Check if an object is an error object |
+| [**sort**](#sort) | Sort an object |
 
 ### Description
 
@@ -347,6 +349,22 @@ Convert an os error number to a string
 Example:
 ```
 strerror(2)
+```
+
+### <a name="is_error"></a>is_error
+Check if the object is an error object
+
+Example:
+```
+is_error(2)
+```
+
+### <a name="sort"></a>sort
+Sort an array object
+
+Example:
+```
+sort([3, 2, 1])
 ```
 
 ## Builtin variables

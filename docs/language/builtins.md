@@ -254,6 +254,10 @@ toupper("a")
 ### <a name="open"></a>open
 Open a file for reading or writing.
 It accepts a file path and an optional mode as a string and returns a file handle.
+If there is an IO error, `get_errno` can be used to get the last os error
+and `strerror` to convert it to a string. This function also returns the
+same as an IO error. So, alternatively, `is_error` can be used to check if
+the returned value is an error object.
 
 Example:
 ```
@@ -263,16 +267,19 @@ let f = open("/path/to/file", "r");
 Modes supported
 | mode | Description |
 |------|-------------|
-| r | Open file for reading. Return null if the file does not exist |
+| r | Open file for reading. Return error if the file does not exist |
 | w | Open or create file for writing. Truncate if exists |
 | a | Open file for writing to the end of the file. Create it if it does not exist |
-| x | Create a file and open it for writing. Return null if it exits |
+| x | Create a file and open it for writing. Return error if it exits |
 
 ### <a name="read"></a>read
 Read from a file or stdin.
 It accepts a file handle as first argument and an optional number of bytes
 as the second argument. It returns an array of bytes encoded as UTF-8.
-
+If there is an IO error, `get_errno` can be used to get the last os error
+and `strerror` to convert it to a string. This function also returns the
+same as an IO error. So, alternatively, `is_error` can be used to check if
+the returned value is an error object.
 ```
 let f = open("test");
 let bytes = read(f);
@@ -282,6 +289,10 @@ let bytes = read(f);
 Write to a file, stdout or stderr.
 It accepts a file handle as first argument and a string or an array of bytes
 as the second argument. It returns the number of bytes written.
+If there is an IO error, `get_errno` can be used to get the last os error
+and `strerror` to convert it to a string. This function also returns the
+same as an IO error. So, alternatively, `is_error` can be used to check if
+the returned value is an error object.
 
 ```
 let f = open("test", "w");
@@ -291,7 +302,8 @@ write(f, "hello");
 ### <a name="read_to_string"></a>read_to_string
 Read the contents of a file into a string
 It accepts a file handle as first argument and returns the content of the
-file as a string.
+file as a string. Return IO error or a Utf8 error. Use `is_error` to check
+if the returned value is an error object.
 
 ```
 let f = open("test");
@@ -299,7 +311,8 @@ let s = read_to_string(f);
 ```
 
 ### <a name="decode_utf8"></a>decode_utf8
-Decode a UTF-8 byte sequence to a string
+Decode a UTF-8 byte sequence to a string. Return Utf8 error. Use `is_error`
+to check if the returned value is an error object.
 
 Example:
 ```
@@ -320,6 +333,11 @@ write(f, bytes);
 
 ### <a name="read_line"></a>read_line
 Read a line from the standard input or a file handle into a string.
+Note that the newline character at the end of a line is not trimmed.
+If there is an IO error, `get_errno` can be used to get the last os error
+and `strerror` to convert it to a string. This function also returns the
+same as an IO error. So, alternatively, `is_error` can be used to check if
+the returned value is an error object.
 
 Example:
 ```
@@ -332,6 +350,10 @@ Note that the newline character is not removed from the string read.
 ### <a name="input"></a>input
 Read a line from the standard input and return it as a string.
 It accepts an optional prompt argument.
+If there is an IO error, `get_errno` can be used to get the last os error
+and `strerror` to convert it to a string. This function also returns the
+same as an IO error. So, alternatively, `is_error` can be used to check if
+the returned value is an error object.
 
 Example:
 ```
@@ -359,7 +381,7 @@ Check if the object is an error object
 
 Example:
 ```
-is_error(2)
+is_error(open(""))
 ```
 
 ### <a name="sort"></a>sort
@@ -371,7 +393,7 @@ sort([3, 2, 1])
 ```
 
 ### <a name="chars"></a>chars
-Sort an array object
+Get an array of characters of the string passed to it.
 
 Example:
 ```

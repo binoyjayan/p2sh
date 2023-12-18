@@ -1,13 +1,34 @@
 # Control Flow
 
-## if expression
+## simple if expression
+
+Simple if expressions produce a value specified in the if body.
+Since the else part is missing, it is assumed to be a `null`.
+In REPL, a multiline if statement can be executed by suffixing
+a back-slash character (`\`) at the end of the line to indicate
+that the next line is a continuation.
+
+```
+let n = 0;
+let s = if n == 0 {  \
+  "zero"             \
+};
+puts(s);
+
+```
+
+Note: There should not be any space following the `\` character.
+
+Alternatively, instead of using the slash suffix, you can also
+create file via the cat command available in posix systems.
+
+## if-else expression
 
 Save the following script in a file. e.g. 'if.p2'.
 On posix systems, you can use 'cat' with 'EOF' to create this file
 on your terminal. Alternatively, an editor may also be used.
 
 ```
-
 cat > if.p2 <<EOF
 
 if len(argv) < 2 {
@@ -53,7 +74,6 @@ a match is found. Once a match is found, the control flow breaks out of the chec
 Note that there is no fallthrough mechanism similar to a switch statment in c.
 
 ```
-
 cat > match.p2 <<EOF
 
 let s = input("-->> ");
@@ -92,41 +112,45 @@ The loop statement executes the loop body infinitely. To break out of the loop,
 use the break statement.
 
 ```
-
-cat > loop.p2 <<EOF
-
 let n = 1;
-loop {
-  if n > 5 {
-    break;
-  }
-  puts(n);
-  n = n + 1;
+loop {         \
+  if n > 5 {   \
+    break;     \
+  }            \
+  puts(n);     \
+  n = n + 1;   \
 }
 
-EOF
 ```
 
-Execution
-
+Output:
 ```
-p2sh loop.p2
 1
 2
 3
 4
 5
+true
 ```
+
+Note that the `true` at the end is the value of the last expression
+evaluated in the loop and can be ignored. In this case it is the
+result of the if expression.
 
 ## While
 
 The same code can be written using while
 
 ```
->> let n = 1;
-1
+let n = 1;
+while n <= 5 {  \
+   puts(n);     \
+   n = n + 1;   \
+}
+```
 
->> while n <= 5 { puts(n); n = n + 1; }
+Output:
+```
 1
 2
 3
@@ -134,11 +158,6 @@ The same code can be written using while
 5
 false
 ```
-
-Note that the `false` at the end is the value of the last expression
-evaluated and can be ignored. In this case it is the result of
-the condition in the while statement.
-
 
 ### loop labels
 

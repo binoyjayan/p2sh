@@ -1,0 +1,56 @@
+#!/usr/bin/env p2sh
+
+fn swap(a, i, j) {
+    let t = a[i];
+    a[i] = a[j];
+    a[j] = t;
+}
+
+fn shuffle(a) {
+    let i = 0;
+    let n = len(a);
+    while i < n {
+        let r = rand() % n;
+        swap(a, i, r);
+        i = i + 1;
+    }
+}
+
+fn partition(a, lo, hi) {
+    let i = lo;
+    let j = hi + 1;
+    let v = a[lo];   //partitioning element
+    while true {
+        while a[i = i + 1] < v {
+            if i == hi {
+                break;
+            }
+        }
+        while v < a[j = j - 1] {
+            if j == lo {
+                break;
+            }
+        }
+        if i >= j {
+            break;
+        }
+        swap(a, i, j);
+    }
+    swap(a, lo, j);
+    return j;
+}
+
+fn sort_quick(a, lo, hi) {
+    if hi <= lo {
+        return;
+    }
+    let j = partition(a, lo, hi);
+    sort_quick(a, lo, j - 1);
+    sort_quick(a, j + 1, hi);
+}
+
+let a = [141, 1, 17, -7, -17, -27, 18, 541, 8, 7, 7];
+puts(a);
+shuffle(a);
+sort_quick(a, 0, len(a) - 1);
+puts(a);

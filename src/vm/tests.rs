@@ -1448,10 +1448,20 @@ fn test_builtin_functions_conversions() {
 
 #[test]
 fn test_builtin_functions_math() {
-    let tests = vec![VmTestCase {
-        input: r#"round(3.141592653589793238, 2)"#,
-        expected: Object::Float(3.14),
-    }];
+    let tests = vec![
+        VmTestCase {
+            input: r#"round(3.141592653589793238, 2)"#,
+            expected: Object::Float(3.14),
+        },
+        VmTestCase {
+            input: r#"
+                let n = rand(100);
+                let f = rand(100.);
+                n >= 0 && n < 100 && f >= 0. && f < 100.
+            "#,
+            expected: Object::Bool(true),
+        },
+    ];
     run_vm_tests(&tests);
 }
 

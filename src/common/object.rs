@@ -37,6 +37,8 @@ impl PartialEq for Object {
             (Object::Char(a), Object::Char(b)) => a.eq(b),
             (Object::Byte(a), Object::Byte(b)) => a.eq(b),
             (Object::Integer(a), Object::Integer(b)) => a.eq(b),
+            (Object::Integer(a), Object::Float(b)) => (*a as f64).eq(b),
+            (Object::Float(a), Object::Integer(b)) => a.eq(&(*b as f64)),
             (Object::Float(a), Object::Float(b)) => a.eq(b),
             (Object::Bool(a), Object::Bool(b)) => a.eq(b),
             (Object::Arr(a), Object::Arr(b)) => a.eq(b),

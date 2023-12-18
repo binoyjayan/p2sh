@@ -47,6 +47,7 @@ The following table lists the builtin functions available.
 | [**sort**](#sort) | Sort an object |
 | [**chars**](#chars) | Convert a string to an array of chars |
 | [**join**](#join) | Join an array of characters |
+| [**rand**](#rand) | Random number generator |
 
 ### Description
 
@@ -386,6 +387,18 @@ join(['h', 'e', 'l', 'l', 'o']);
 join(['h', 'e', 'l', 'l', 'o'], ' ');
 join(['h', 'e', 'l', 'l', 'o'], ", ");
 ```
+
+### <a name="rand"></a>rand
+Generates a pseudo random number
+It accepts a optional max (inclusive) argument that can be an integer or a float.
+
+Examples:
+```
+rand()
+rand(100)
+rand(100.)
+```
+
 
 ## Builtin variables
 

@@ -8,6 +8,7 @@ edition = "2021"
 lazy_static = "1.4.0"
 byteorder = "1.4.3"
 dialoguer = {version = "0.11.0", features = ["history", "completion"]}
+rand = "0.8.5"
 
 [features]
 debug_print_code = []

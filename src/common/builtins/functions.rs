@@ -1,3 +1,4 @@
+use rand::Rng;
 use std::fs;
 use std::io;
 use std::io::{BufRead, Read, Write};
@@ -52,6 +53,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("sort", builtin_sort),
     BuiltinFunction::new("chars", builtin_chars),
     BuiltinFunction::new("join", builtin_join),
+    BuiltinFunction::new("rand", builtin_rand),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -1102,5 +1104,29 @@ fn builtin_join(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             Ok(Rc::new(Object::Str(s)))
         }
         _ => Ok(Rc::new(Object::Null)),
+    }
+}
+
+/// Generate a random number. Optionally take a max value
+fn builtin_rand(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() > 1 {
+        return Err(format!("takes one or no arguments. got={}", args.len()));
+    }
+    let mut rng = rand::thread_rng();
+    let max = if args.is_empty() {
+        Rc::new(Object::Integer(i64::MAX))
+    } else {
+        args[0].clone()
+    };
+    match max.as_ref() {
+        Object::Integer(n) => {
+            let r = rng.gen_range(0..=*n) as i64;
+            Ok(Rc::new(Object::Integer(r)))
+        }
+        Object::Float(n) => {
+            let r = rng.gen_range(0.0..=*n) as f64;
+            Ok(Rc::new(Object::Float(r)))
+        }
+        _ => Err(String::from("unsupported argument")),
     }
 }

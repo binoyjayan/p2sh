@@ -1,0 +1,23 @@
+#!/usr/bin/env p2sh
+// Script copy a file from one path to another
+
+if len(argv) != 3 {
+    println("Usage: {} <src-file> <dest-file>", argv[0]);
+    exit(1);
+}
+
+let src = open(argv[1], "r");
+if is_error(src) {
+    puts(argv[1], ": ", src);
+    exit(2);
+}
+let dst = open(argv[2], "w");
+if is_error(dst) {
+    puts(argv[2], ": ", dst);
+    exit(2);
+}
+
+let bytes = null;
+while bytes = read(src, 4096) {
+    write(dst, bytes);
+}

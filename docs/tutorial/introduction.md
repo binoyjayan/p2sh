@@ -8,8 +8,11 @@ allowing users to execute commands on the fly.
 ```
 The p2sh Programming language v0.4.0
 Ctrl+D to quit
->> puts("Hello, World!")
-Hello, World!
+>> puts("💖💖💖 Hello, World! 💖💖💖")
+💖💖💖 Hello, World! 💖💖💖
+
+>> len("💖");
+4
 ```
 
 ## Using p2sh as a calculator

@@ -4,7 +4,8 @@
 
 🦀 🦀 🦀 Interpreter for the p2sh programming language 🦀 🦀 🦀
 
-The project served as a way for me to learn Rust, so many parts of the code may not be idiomatic.
+The project served as a way for me to learn Rust, so many parts of the code may not be the most idiomatic.
+A p2sh script can be edited using the [kilo editor](https://github.com/binoyjayan/kilo-rs/tree/main) that knows its syntax.
 
 ## Dependencies
 

@@ -9,6 +9,9 @@ use std::ops;
 use std::rc::Rc;
 
 use crate::code::definitions::Instructions;
+use crate::common::builtins::pcap::Pcap;
+
+use super::builtins::pcap::PcapPacket;
 
 #[derive(Debug)]
 pub enum Object {
@@ -27,6 +30,8 @@ pub enum Object {
     Clos(Rc<Closure>),
     File(Rc<FileHandle>),
     Err(Error),
+    Pcap(Rc<Pcap>),
+    Packet(Rc<PcapPacket>),
 }
 
 impl PartialEq for Object {
@@ -149,6 +154,8 @@ impl fmt::Display for Object {
             Self::Clos(val) => write!(f, "{}", val),
             Self::File(val) => write!(f, "{}", val),
             Self::Err(val) => write!(f, "{}", val),
+            Self::Pcap(val) => write!(f, "{}", val),
+            Self::Packet(val) => write!(f, "{}", val),
         }
     }
 }
@@ -359,7 +366,7 @@ impl PartialEq for BuiltinFunction {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Array {
     pub elements: RefCell<Vec<Rc<Object>>>,
 }
@@ -396,7 +403,7 @@ impl Array {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct HMap {
     pub pairs: RefCell<HashMap<Rc<Object>, Rc<Object>>>,
 }
@@ -506,7 +513,7 @@ impl Eq for HMap {}
 // OpReturnValue tells the VM to return the value on top of the stack
 // to the calling context.
 // OpReturn is similar to OpReturnValue except that it returns Null.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct CompiledFunction {
     pub instructions: Rc<Instructions>,
     pub num_locals: usize,
@@ -545,7 +552,7 @@ impl Eq for CompiledFunction {}
 // available to the compiler. Instead an opcode 'OpClosure' is used by the
 // compiler to inform the VM to create a closure and wrap the function and
 // its environment.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct Closure {
     pub func: Rc<CompiledFunction>,
     pub free: RefCell<Vec<Rc<Object>>>,

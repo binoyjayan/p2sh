@@ -8,6 +8,7 @@ use std::thread;
 use std::time;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use super::pcap::Pcap;
 use super::print::format_buf;
 use crate::common::object::*;
 
@@ -54,6 +55,10 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("chars", builtin_chars),
     BuiltinFunction::new("join", builtin_join),
     BuiltinFunction::new("rand", builtin_rand),
+    BuiltinFunction::new("pcap_open", builtin_pcap_open),
+    BuiltinFunction::new("pcap_stream", builtin_pcap_stream),
+    BuiltinFunction::new("pcap_next", builtin_pcap_next),
+    BuiltinFunction::new("pcap_read", builtin_pcap_read),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -1126,6 +1131,152 @@ fn builtin_rand(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
         Object::Float(n) => {
             let r = rng.gen_range(0.0..=*n) as f64;
             Ok(Rc::new(Object::Float(r)))
+        }
+        _ => Err(String::from("unsupported argument")),
+    }
+}
+
+/// Opens a pcap file
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing the path to the file (Object::Str) and an optional
+///           second argument specifying the mode (Object::Str).
+/// # Returns
+/// Returns a Result containing a pcap file handle wrapped in an Object::Pcap,
+/// or a null if the operation fails. An I/O error will result in the last
+/// error being set which can be retrieved using get_errno().
+/// Apart from opening the file, read the pcap header and validate
+/// the magic number and the endianness. Return error if the validation fails.
+fn builtin_pcap_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    let obj = builtin_open(args)?;
+    match obj.as_ref() {
+        Object::File(f) => {
+            match Pcap::from_file(f.clone()) {
+                Ok(pcap) => {
+                    // Return the pcap object
+                    Ok(Rc::new(Object::Pcap(Rc::new(pcap))))
+                }
+                Err(e) => {
+                    // Failed to open pcap file
+                    Ok(Rc::new(Object::Err(Error::IO(e))))
+                }
+            }
+        }
+        _ => Err(String::from("unsupported argument")),
+    }
+}
+
+/// Read the next packet from a pcap file
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing the pcap file handle
+/// # Returns
+/// Returns a Result containing a packet object wrapped in an Object::Packet,
+/// or an error if the operation fails. An I/O error will result in the last
+/// error being set which can be retrieved using get_errno().
+fn builtin_pcap_next(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 1 {
+        return Err(format!("takes one argument. got={}", args.len()));
+    }
+
+    match args[0].as_ref() {
+        Object::Pcap(f) => {
+            match f.next_packet() {
+                Ok(packet) => {
+                    // Return the packet object
+                    Ok(Rc::new(Object::Packet(Rc::new(packet))))
+                }
+                Err(e) => {
+                    if e.kind() == io::ErrorKind::UnexpectedEof {
+                        // Return Object::Null for EOF error
+                        return Ok(Rc::new(Object::Null));
+                    }
+                    // For other IO errors, return the error
+                    Ok(Rc::new(Object::Err(Error::IO(e))))
+                }
+            }
+        }
+        _ => Err(String::from("first argument should be a file handle")),
+    }
+}
+
+/// Read all or a specified number of packets from a pcap file
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing the pcap file handle and an optional
+///           second argument specifying the number of packets to read (Object::Integer).
+/// # Returns
+/// Returns a Result containing an array of packet objects wrapped in an Object::Arr,
+/// or an error if the operation fails. An I/O error will result in the last
+/// error being set which can be retrieved using get_errno().
+/// If the number of packets to read is not specified, read all packets.
+/// If the number of packets to read is specified, read that many packets.
+fn builtin_pcap_read(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.is_empty() || args.len() > 2 {
+        return Err(format!("takes one or two arguments. got={}", args.len()));
+    }
+
+    match args[0].as_ref() {
+        Object::Pcap(f) => {
+            let num_packets_to_read = if args.len() == 2 {
+                match args[1].as_ref() {
+                    Object::Integer(num) => *num as usize,
+                    _ => return Err(String::from("second argument should be an integer")),
+                }
+            } else {
+                usize::MAX
+            };
+            // Use next_packet() in a loop to read all packets
+            let mut packets = Vec::new();
+            for _ in 0..num_packets_to_read {
+                match f.next_packet() {
+                    Ok(packet) => {
+                        packets.push(Rc::new(Object::Packet(Rc::new(packet))));
+                    }
+                    Err(e) => {
+                        if e.kind() == io::ErrorKind::UnexpectedEof {
+                            break;
+                        }
+                        // For other IO errors, return the error
+                        return Ok(Rc::new(Object::Err(Error::IO(e))));
+                    }
+                }
+            }
+            // Return the array of packets
+            Ok(Rc::new(Object::Arr(Rc::new(Array::new(packets)))))
+        }
+        _ => Err(String::from("first argument should be a file handle")),
+    }
+}
+
+/// Opens a pcap stream
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing the path to the file (Object::Str) and an optional
+///           second argument specifying the mode (Object::Str).
+/// # Returns
+/// Returns a Result containing a pcap file handle wrapped in an Object::Pcap,
+/// or a null if the operation fails. An I/O error will result in the last
+/// error being set which can be retrieved using get_errno().
+/// Apart from opening the file, read the pcap header and validate
+/// the magic number and the endianness. Return error if the validation fails.
+fn builtin_pcap_stream(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() > 1 {
+        return Err(format!("takes one or no arguments. got={}", args.len()));
+    }
+    match args[0].as_ref() {
+        Object::File(f) => {
+            match f.as_ref() {
+                FileHandle::Stdin | FileHandle::Stdout => {
+                    match Pcap::from_file(f.clone()) {
+                        Ok(pcap) => {
+                            // Return the pcap object
+                            Ok(Rc::new(Object::Pcap(Rc::new(pcap))))
+                        }
+                        Err(e) => {
+                            // Failed to open pcap file
+                            Ok(Rc::new(Object::Err(Error::IO(e))))
+                        }
+                    }
+                }
+                _ => Err(String::from("invalid file handle")),
+            }
         }
         _ => Err(String::from("unsupported argument")),
     }

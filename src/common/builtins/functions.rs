@@ -57,8 +57,8 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("rand", builtin_rand),
     BuiltinFunction::new("pcap_open", builtin_pcap_open),
     BuiltinFunction::new("pcap_stream", builtin_pcap_stream),
-    BuiltinFunction::new("pcap_next", builtin_pcap_next),
-    BuiltinFunction::new("pcap_read", builtin_pcap_read),
+    BuiltinFunction::new("pcap_read_next", builtin_pcap_read_next),
+    BuiltinFunction::new("pcap_read_all", builtin_pcap_read_all),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -1172,7 +1172,7 @@ fn builtin_pcap_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 /// Returns a Result containing a packet object wrapped in an Object::Packet,
 /// or an error if the operation fails. An I/O error will result in the last
 /// error being set which can be retrieved using get_errno().
-fn builtin_pcap_next(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+fn builtin_pcap_read_next(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.len() != 1 {
         return Err(format!("takes one argument. got={}", args.len()));
     }
@@ -1208,7 +1208,7 @@ fn builtin_pcap_next(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 /// error being set which can be retrieved using get_errno().
 /// If the number of packets to read is not specified, read all packets.
 /// If the number of packets to read is specified, read that many packets.
-fn builtin_pcap_read(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+fn builtin_pcap_read_all(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.is_empty() || args.len() > 2 {
         return Err(format!("takes one or two arguments. got={}", args.len()));
     }

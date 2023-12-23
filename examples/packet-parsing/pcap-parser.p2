@@ -1,0 +1,21 @@
+#!/usr/bin/env p2sh
+
+if len(argv) < 2 {
+  println("Usage: {} <pcap file>", argv[0]);
+  exit(1);
+}
+
+let f = pcap_open(argv[1]);
+if is_error(f) {
+    puts(f);
+    exit(1);
+}
+
+let i = 1;
+let pcap = null;
+
+while pcap = pcap_read_next(f) {
+   let pkt = decode_ethernet(pcap);
+   println("[{}] {}", i, pkt);
+   i = i + 1;
+}

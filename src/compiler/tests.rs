@@ -5,8 +5,8 @@ use std::rc::Rc;
 use super::*;
 use crate::code::definitions;
 use crate::code::opcode::*;
-use crate::common::error::*;
 use crate::common::object::*;
+use crate::compiler::error::*;
 use crate::parser::*;
 use crate::scanner::*;
 

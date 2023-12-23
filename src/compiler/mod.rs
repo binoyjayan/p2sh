@@ -6,16 +6,17 @@ use crate::code::definitions::{self, *};
 use crate::code::opcode::Opcode;
 use crate::common::builtins::functions::BUILTINFNS;
 use crate::common::builtins::variables::BuiltinVarType;
-use crate::common::error::CompileError;
 use crate::common::object::CompiledFunction;
 use crate::common::object::FileHandle;
 use crate::common::object::Object;
+use crate::compiler::error::CompileError;
 use crate::compiler::symtab::SymbolTable;
 use crate::parser::ast::expr::*;
 use crate::parser::ast::stmt::BlockStatement;
 use crate::parser::ast::stmt::Statement;
 use crate::parser::ast::*;
 
+pub mod error;
 pub mod symtab;
 pub mod symtab_test;
 pub mod tests;

@@ -6,7 +6,6 @@ use std::rc::Rc;
 use crate::code::opcode::Opcode;
 use crate::common::builtins::functions::BUILTINFNS;
 use crate::common::builtins::variables::BuiltinVarType;
-use crate::common::error::RTError;
 use crate::common::object::Array;
 use crate::common::object::BuiltinFunction;
 use crate::common::object::Closure;
@@ -14,6 +13,7 @@ use crate::common::object::CompiledFunction;
 use crate::common::object::HMap;
 use crate::common::object::Object;
 use crate::compiler::Bytecode;
+use crate::vm::error::RTError;
 use crate::vm::frame::Frame;
 
 const STACK_SIZE: usize = 4096;

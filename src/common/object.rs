@@ -9,10 +9,11 @@ use std::io;
 use std::ops;
 use std::rc::Rc;
 
+use super::builtins::packet::error::PacketError;
+use super::builtins::packet::ethernet::Ethernet;
+use super::builtins::pcap::PcapPacket;
 use crate::code::definitions::Instructions;
 use crate::common::builtins::pcap::Pcap;
-
-use super::builtins::pcap::PcapPacket;
 
 #[derive(Debug)]
 pub enum Object {
@@ -30,9 +31,10 @@ pub enum Object {
     Map(Rc<HMap>),
     Clos(Rc<Closure>),
     File(Rc<FileHandle>),
-    Err(Error),
+    Err(ErrorObj),
     Pcap(Rc<Pcap>),
     Packet(Rc<PcapPacket>),
+    Eth(Rc<Ethernet>),
 }
 
 impl PartialEq for Object {
@@ -156,6 +158,7 @@ impl fmt::Display for Object {
             Self::Err(val) => write!(f, "{}", val),
             Self::Pcap(val) => write!(f, "{}", val),
             Self::Packet(val) => write!(f, "{}", val),
+            Self::Eth(val) => write!(f, "{}", val),
         }
     }
 }
@@ -613,17 +616,24 @@ impl fmt::Display for FileHandle {
     }
 }
 
+/// The error object.
+/// It is different from runtime error in the sense that a runtime error
+/// is not interpreted by the programming language but will terminate the
+/// program. However, the error objects are used in the builtin functions
+/// for error handling.
 #[derive(Debug)]
-pub enum Error {
+pub enum ErrorObj {
     IO(io::Error),
     Utf8(std::string::FromUtf8Error),
+    Packet(PacketError),
 }
 
-impl fmt::Display for Error {
+impl fmt::Display for ErrorObj {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             Self::IO(e) => write!(f, "io-error: {e}"),
             Self::Utf8(e) => write!(f, "utf8-error: {e}"),
+            Self::Packet(e) => write!(f, "packet-error: {}", e),
         }
     }
 }

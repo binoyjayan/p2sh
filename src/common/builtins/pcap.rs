@@ -59,7 +59,7 @@ impl PcapGlobalHeader {
         if magic_number != PCAP_MAGIC_MS && magic_number != PCAP_MAGIC_NS {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!("Invalid pcap magic number -- {:X}", magic_number,),
+                format!("Invalid pcap magic number {:X}", magic_number,),
             ));
         }
 

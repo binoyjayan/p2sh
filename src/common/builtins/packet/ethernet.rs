@@ -1,39 +1,43 @@
 use super::error::PacketError;
 use super::macaddress::MacAddress;
 use std::fmt;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct Ethernet {
-    pub destination: MacAddress,
-    pub source: MacAddress,
+    pub dest: MacAddress,   // Destination MAC address
+    pub source: MacAddress, // Source MAC address
     pub ethertype: EtherType,
-    pub payload: Vec<u8>,
+    pub rawdata: Rc<Vec<u8>>, // Raw data of the entire packet
+    pub offset: usize,        // Offset of the ethernet header
 }
+
+pub const ETHERNET_HEADER_SIZE: usize = 14;
 
 impl fmt::Display for Ethernet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "<{}: {} -> {}>",
-            self.ethertype, self.source, self.destination
-        )
+        write!(f, "<{}: {} -> {}>", self.ethertype, self.source, self.dest)
     }
 }
 
 impl Ethernet {
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, PacketError> {
-        if bytes.len() < 14 {
-            return Err(PacketError::InvalidLength(bytes.len()));
+    // off is the offset of the ethernet header when it is encapsulated in
+    // another protocol. For example, if the ethernet header is encapsulated
+    // in an 802.1Q VLAN header, then off is the offset of the VLAN header.
+    pub fn from_bytes(rawdata: Rc<Vec<u8>>, off: usize) -> Result<Self, PacketError> {
+        if rawdata.len() < off + ETHERNET_HEADER_SIZE {
+            return Err(PacketError::InvalidLength(rawdata.len()));
         }
-        let destination = MacAddress::from_bytes(&bytes[0..6]);
-        let source = MacAddress::from_bytes(&bytes[6..12]);
-        let ethertype = EtherType(((bytes[12] as u16) << 8) | (bytes[13] as u16));
-        let payload = bytes[14..].to_vec();
+        let destination = MacAddress::from_bytes(&rawdata[off..off + 6]);
+        let source = MacAddress::from_bytes(&rawdata[off + 6..off + 12]);
+        let ethertype = EtherType(((rawdata[off + 12] as u16) << 8) | (rawdata[off + 13] as u16));
+        let offset = off + ETHERNET_HEADER_SIZE;
         Ok(Self {
-            destination,
+            dest: destination,
             source,
             ethertype,
-            payload,
+            rawdata,
+            offset,
         })
     }
 }

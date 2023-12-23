@@ -1291,7 +1291,7 @@ fn builtin_decode_ethernet(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> 
     match args[0].as_ref() {
         Object::Packet(f) => {
             let packet = f.as_ref();
-            match Ethernet::from_bytes(&packet.data) {
+            match Ethernet::from_bytes(Rc::clone(&packet.data), 0) {
                 Ok(ethernet) => Ok(Rc::new(Object::Eth(Rc::new(ethernet)))),
                 Err(e) => Ok(Rc::new(Object::Err(ErrorObj::Packet(e)))),
             }

@@ -121,7 +121,7 @@ impl PcapPacketHeader {
 #[derive(Debug)]
 pub struct PcapPacket {
     pub header: PcapPacketHeader,
-    pub data: Vec<u8>,
+    pub data: Rc<Vec<u8>>,
 }
 
 impl fmt::Display for PcapPacket {
@@ -198,7 +198,7 @@ impl Pcap {
                 // return whole packet
                 Ok(PcapPacket {
                     header: packet_header,
-                    data: packet_data,
+                    data: Rc::new(packet_data),
                 })
             }
             FileHandle::Stdin => {
@@ -216,7 +216,7 @@ impl Pcap {
                 io::stdin().read_exact(&mut packet_data)?;
                 Ok(PcapPacket {
                     header: packet_header,
-                    data: packet_data,
+                    data: Rc::new(packet_data),
                 })
             }
             _ => Err(io::Error::new(

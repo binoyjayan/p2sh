@@ -4,7 +4,7 @@ let f = pcap_stream(stdin);
 let p = null;
 let i = 1;
 
-while p = pcap_next(f) {
+while p = pcap_read_next(f) {
    println("[{}] {}", i, p);
    i = i + 1;
 }

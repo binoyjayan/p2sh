@@ -11,10 +11,11 @@ if is_error(f) {
     exit(1);
 }
 
-let p = null;
-let i = 1;
+let p = pcap_read_all(f);
+let i = 0;
 
-while p = pcap_next(f) {
-   println("[{}] {}", i, p);
+while i < len(p) {
+   println("[{}] {}", i + 1, p[i]);
    i = i + 1;
 }
+

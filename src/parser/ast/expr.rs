@@ -1,6 +1,7 @@
 use super::stmt::*;
 use crate::scanner::token::*;
 use std::fmt;
+use std::fmt::Write;
 
 #[derive(Clone, Debug)]
 pub enum Expression {
@@ -322,11 +323,10 @@ pub struct MatchArm {
 impl fmt::Display for MatchArm {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Display patterns separated by ' | '
-        let pat_str = self
-            .patterns
-            .iter()
-            .map(|p| format!("{} | ", p))
-            .collect::<String>();
+        let pat_str = self.patterns.iter().fold(String::new(), |mut acc, p| {
+            let _ = write!(&mut acc, "{} | ", p);
+            acc
+        });
         let pat_str = pat_str.trim_end_matches(|c| c == ' ' || c == ',');
         let body = format!("{}", self.body);
         write!(f, " {} => {{ {} }}", pat_str, body.trim())?;
@@ -368,11 +368,10 @@ pub struct FunctionLiteral {
 impl fmt::Display for FunctionLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Display parameters separated by ', '
-        let params_str = self
-            .params
-            .iter()
-            .map(|p| format!("{}, ", p))
-            .collect::<String>();
+        let params_str = self.params.iter().fold(String::new(), |mut acc, p| {
+            let _ = write!(&mut acc, "{}, ", p);
+            acc
+        });
         let params_str = params_str.trim_end_matches(|c| c == ' ' || c == ',');
         write!(f, "{} ({}) {}", self.token, params_str, self.body)
     }
@@ -387,11 +386,10 @@ pub struct CallExpr {
 
 impl fmt::Display for CallExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let args_str = self
-            .args
-            .iter()
-            .map(|p| format!("{}, ", p))
-            .collect::<String>();
+        let args_str = self.args.iter().fold(String::new(), |mut acc, p| {
+            let _ = write!(&mut acc, "{}, ", p);
+            acc
+        });
         let args_str = args_str.trim_end_matches(|c| c == ' ' || c == ',');
         write!(f, "{}({})", self.func, args_str)
     }
@@ -405,11 +403,10 @@ pub struct ArrayLiteral {
 
 impl fmt::Display for ArrayLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let elements_str = self
-            .elements
-            .iter()
-            .map(|p| format!("{}, ", p))
-            .collect::<String>();
+        let elements_str = self.elements.iter().fold(String::new(), |mut acc, p| {
+            let _ = write!(&mut acc, "{}, ", p);
+            acc
+        });
         let elements_str = elements_str.trim_end_matches(|c| c == ' ' || c == ',');
         write!(f, "[{}]", elements_str)
     }
@@ -426,11 +423,10 @@ pub struct HashLiteral {
 
 impl fmt::Display for HashLiteral {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let pairs_str = self
-            .pairs
-            .iter()
-            .map(|p| format!("{}: {}, ", p.0, p.1))
-            .collect::<String>();
+        let pairs_str = self.pairs.iter().fold(String::new(), |mut acc, p| {
+            let _ = write!(&mut acc, "{}: {}, ", p.0, p.1);
+            acc
+        });
         let pairs_str = pairs_str.trim_end_matches(|c| c == ' ' || c == ',');
         write!(f, "{{{}}}", pairs_str)
     }

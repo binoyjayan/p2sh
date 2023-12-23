@@ -96,7 +96,7 @@ impl SymbolTable {
 
         self.store
             .entry(name.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(Rc::clone(&symbol));
 
         self.num_definitions += 1;

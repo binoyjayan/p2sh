@@ -1077,7 +1077,7 @@ fn builtin_chars(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 // Join an array of chars into a string, optionally delimited by
 // a character or a string
 fn builtin_join(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
-    if args.len() < 1 || args.len() > 2 {
+    if args.is_empty() || args.len() > 2 {
         return Err(format!("takes one or two arguments. got={}", args.len()));
     }
     let obj = args[0].as_ref();

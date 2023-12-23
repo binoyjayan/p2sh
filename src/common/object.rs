@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
+use std::fmt::Write;
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::io;
@@ -58,6 +59,7 @@ impl PartialEq for Object {
 
 impl Eq for Object {}
 
+#[allow(clippy::non_canonical_partial_ord_impl)]
 impl PartialOrd for Object {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
@@ -75,11 +77,9 @@ impl PartialOrd for Object {
 
 impl Ord for Object {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.partial_cmp(other).unwrap_or_else(|| {
-            // Handle the case where the objects are not comparable.
-            // For simplicity, we'll just return Ordering::Equal.
-            std::cmp::Ordering::Equal
-        })
+        // Handle the case where the objects are not comparable.
+        // For simplicity, we'll just return Ordering::Equal.
+        self.partial_cmp(other).unwrap_or(std::cmp::Ordering::Equal)
     }
 }
 
@@ -440,8 +440,10 @@ impl fmt::Display for Array {
             .elements
             .borrow()
             .iter()
-            .map(|p| format!("{}, ", p))
-            .collect::<String>();
+            .fold(String::new(), |mut acc, p| {
+                let _ = write!(&mut acc, "{}, ", p);
+                acc
+            });
         let elements_str = elements_str.trim_end_matches(|c| c == ' ' || c == ',');
         write!(f, "[{}]", elements_str)
     }
@@ -473,8 +475,10 @@ impl fmt::Display for HMap {
             .pairs
             .borrow()
             .iter()
-            .map(|(k, v)| format!("{}: {}, ", k, v))
-            .collect::<String>();
+            .fold(String::new(), |mut acc, (k, v)| {
+                let _ = write!(&mut acc, "{}: {}, ", k, v);
+                acc
+            });
         let pairs_str = pairs_str.trim_end_matches(|c| c == ' ' || c == ',');
         write!(f, "map {{{}}}", pairs_str)
     }

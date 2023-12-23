@@ -1,0 +1,11 @@
+#!/usr/bin/env p2sh
+
+let f = pcap_stream(stdin);
+let p = null;
+let i = 1;
+
+while p = pcap_next(f) {
+   println("[{}] {}", i, p);
+   i = i + 1;
+}
+

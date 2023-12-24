@@ -101,7 +101,15 @@ pub enum TokenType {
     RangeEx,
     RangeInc,
     Match,
+    // Struct
     Struct,
+    Dot,
+    // Packet tokens
+    Src,
+    Dest,
+    Ethtype,
+    Payload,
+    // End of tokens
     NumberOfTokens,
 }
 
@@ -168,6 +176,11 @@ impl From<TokenType> for &'static str {
             TokenType::RangeInc => "..=",
             TokenType::Match => "MATCH",
             TokenType::Struct => "STRUCT",
+            TokenType::Dot => ".",
+            TokenType::Src => "SRC",
+            TokenType::Dest => "DEST",
+            TokenType::Ethtype => "ETHTYPE",
+            TokenType::Payload => "PAYLOAD",
             TokenType::NumberOfTokens => "",
         }
     }

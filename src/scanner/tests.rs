@@ -402,3 +402,24 @@ fn test_tokens_std_files() {
     ];
     run_scanner_tests(input, tests);
 }
+
+#[test]
+fn test_tokens_ethernet_fields() {
+    let input = r#"
+        p.dest;
+        p.src;
+    "#;
+    let tests = vec![
+        ExpectedToken(TokenType::Identifier, "p"),
+        ExpectedToken(TokenType::Dot, "."),
+        ExpectedToken(TokenType::Identifier, "dest"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::Identifier, "p"),
+        ExpectedToken(TokenType::Dot, "."),
+        ExpectedToken(TokenType::Identifier, "src"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        // EOF
+        ExpectedToken(TokenType::Eof, ""),
+    ];
+    run_scanner_tests(input, tests);
+}

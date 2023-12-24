@@ -120,11 +120,18 @@ impl Scanner {
             '"' => self.read_string(),
             '\'' => self.read_char_token(),
             _ => {
+                let peek_ch = self.peek_char();
                 if Self::is_identifier_first(self.ch) {
                     return self.read_identifier();
-                } else if self.ch == '.' && self.peek_char() == '.' {
-                    return self.read_dot();
-                } else if self.ch == '.' || self.ch.is_ascii_digit() {
+                } else if self.ch == '.' {
+                    if peek_ch.is_ascii_digit() {
+                        return self.read_number();
+                    } else if peek_ch == '.' {
+                        return self.read_range();
+                    } else if Self::is_identifier_first(peek_ch) {
+                        return self.read_dot();
+                    }
+                } else if self.ch.is_ascii_digit() {
                     return self.read_number();
                 }
                 self.make_token(TokenType::Illegal, &self.ch.to_string())
@@ -282,7 +289,7 @@ impl Scanner {
 
     // If current character is a dot, read next to see if it is
     // a exclusive (..) or an inclusive (..=) range operator
-    fn read_dot(&mut self) -> Token {
+    fn read_range(&mut self) -> Token {
         self.read_char();
         self.read_char();
         if self.ch == '=' {
@@ -291,6 +298,11 @@ impl Scanner {
         } else {
             self.make_token(TokenType::RangeEx, "..")
         }
+    }
+
+    fn read_dot(&mut self) -> Token {
+        self.read_char();
+        self.make_token(TokenType::Dot, ".")
     }
 
     // Identifiers can start with a letter or underscore

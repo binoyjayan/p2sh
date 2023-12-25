@@ -1,4 +1,7 @@
-use dialoguer::{theme::ColorfulTheme, BasicHistory, Completion, Input};
+use dialoguer::{theme::ColorfulTheme, BasicHistory, Completion, Input, Select};
+
+pub const PROMPT_MAIN: &str = ">>";
+pub const PROMPT_CONTINUE: &str = ">";
 
 struct Commands {
     options: Vec<String>,
@@ -21,10 +24,18 @@ impl Completion for Commands {
             .filter(|option| option.starts_with(input))
             .collect::<Vec<_>>();
 
-        if matches.len() == 1 {
-            Some(matches[0].to_string())
-        } else {
-            None
+        match matches.len() {
+            1 => Some(matches[0].to_string()),
+            n if n > 1 => {
+                // Default to the first item if an error occurs
+                let selection = Select::with_theme(&ColorfulTheme::default())
+                    .items(&matches[..])
+                    .interact_opt()
+                    .unwrap_or(None);
+                // Return the selected item or None
+                selection.map(|idx| matches[idx].to_string())
+            }
+            _ => None,
         }
     }
 }
@@ -46,10 +57,19 @@ impl Prompt {
         let mut input_lines = Vec::new();
 
         loop {
+            // Select the prompt for displaying
+            let prompt_str = if input_lines.is_empty() {
+                PROMPT_MAIN
+            } else {
+                PROMPT_CONTINUE
+            };
+
+            // Display the prompt and get user input
             let input_line = Input::<String>::with_theme(&ColorfulTheme::default())
-                .with_prompt(if input_lines.is_empty() { ">>" } else { ">" })
+                .with_prompt(prompt_str)
                 .history_with(&mut self.history)
                 .completion_with(&self.commands)
+                .with_post_completion_text(prompt_str)
                 .allow_empty(true)
                 .interact_text()?;
 

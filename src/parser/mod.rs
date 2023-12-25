@@ -150,7 +150,7 @@ impl Parser {
             return Ok(Statement::Invalid);
         }
         self.next_token();
-        let value = self.parse_expression(Precedence::Lowest);
+        let value = self.parse_expression(Precedence::Lowest, false);
 
         // If the value expression is a function, the update the function node
         // with the identifier contained from compiling the let statement since
@@ -173,7 +173,9 @@ impl Parser {
         let identifier = Identifier {
             token: token_ident.clone(),
             value: token_ident.literal,
-            access: AccessType::Set,
+            context: ParseContext {
+                access: AccessType::Set,
+            },
         };
         let let_stmt = LetStmt {
             token: token_let,
@@ -192,7 +194,7 @@ impl Parser {
             None
         } else {
             self.next_token();
-            Some(self.parse_expression(Precedence::Lowest))
+            Some(self.parse_expression(Precedence::Lowest, false))
         };
 
         if self.peek_token_is(&TokenType::Semicolon) {
@@ -221,7 +223,7 @@ impl Parser {
     fn parse_while_statement(&mut self, label: Option<Token>) -> Result<Statement, ParseError> {
         let token = self.current.clone();
         self.next_token();
-        let condition = self.parse_expression(Precedence::Lowest);
+        let condition = self.parse_expression(Precedence::Lowest, false);
         if !self.expect_peek(&TokenType::LeftBrace) {
             return Ok(Statement::Invalid);
         }
@@ -324,7 +326,7 @@ impl Parser {
                 }
             };
         }
-        let expr = self.parse_expression(Precedence::Assignment);
+        let expr = self.parse_expression(Precedence::Assignment, false);
         if self.peek_token_is(&TokenType::Semicolon) {
             self.next_token();
         }
@@ -373,13 +375,13 @@ impl Parser {
     /// 'a + b + c' -->> ((a + b) + c) when 'precedence < self.peek_precedence()'
     /// 'a + b + c' -->> (a + (b + c)) when 'precedence <= self.peek_precedence()'
     ///
-    fn parse_expression(&mut self, precedence: Precedence) -> Expression {
+    fn parse_expression(&mut self, precedence: Precedence, property: bool) -> Expression {
         let can_assign = precedence <= Precedence::Assignment;
         self.peek_invalid_assignment(can_assign);
 
         // If there is a prefix parser for the current token
         if let Some(prefix) = self.curr_prefix() {
-            let mut left_expr = prefix(self);
+            let mut left_expr = prefix(self, property);
 
             // Continue parsing if the next token is not a semi-colon and has
             // a valid precedence for the current infix expression

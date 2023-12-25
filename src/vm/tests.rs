@@ -2074,6 +2074,17 @@ fn test_assignment_expressions() {
                 ]),
             })),
         },
+        VmTestCase {
+            input: "let a = [1]; let b = [a]; a[0] = 2; [a[0], b[0]]",
+            expected: Object::Arr(Rc::new(Array {
+                elements: RefCell::new(vec![
+                    Rc::new(Object::Integer(2)),
+                    Rc::new(Object::Arr(Rc::new(Array {
+                        elements: RefCell::new(vec![Rc::new(Object::Integer(2))]),
+                    }))),
+                ]),
+            })),
+        },
     ];
 
     run_vm_tests(&tests);

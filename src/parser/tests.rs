@@ -318,14 +318,18 @@ fn test_string_formatting() {
     let ident_myvar1 = Identifier {
         token: token_myvar1,
         value: "myvar1".to_string(),
-        access: AccessType::Get,
+        context: ParseContext {
+            access: AccessType::Get,
+        },
     };
 
     let token_myvar2 = Token::new(TokenType::Identifier, "myvar2", 2);
     let ident_myvar2 = Identifier {
         token: token_myvar2,
         value: "myvar2".to_string(),
-        access: AccessType::Get,
+        context: ParseContext {
+            access: AccessType::Get,
+        },
     };
 
     let program = Program {

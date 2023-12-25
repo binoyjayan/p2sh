@@ -647,6 +647,12 @@ impl Compiler {
                 // First operand to OpCall is the number of arguments
                 self.emit(Opcode::Call, &[num_args], call.token.line);
             }
+            Expression::Dot(expr) => {
+                self.compile_dot_expression(expr)?;
+            }
+            Expression::Prop(expr) => {
+                self.compile_prop_expression(expr)?;
+            }
         }
         Ok(())
     }
@@ -935,7 +941,7 @@ impl Compiler {
     fn compile_identifier(&mut self, expr: Identifier) -> Result<(), CompileError> {
         let depth = self.scopes[self.scope_index].scope_depth;
         if let Some(symbol) = self.symtab.resolve(&expr.token.literal, depth) {
-            match expr.access {
+            match expr.context.access {
                 AccessType::Get => {
                     self.load_symbol(symbol, expr.token.line);
                 }
@@ -958,7 +964,7 @@ impl Compiler {
         // Compile the index expression
         self.compile_expression(*expr.index)?;
         // Emit the index operator
-        match expr.access {
+        match expr.context.access {
             AccessType::Get => {
                 self.emit(Opcode::GetIndex, &[], expr.token.line);
             }
@@ -1096,6 +1102,28 @@ impl Compiler {
         self.compile_expression(right)?;
         // Patch the Jump instruction
         self.patch_jump(end_pos);
+        Ok(())
+    }
+
+    fn compile_dot_expression(&mut self, expr: DotExpr) -> Result<(), CompileError> {
+        // Compile the expression whose property is being accessed
+        self.compile_expression(*expr.left)?;
+        // Compile the property expression
+        self.compile_expression(*expr.property)?;
+        Ok(())
+    }
+
+    fn compile_prop_expression(&mut self, expr: PktPropExpr) -> Result<(), CompileError> {
+        let val = expr.value as usize;
+        // Emit the property opcode
+        match expr.context.access {
+            AccessType::Get => {
+                self.emit(Opcode::GetProp, &[val], expr.token.line);
+            }
+            AccessType::Set => {
+                self.emit(Opcode::SetProp, &[val], expr.token.line);
+            }
+        }
         Ok(())
     }
 }

@@ -8,7 +8,6 @@ use std::thread;
 use std::time;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use super::packet::ethernet::Ethernet;
 use super::pcap::Pcap;
 use super::print::format_buf;
 use crate::common::object::*;
@@ -60,7 +59,6 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("pcap_stream", builtin_pcap_stream),
     BuiltinFunction::new("pcap_read_next", builtin_pcap_read_next),
     BuiltinFunction::new("pcap_read_all", builtin_pcap_read_all),
-    BuiltinFunction::new("decode_ethernet", builtin_decode_ethernet),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -1278,22 +1276,6 @@ fn builtin_pcap_stream(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                     }
                 }
                 _ => Err(String::from("invalid file handle")),
-            }
-        }
-        _ => Err(String::from("unsupported argument")),
-    }
-}
-
-fn builtin_decode_ethernet(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
-    if args.len() != 1 {
-        return Err(format!("takes one argument. got={}", args.len()));
-    }
-    match args[0].as_ref() {
-        Object::Packet(f) => {
-            let packet = f.as_ref();
-            match Ethernet::from_bytes(Rc::clone(&packet.data), 0) {
-                Ok(ethernet) => Ok(Rc::new(Object::Eth(Rc::new(ethernet)))),
-                Err(e) => Ok(Rc::new(Object::Err(ErrorObj::Packet(e)))),
             }
         }
         _ => Err(String::from("unsupported argument")),

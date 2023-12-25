@@ -11,6 +11,7 @@ use std::rc::Rc;
 
 use super::builtins::packet::error::PacketError;
 use super::builtins::packet::ethernet::Ethernet;
+use super::builtins::packet::vlan::Vlan;
 use super::builtins::pcap::PcapPacket;
 use crate::code::definitions::Instructions;
 use crate::common::builtins::pcap::Pcap;
@@ -35,6 +36,7 @@ pub enum Object {
     Pcap(Rc<Pcap>),
     Packet(Rc<PcapPacket>),
     Eth(Rc<Ethernet>),
+    Vlan(Rc<Vlan>),
 }
 
 impl PartialEq for Object {
@@ -159,6 +161,7 @@ impl fmt::Display for Object {
             Self::Pcap(val) => write!(f, "{}", val),
             Self::Packet(val) => write!(f, "{}", val),
             Self::Eth(val) => write!(f, "{}", val),
+            Self::Vlan(val) => write!(f, "{}", val),
         }
     }
 }

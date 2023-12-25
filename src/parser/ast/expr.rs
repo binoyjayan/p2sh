@@ -1,7 +1,9 @@
-use super::stmt::*;
-use crate::scanner::token::*;
 use std::fmt;
 use std::fmt::Write;
+
+use super::stmt::*;
+use crate::code::prop::PacketPropType;
+use crate::scanner::token::*;
 
 #[derive(Clone, Debug)]
 pub enum Expression {
@@ -26,7 +28,15 @@ pub enum Expression {
     Index(IndexExpr),
     Assign(AssignExpr),
     Range(RangeExpr),
+    Dot(DotExpr),
+    Prop(PktPropExpr),
     Invalid,
+}
+
+// Parse context
+#[derive(Clone, Debug)]
+pub struct ParseContext {
+    pub access: AccessType,
 }
 
 // Type of access to a symbol or expresion
@@ -52,7 +62,7 @@ impl fmt::Display for Underscore {
 pub struct Identifier {
     pub token: Token,
     pub value: String,
-    pub access: AccessType,
+    pub context: ParseContext,
 }
 
 impl fmt::Display for Identifier {
@@ -65,7 +75,7 @@ impl fmt::Display for Identifier {
 pub struct BuiltinID {
     pub token: Token,
     pub value: String,
-    pub access: AccessType,
+    pub context: ParseContext,
 }
 
 impl fmt::Display for BuiltinID {
@@ -438,7 +448,7 @@ pub struct IndexExpr {
     pub token: Token, // [
     pub left: Box<Expression>,
     pub index: Box<Expression>,
-    pub access: AccessType,
+    pub context: ParseContext,
 }
 
 impl fmt::Display for IndexExpr {
@@ -474,6 +484,34 @@ impl fmt::Display for RangeExpr {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct PktPropExpr {
+    pub token: Token,
+    pub value: PacketPropType,
+    pub context: ParseContext,
+}
+
+impl fmt::Display for PktPropExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<{}>", self.token)
+    }
+}
+
+// Dot expression looks like '<expr>.<expr>'
+#[derive(Clone, Debug)]
+pub struct DotExpr {
+    pub token: Token, // [
+    pub left: Box<Expression>,
+    pub property: Box<Expression>,
+    pub context: ParseContext,
+}
+
+impl fmt::Display for DotExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}.{})", self.left, self.property)
+    }
+}
+
 impl Expression {
     #[allow(dead_code)]
     fn token_literal(&self) -> String {
@@ -498,7 +536,9 @@ impl Expression {
             Expression::Index(idx) => idx.token.literal.clone(),
             Expression::Assign(asn) => asn.token.literal.clone(),
             Expression::Range(r) => r.token.literal.clone(),
+            Expression::Dot(e) => e.token.literal.clone(),
             Expression::Null(null) => null.token.literal.clone(),
+            Expression::Prop(prop) => prop.token.literal.clone(),
             Expression::Invalid => "invalid".to_string(),
         }
     }
@@ -527,7 +567,9 @@ impl fmt::Display for Expression {
             Expression::Index(idx) => write!(f, "{}", idx),
             Expression::Assign(asn) => write!(f, "{}", asn),
             Expression::Range(r) => write!(f, "{}", r),
+            Expression::Dot(e) => write!(f, "{}", e),
             Expression::Null(null) => write!(f, "{}", null),
+            Expression::Prop(prop) => write!(f, "{}", prop),
             Expression::Invalid => write!(f, "INVALID EXPRESSION"),
         }
     }

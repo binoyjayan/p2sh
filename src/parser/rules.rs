@@ -1,7 +1,9 @@
 use super::*;
+use crate::code::prop::PacketPropType;
 use lazy_static::lazy_static;
+use std::collections::HashMap;
 
-type PrefixParserFn = fn(&mut Parser) -> Expression;
+type PrefixParserFn = fn(&mut Parser, bool) -> Expression;
 type InfixParserFn = fn(&mut Parser, Expression) -> Expression;
 
 #[derive(Clone, Default)]
@@ -219,7 +221,38 @@ lazy_static! {
             Precedence::Range,
             Associativity::Right
         );
+        // Dot expressions
+        rules[TokenType::Dot as usize] =
+            ParseRule::new(None, Some(Parser::parse_dot_expression), Precedence::Call);
         rules
+    };
+}
+
+// Packet property definitions
+lazy_static! {
+    static ref PACKET_PROP_MAP: HashMap<String, PacketPropType> = {
+        let mut map = HashMap::new();
+        map.insert("magic".to_string(), PacketPropType::Magic);
+        map.insert("major".to_string(), PacketPropType::Major);
+        map.insert("minor".to_string(), PacketPropType::Minor);
+        map.insert("thiszone".to_string(), PacketPropType::ThisZone);
+        map.insert("sigflags".to_string(), PacketPropType::SigFlags);
+        map.insert("snaplen".to_string(), PacketPropType::Snaplen);
+        map.insert("linktype".to_string(), PacketPropType::LinkType);
+        map.insert("sec".to_string(), PacketPropType::Sec);
+        map.insert("usec".to_string(), PacketPropType::USec);
+        map.insert("nsec".to_string(), PacketPropType::USec);
+        map.insert("caplen".to_string(), PacketPropType::Caplen);
+        map.insert("wirelen".to_string(), PacketPropType::Wirelen);
+        map.insert("payload".to_string(), PacketPropType::Payload);
+        map.insert("eth".to_string(), PacketPropType::Eth);
+        map.insert("src".to_string(), PacketPropType::Src);
+        map.insert("dst".to_string(), PacketPropType::Dst);
+        map.insert("ethertype".to_string(), PacketPropType::EtherType);
+        map.insert("id".to_string(), PacketPropType::Id);
+        map.insert("priority".to_string(), PacketPropType::Priority);
+        map.insert("dei".to_string(), PacketPropType::Dei);
+        map
     };
 }
 
@@ -268,38 +301,55 @@ impl Parser {
             && !self.peek_token_is(&TokenType::Eof)
     }
 
-    fn parse_null(&mut self) -> Expression {
+    fn parse_null(&mut self, _: bool) -> Expression {
         Expression::Null(NullLiteral {
             token: self.current.clone(),
         })
     }
 
-    fn parse_underscore(&mut self) -> Expression {
+    fn parse_underscore(&mut self, _: bool) -> Expression {
         Expression::Score(Underscore {
             token: self.current.clone(),
             value: self.current.literal.clone(),
         })
     }
 
-    fn parse_identifier(&mut self) -> Expression {
+    /// Parse an identifier or a property of a packet object,
+    /// If it is packet property, then validate the property name.
+    fn parse_identifier(&mut self, property: bool) -> Expression {
         let access = self.peek_access_type();
-        Expression::Ident(Identifier {
-            token: self.current.clone(),
-            value: self.current.literal.clone(),
-            access,
-        })
+        let value = self.current.literal.clone();
+        if property {
+            if let Some(ptype) = PACKET_PROP_MAP.get(&value) {
+                Expression::Prop(PktPropExpr {
+                    token: self.current.clone(),
+                    value: *ptype,
+                    context: ParseContext { access },
+                })
+            } else {
+                let msg = format!("invalid property '{}'", self.current.literal);
+                self.push_error(&msg);
+                Expression::Invalid
+            }
+        } else {
+            Expression::Ident(Identifier {
+                token: self.current.clone(),
+                value,
+                context: ParseContext { access },
+            })
+        }
     }
 
-    fn parse_builtin_id(&mut self) -> Expression {
+    fn parse_builtin_id(&mut self, _: bool) -> Expression {
         let access = self.peek_access_type();
         Expression::Builtin(BuiltinID {
             token: self.current.clone(),
             value: self.current.literal.clone(),
-            access,
+            context: ParseContext { access },
         })
     }
 
-    fn parse_integer(&mut self) -> Expression {
+    fn parse_integer(&mut self, _: bool) -> Expression {
         self.peek_invalid_assignment(false);
         if let Ok(value) = self.current.literal.parse() {
             Expression::Integer(IntegerLiteral {
@@ -313,7 +363,7 @@ impl Parser {
         }
     }
 
-    fn parse_float(&mut self) -> Expression {
+    fn parse_float(&mut self, _: bool) -> Expression {
         self.peek_invalid_assignment(false);
         if let Ok(value) = self.current.literal.parse() {
             Expression::Float(FloatLiteral {
@@ -327,7 +377,7 @@ impl Parser {
         }
     }
 
-    fn parse_string(&mut self) -> Expression {
+    fn parse_string(&mut self, _: bool) -> Expression {
         self.peek_invalid_assignment(false);
         if let Ok(value) = self.current.literal.parse() {
             Expression::Str(StringLiteral {
@@ -341,7 +391,7 @@ impl Parser {
         }
     }
 
-    fn parse_char(&mut self) -> Expression {
+    fn parse_char(&mut self, _: bool) -> Expression {
         self.peek_invalid_assignment(false);
         if let Ok(value) = self.current.literal.parse() {
             Expression::Char(CharLiteral {
@@ -355,7 +405,7 @@ impl Parser {
         }
     }
 
-    fn parse_byte(&mut self) -> Expression {
+    fn parse_byte(&mut self, _: bool) -> Expression {
         self.peek_invalid_assignment(false);
         if let Some(value) = self.current.literal.bytes().next() {
             Expression::Byte(ByteLiteral {
@@ -370,11 +420,11 @@ impl Parser {
     }
 
     // Parse unary expressions such as '-' and '!'
-    fn parse_prefix_expression(&mut self) -> Expression {
+    fn parse_prefix_expression(&mut self, _: bool) -> Expression {
         let operator = self.current.literal.clone();
         let token = self.current.clone();
         self.next_token();
-        let right = self.parse_expression(Precedence::Unary);
+        let right = self.parse_expression(Precedence::Unary, false);
 
         Expression::Unary(UnaryExpr {
             token,
@@ -392,7 +442,7 @@ impl Parser {
         // advance to the next token
         self.next_token();
 
-        let right = self.parse_expression(precedence);
+        let right = self.parse_expression(precedence, false);
         Expression::Binary(BinaryExpr {
             token,
             operator,
@@ -401,7 +451,7 @@ impl Parser {
         })
     }
 
-    fn parse_boolean(&mut self) -> Expression {
+    fn parse_boolean(&mut self, _: bool) -> Expression {
         self.peek_invalid_assignment(false);
         Expression::Bool(BooleanExpr {
             token: self.current.clone(),
@@ -410,9 +460,9 @@ impl Parser {
     }
 
     // Override operator precedence using grouped expression
-    fn parse_grouped(&mut self) -> Expression {
+    fn parse_grouped(&mut self, _: bool) -> Expression {
         self.next_token();
-        let expr = self.parse_expression(Precedence::Assignment);
+        let expr = self.parse_expression(Precedence::Assignment, false);
         if self.expect_peek(&TokenType::RightParen) {
             // check for cases such as '(a) = b'
             self.peek_invalid_assignment(false);
@@ -422,11 +472,11 @@ impl Parser {
         }
     }
 
-    fn parse_if_expr(&mut self) -> Expression {
+    fn parse_if_expr(&mut self, _: bool) -> Expression {
         let token = self.current.clone();
         // advance to the condition expression
         self.next_token();
-        let condition = self.parse_expression(Precedence::Assignment);
+        let condition = self.parse_expression(Precedence::Assignment, false);
         if !self.expect_peek(&TokenType::LeftBrace) {
             return Expression::Invalid;
         }
@@ -436,7 +486,7 @@ impl Parser {
             self.next_token();
             if self.peek_token_is(&TokenType::If) {
                 self.next_token();
-                ElseIfExpr::ElseIf(Box::new(self.parse_if_expr()))
+                ElseIfExpr::ElseIf(Box::new(self.parse_if_expr(false)))
             } else if self.peek_token_is(&TokenType::LeftBrace) {
                 self.next_token();
                 // Some(self.parse_block_statement())
@@ -473,12 +523,12 @@ impl Parser {
         }
     }
 
-    fn parse_match_expr(&mut self) -> Expression {
+    fn parse_match_expr(&mut self, _: bool) -> Expression {
         // The match token
         let token = self.current.clone();
         // advance to the condition expression
         self.next_token();
-        let condition = self.parse_expression(Precedence::Assignment);
+        let condition = self.parse_expression(Precedence::Assignment, false);
         if !self.expect_peek(&TokenType::LeftBrace) {
             return Expression::Invalid;
         }
@@ -504,7 +554,7 @@ impl Parser {
                         self.parse_block_statement()
                     } else {
                         let token = self.current.clone();
-                        let expr = self.parse_expression(Precedence::Assignment);
+                        let expr = self.parse_expression(Precedence::Assignment, false);
                         // Create a block statement from expression statement
                         // Make a dummy token for the block statement
                         BlockStatement {
@@ -594,7 +644,7 @@ impl Parser {
     // involving bitwise OR and match pattern OR tokens.
     fn parse_match_pattern(&mut self) -> Result<Vec<MatchPattern>, String> {
         self.in_match_pattern = true;
-        let pattern = self.parse_expression(Precedence::Assignment);
+        let pattern = self.parse_expression(Precedence::Assignment, false);
         self.in_match_pattern = false;
         let patterns = Self::convert_to_pattern_list(pattern);
 
@@ -673,7 +723,7 @@ impl Parser {
     // they can be used to define closures, which sets them apart from function
     // statements. Despite these differences, the underlying implementations are
     // the same.
-    fn parse_function_expression(&mut self) -> Expression {
+    fn parse_function_expression(&mut self, _: bool) -> Expression {
         let token = self.current.clone();
         if !self.expect_peek(&TokenType::LeftParen) {
             return Expression::Invalid;
@@ -706,7 +756,9 @@ impl Parser {
         identifiers.push(Identifier {
             token: token_ident,
             value: ident_value,
-            access: AccessType::Get,
+            context: ParseContext {
+                access: AccessType::Get,
+            },
         });
 
         while self.peek_token_is(&TokenType::Comma) {
@@ -717,7 +769,9 @@ impl Parser {
             identifiers.push(Identifier {
                 token: token_ident,
                 value: ident_value,
-                access: AccessType::Get,
+                context: ParseContext {
+                    access: AccessType::Get,
+                },
             });
         }
 
@@ -754,11 +808,11 @@ impl Parser {
             return args;
         }
         self.next_token();
-        args.push(self.parse_expression(Precedence::Assignment));
+        args.push(self.parse_expression(Precedence::Assignment, false));
         while self.peek_token_is(&TokenType::Comma) {
             self.next_token();
             self.next_token();
-            args.push(self.parse_expression(Precedence::Assignment));
+            args.push(self.parse_expression(Precedence::Assignment, false));
         }
 
         if !self.expect_peek(&ttype_end) {
@@ -767,7 +821,7 @@ impl Parser {
         args
     }
 
-    fn parse_array_literal(&mut self) -> Expression {
+    fn parse_array_literal(&mut self, _: bool) -> Expression {
         let token = self.current.clone();
 
         Expression::Array(ArrayLiteral {
@@ -785,24 +839,26 @@ impl Parser {
         let token = self.current.clone();
         // advance to the index token
         self.next_token();
-        let index = self.parse_expression(Precedence::Assignment);
+        let index = self.parse_expression(Precedence::Assignment, false);
         if !self.expect_peek(&TokenType::RightBracket) {
             return Expression::Invalid;
         }
 
-        let access = self.peek_access_type();
+        let context = ParseContext {
+            access: self.peek_access_type(),
+        };
 
         Expression::Index(IndexExpr {
             token,
             left: Box::new(left),
             index: Box::new(index),
-            access,
+            context,
         })
     }
 
     // Use the "map" keyword to create a hash map. Using a keyword helps
     // disambiguate between a hash map and a block statement.
-    fn parse_hash_literal(&mut self) -> Expression {
+    fn parse_hash_literal(&mut self, _: bool) -> Expression {
         let mut pairs = Vec::new();
         // Consume the 'map' keyword
         self.next_token();
@@ -811,14 +867,14 @@ impl Parser {
         while !self.peek_token_is(&TokenType::RightBrace) {
             // consume the first '{' or a ',' in each iteration
             self.next_token();
-            let key: Expression = self.parse_expression(Precedence::Assignment);
+            let key: Expression = self.parse_expression(Precedence::Assignment, false);
 
             if !self.expect_peek(&TokenType::Colon) {
                 return Expression::Invalid;
             }
             // consume the colon (':') character
             self.next_token();
-            let value = self.parse_expression(Precedence::Assignment);
+            let value = self.parse_expression(Precedence::Assignment, false);
             pairs.push((key, value));
 
             if !self.peek_token_is(&TokenType::RightBrace) && !self.expect_peek(&TokenType::Comma) {
@@ -840,7 +896,7 @@ impl Parser {
         let precedence = self.curr_precedence();
         // advance to the next token
         self.next_token();
-        let right = self.parse_expression(precedence);
+        let right = self.parse_expression(precedence, false);
 
         Expression::Assign(AssignExpr {
             token,
@@ -868,7 +924,7 @@ impl Parser {
         // advance to the next token
         self.next_token();
 
-        let right = self.parse_expression(precedence);
+        let right = self.parse_expression(precedence, false);
         // Check if both left and right operands are integers or identifiers
         let is_valid_range = matches!(
             (&left, &right),
@@ -889,6 +945,24 @@ impl Parser {
         } else {
             Err(format!("invalid use of range operator '{}'", operator))
         }
+    }
+
+    fn parse_dot_expression(&mut self, left: Expression) -> Expression {
+        // The dot ('.') token
+        let token = self.current.clone();
+        // advance to the index token
+        self.next_token();
+        let property = self.parse_expression(Precedence::Assignment, true);
+        let context = ParseContext {
+            access: self.peek_access_type(),
+        };
+
+        Expression::Dot(DotExpr {
+            token,
+            left: Box::new(left),
+            property: Box::new(property),
+            context,
+        })
     }
 
     fn peek_access_type(&self) -> AccessType {

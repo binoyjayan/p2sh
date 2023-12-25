@@ -16,13 +16,13 @@ enum PcapTsFormat {
 #[allow(unused)]
 #[derive(Debug)]
 pub struct PcapGlobalHeader {
-    magic_number: u32,
-    version_major: u16,
-    version_minor: u16,
-    thiszone: i32,
-    sigfigs: u32,
-    snaplen: u32,
-    linktype: u32,
+    pub magic_number: u32,
+    pub version_major: u16,
+    pub version_minor: u16,
+    pub thiszone: i32,
+    pub sigfigs: u32,
+    pub snaplen: u32,
+    pub linktype: u32,
 }
 
 impl Default for PcapGlobalHeader {
@@ -81,10 +81,10 @@ impl PcapGlobalHeader {
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
 pub struct PcapPacketHeader {
-    ts_sec: u32,  // Timestamp seconds
-    ts_usec: u32, // Timestamp in nanoseconds or microseconds
-    caplen: u32,  // Length of portion present
-    wirelen: u32, // Length of the packet (off wire)
+    pub ts_sec: u32,  // Timestamp seconds
+    pub ts_usec: u32, // Timestamp in nanoseconds or microseconds
+    pub caplen: u32,  // Length of portion present
+    pub wirelen: u32, // Length of the packet (off wire)
 }
 
 impl fmt::Display for PcapPacketHeader {
@@ -121,12 +121,12 @@ impl PcapPacketHeader {
 #[derive(Debug)]
 pub struct PcapPacket {
     pub header: PcapPacketHeader,
-    pub data: Rc<Vec<u8>>,
+    pub rawdata: Rc<Vec<u8>>,
 }
 
 impl fmt::Display for PcapPacket {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} [len: {}]", self.header, self.data.len())
+        write!(f, "{} [len: {}]", self.header, self.rawdata.len())
     }
 }
 
@@ -134,7 +134,7 @@ impl fmt::Display for PcapPacket {
 #[derive(Debug)]
 pub struct Pcap {
     pub file: Rc<FileHandle>,
-    header: PcapGlobalHeader,
+    pub header: PcapGlobalHeader,
     ts_format: PcapTsFormat,
 }
 
@@ -198,7 +198,7 @@ impl Pcap {
                 // return whole packet
                 Ok(PcapPacket {
                     header: packet_header,
-                    data: Rc::new(packet_data),
+                    rawdata: Rc::new(packet_data),
                 })
             }
             FileHandle::Stdin => {
@@ -216,7 +216,7 @@ impl Pcap {
                 io::stdin().read_exact(&mut packet_data)?;
                 Ok(PcapPacket {
                     header: packet_header,
-                    data: Rc::new(packet_data),
+                    rawdata: Rc::new(packet_data),
                 })
             }
             _ => Err(io::Error::new(

@@ -17,7 +17,7 @@ pub struct Vlan {
 #[allow(unused)]
 pub const VLAN_HEADER_SIZE: usize = 4;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ClassOfService(pub u8);
 
 /// IEEE 802.1p classes
@@ -32,6 +32,12 @@ pub mod ClassesOfService {
     pub const InternetworkControl: ClassOfService = ClassOfService(5);
     pub const NetworkControl: ClassOfService = ClassOfService(6);
     pub const Reserved: ClassOfService = ClassOfService(7);
+}
+
+impl From<ClassOfService> for u8 {
+    fn from(item: ClassOfService) -> Self {
+        item.0
+    }
 }
 
 impl fmt::Display for Vlan {

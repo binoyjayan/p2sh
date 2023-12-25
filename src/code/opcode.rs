@@ -46,6 +46,8 @@ pub enum Opcode {
     ShiftLeft,
     ShiftRight,
     Dup,
+    GetProp,
+    SetProp,
     #[default]
     Invalid,
 }
@@ -98,6 +100,8 @@ impl From<u8> for Opcode {
             42 => Opcode::ShiftLeft,
             43 => Opcode::ShiftRight,
             44 => Opcode::Dup,
+            45 => Opcode::GetProp,
+            46 => Opcode::SetProp,
             _ => Opcode::Invalid,
         }
     }

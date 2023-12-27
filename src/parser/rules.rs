@@ -236,7 +236,7 @@ lazy_static! {
         map.insert("major".to_string(), PacketPropType::Major);
         map.insert("minor".to_string(), PacketPropType::Minor);
         map.insert("thiszone".to_string(), PacketPropType::ThisZone);
-        map.insert("sigflags".to_string(), PacketPropType::SigFlags);
+        map.insert("sigflags".to_string(), PacketPropType::SigFigs);
         map.insert("snaplen".to_string(), PacketPropType::Snaplen);
         map.insert("linktype".to_string(), PacketPropType::LinkType);
         map.insert("sec".to_string(), PacketPropType::Sec);

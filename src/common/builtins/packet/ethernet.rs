@@ -1,22 +1,36 @@
 use super::error::PacketError;
 use super::macaddress::MacAddress;
+use crate::common::object::Object;
+
+use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
 #[derive(Debug)]
-pub struct Ethernet {
+pub struct EthernetHeader {
     pub dest: MacAddress,   // Destination MAC address
     pub source: MacAddress, // Source MAC address
     pub ethertype: EtherType,
-    pub rawdata: Rc<Vec<u8>>, // Raw data of the entire packet
-    pub offset: usize,        // Offset of the ethernet header
+}
+
+#[derive(Debug)]
+pub struct Ethernet {
+    pub header: RefCell<EthernetHeader>, // Header of the ethernet packet
+    pub rawdata: Rc<Vec<u8>>,            // Raw data of the entire packet
+    pub offset: usize,                   // Offset of the ethernet header
 }
 
 pub const ETHERNET_HEADER_SIZE: usize = 14;
 
 impl fmt::Display for Ethernet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<{}: {} -> {}>", self.ethertype, self.source, self.dest)
+        write!(
+            f,
+            "<{}: {} -> {}>",
+            self.header.borrow().ethertype,
+            self.header.borrow().source,
+            self.header.borrow().dest
+        )
     }
 }
 
@@ -32,13 +46,58 @@ impl Ethernet {
         let source = MacAddress::from_bytes(&rawdata[off + 6..off + 12]);
         let ethertype = EtherType(((rawdata[off + 12] as u16) << 8) | (rawdata[off + 13] as u16));
         let offset = off + ETHERNET_HEADER_SIZE;
-        Ok(Self {
+        let header = RefCell::new(EthernetHeader {
             dest: destination,
             source,
             ethertype,
+        });
+        Ok(Self {
+            header,
             rawdata,
             offset,
         })
+    }
+    pub fn get_src(&self) -> Rc<Object> {
+        Rc::new(Object::Str(self.header.borrow().source.to_string()))
+    }
+    pub fn get_dst(&self) -> Rc<Object> {
+        Rc::new(Object::Str(self.header.borrow().dest.to_string()))
+    }
+    pub fn get_ethertype(&self) -> Rc<Object> {
+        Rc::new(Object::Str(self.header.borrow().ethertype.to_string()))
+    }
+    pub fn set_src(&self, src: Rc<Object>) -> Result<(), String> {
+        match src.as_ref() {
+            Object::Str(src) => match MacAddress::from_str(src) {
+                Ok(mac) => {
+                    self.header.borrow_mut().source = mac;
+                    Ok(())
+                }
+                Err(e) => Err(e.to_string()),
+            },
+            _ => Err("Invalid value for ethernet property src".to_string()),
+        }
+    }
+    pub fn set_dst(&self, src: Rc<Object>) -> Result<(), String> {
+        match src.as_ref() {
+            Object::Str(dst) => match MacAddress::from_str(dst) {
+                Ok(mac) => {
+                    self.header.borrow_mut().dest = mac;
+                    Ok(())
+                }
+                Err(e) => Err(e.to_string()),
+            },
+            _ => Err("Invalid value for ethernet property dest".to_string()),
+        }
+    }
+    pub fn set_ethertype(&self, src: Rc<Object>) -> Result<(), String> {
+        match src.as_ref() {
+            Object::Integer(ethertype) => {
+                self.header.borrow_mut().ethertype = EtherType(*ethertype as u16);
+                Ok(())
+            }
+            _ => Err("Invalid value for ethernet property ethertype".to_string()),
+        }
     }
 }
 

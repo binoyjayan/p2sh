@@ -7,6 +7,9 @@ use crate::code::opcode::Opcode;
 use crate::code::prop::PacketPropType;
 use crate::common::builtins::functions::BUILTINFNS;
 use crate::common::builtins::packet::ethernet::Ethernet;
+use crate::common::builtins::packet::vlan::Vlan;
+use crate::common::builtins::pcap::Pcap;
+use crate::common::builtins::pcap::PcapPacket;
 use crate::common::builtins::variables::BuiltinVarType;
 use crate::common::object::Array;
 use crate::common::object::BuiltinFunction;
@@ -488,8 +491,10 @@ impl VM {
                     self.current_frame().ip += 1;
                 }
                 Opcode::SetProp => {
-                    let _prop = instructions.code[ip + 1] as usize;
-                    let _obj = self.pop(line)?.clone();
+                    let prop = instructions.code[ip + 1];
+                    let obj = self.pop(line)?.clone();
+                    let left = self.pop(line)?.clone();
+                    self.exec_prop_expr(left, prop, Some(obj), line)?;
                     self.current_frame().ip += 1;
                 }
                 Opcode::Invalid => {
@@ -800,100 +805,316 @@ impl VM {
         }
     }
 
+    /// Execute a property expression
+    /// left: The object on which the property is being accessed
+    /// prop: The property being accessed
+    /// setval: The value to be set if this is a SetProp operation
+    /// line: The line number of the property expression
+    /// Returns: Ok(()) if the property expression is executed successfully
     fn exec_prop_expr(
         &mut self,
         left: Rc<Object>,
         prop: u8,
-        _setval: Option<Rc<Object>>,
+        setval: Option<Rc<Object>>,
         line: usize,
     ) -> Result<(), RTError> {
         let prop: PacketPropType = PacketPropType::from(prop);
         match left.as_ref() {
             Object::Pcap(pcap) => {
-                let value = match prop {
-                    PacketPropType::Magic => pcap.header.magic_number as i64,
-                    PacketPropType::Major => pcap.header.version_major as i64,
-                    PacketPropType::Minor => pcap.header.version_minor as i64,
-                    PacketPropType::ThisZone => pcap.header.thiszone as i64,
-                    PacketPropType::SigFlags => pcap.header.sigfigs as i64,
-                    PacketPropType::Snaplen => pcap.header.snaplen as i64,
-                    PacketPropType::LinkType => pcap.header.linktype as i64,
-                    _ => {
-                        return Err(RTError::new("Invalid pcap property", line));
-                    }
-                };
-                self.push(Rc::new(Object::Integer(value)), line)?;
+                let obj = self.exec_prop_pcap(pcap.clone(), prop, setval, line)?;
+                self.push(obj, line)?;
             }
-            Object::Packet(pkt) => match prop {
-                PacketPropType::Sec => {
-                    self.push(Rc::new(Object::Integer(pkt.header.ts_sec as i64)), line)?
-                }
-                PacketPropType::USec => {
-                    self.push(Rc::new(Object::Integer(pkt.header.ts_usec as i64)), line)?
-                }
-                PacketPropType::Caplen => {
-                    self.push(Rc::new(Object::Integer(pkt.header.caplen as i64)), line)?
-                }
-                PacketPropType::Wirelen => {
-                    self.push(Rc::new(Object::Integer(pkt.header.wirelen as i64)), line)?
-                }
-                PacketPropType::Eth | PacketPropType::Payload => {
-                    let obj = match Ethernet::from_bytes(Rc::clone(&pkt.rawdata), 0) {
-                        Ok(ethernet) => Rc::new(Object::Eth(Rc::new(ethernet))),
-                        Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
-                    };
-                    self.push(obj, line)?;
-                }
-                _ => {
-                    return Err(RTError::new(
-                        &format!("Invalid packet property '{}'", prop),
-                        line,
-                    ));
-                }
-            },
-            Object::Eth(pkt) => match prop {
-                PacketPropType::Dst => {
-                    self.push(Rc::new(Object::Str(pkt.dest.to_string())), line)?
-                }
-                PacketPropType::Src => {
-                    self.push(Rc::new(Object::Str(pkt.source.to_string())), line)?
-                }
-                PacketPropType::EtherType => {
-                    self.push(Rc::new(Object::Integer(pkt.ethertype.0 as i64)), line)?;
-                }
-                _ => {
-                    return Err(RTError::new(
-                        &format!("Invalid ethernet property '{}'", prop),
-                        line,
-                    ));
-                }
-            },
-            Object::Vlan(v) => match prop {
-                PacketPropType::Priority => {
-                    let pcp: u8 = v.pcp.clone().into();
-                    self.push(Rc::new(Object::Integer(pcp as i64)), line)?;
-                }
-                PacketPropType::Dei => {
-                    self.push(Rc::new(Object::Integer(v.dei as i64)), line)?;
-                }
-                PacketPropType::Id => {
-                    self.push(Rc::new(Object::Integer(v.vlan_id as i64)), line)?;
-                }
-                PacketPropType::EtherType => {
-                    self.push(Rc::new(Object::Integer(v.ethertype.0 as i64)), line)?;
-                }
-                _ => {
-                    return Err(RTError::new(
-                        &format!("Invalid VLAN property '{}'", prop),
-                        line,
-                    ));
-                }
-            },
+            Object::Packet(pkt) => {
+                let obj = self.exec_prop_packet(pkt.clone(), prop, setval, line)?;
+                self.push(obj, line)?;
+            }
+            Object::Eth(eth) => {
+                let obj = self.exec_prop_eth(eth.clone(), prop, setval, line)?;
+                self.push(obj, line)?;
+            }
+            Object::Vlan(v) => {
+                let obj = self.exec_prop_vlan(v.clone(), prop, setval, line)?;
+                self.push(obj, line)?;
+            }
             _ => {
                 return Err(RTError::new("Object does not have any property", line));
             }
         }
         Ok(())
+    }
+
+    /// Execute a pcap property expression
+    /// pcap: The pcap on which the property is being accessed
+    /// prop: The property being accessed
+    /// setval: The value to be set if this is a SetProp operation
+    /// line: The line number of the property expression
+    /// Returns: Ok(obj) if the property expression is executed successfully
+    fn exec_prop_pcap(
+        &mut self,
+        pcap: Rc<Pcap>,
+        prop: PacketPropType,
+        setval: Option<Rc<Object>>,
+        line: usize,
+    ) -> Result<Rc<Object>, RTError> {
+        let obj = match prop {
+            PacketPropType::Magic => {
+                if let Some(val) = setval {
+                    if let Err(e) = pcap.set_magic_number(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    pcap.get_magic_number()
+                }
+            }
+            PacketPropType::Major => {
+                if let Some(val) = setval {
+                    if let Err(e) = pcap.set_version_major(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    pcap.get_version_major()
+                }
+            }
+            PacketPropType::Minor => {
+                if let Some(val) = setval {
+                    if let Err(e) = pcap.set_version_minor(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    pcap.get_version_minor()
+                }
+            }
+            PacketPropType::ThisZone => {
+                if let Some(val) = setval {
+                    if let Err(e) = pcap.set_thiszone(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    pcap.get_thiszone()
+                }
+            }
+            PacketPropType::SigFigs => {
+                if let Some(val) = setval {
+                    if let Err(e) = pcap.set_sigfigs(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    pcap.get_sigfigs()
+                }
+            }
+            PacketPropType::Snaplen => {
+                if let Some(val) = setval {
+                    if let Err(e) = pcap.set_snaplen(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    pcap.get_snaplen()
+                }
+            }
+            PacketPropType::LinkType => {
+                if let Some(val) = setval {
+                    if let Err(e) = pcap.set_linktype(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    pcap.get_linktype()
+                }
+            }
+
+            _ => {
+                return Err(RTError::new("Invalid pcap property", line));
+            }
+        };
+        Ok(obj)
+    }
+
+    /// Execute a packet property expression
+    /// pkt: The packet on which the property is being accessed
+    /// prop: The property being accessed
+    /// setval: The value to be set if this is a SetProp operation
+    /// line: The line number of the property expression
+    /// Returns: Ok(obj) if the property expression is executed successfully
+    fn exec_prop_packet(
+        &mut self,
+        pkt: Rc<PcapPacket>,
+        prop: PacketPropType,
+        setval: Option<Rc<Object>>,
+        line: usize,
+    ) -> Result<Rc<Object>, RTError> {
+        let obj = match prop {
+            PacketPropType::Sec => {
+                if let Some(val) = setval {
+                    if let Err(e) = pkt.set_ts_sec(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    pkt.get_ts_sec()
+                }
+            }
+            PacketPropType::USec => {
+                if let Some(val) = setval {
+                    if let Err(e) = pkt.set_ts_usec(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    pkt.get_ts_usec()
+                }
+            }
+            PacketPropType::Caplen => {
+                if let Some(val) = setval {
+                    if let Err(e) = pkt.set_caplen(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    pkt.get_caplen()
+                }
+            }
+            PacketPropType::Wirelen => {
+                if let Some(val) = setval {
+                    if let Err(e) = pkt.set_wirelen(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    pkt.get_wirelen()
+                }
+            }
+            PacketPropType::Eth | PacketPropType::Payload => {
+                match Ethernet::from_bytes(Rc::clone(&pkt.rawdata), 0) {
+                    Ok(ethernet) => Rc::new(Object::Eth(Rc::new(ethernet))),
+                    Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
+                }
+            }
+            _ => {
+                return Err(RTError::new(
+                    &format!("Invalid packet property '{}'", prop),
+                    line,
+                ));
+            }
+        };
+        Ok(obj)
+    }
+
+    /// Execute an ethernet property expression
+    /// eth: The pcap on which the property is being accessed
+    /// prop: The property being accessed
+    /// setval: The value to be set if this is a SetProp operation
+    /// line: The line number of the property expression
+    /// Returns: Ok(obj) if the property expression is executed successfully
+    fn exec_prop_eth(
+        &mut self,
+        eth: Rc<Ethernet>,
+        prop: PacketPropType,
+        setval: Option<Rc<Object>>,
+        line: usize,
+    ) -> Result<Rc<Object>, RTError> {
+        let obj = match prop {
+            PacketPropType::Dst => {
+                if let Some(val) = setval {
+                    if let Err(e) = eth.set_dst(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    eth.get_dst()
+                }
+            }
+            PacketPropType::Src => {
+                if let Some(val) = setval {
+                    if let Err(e) = eth.set_src(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    eth.get_src()
+                }
+            }
+            PacketPropType::EtherType => {
+                if let Some(val) = setval {
+                    if let Err(e) = eth.set_ethertype(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    eth.get_ethertype()
+                }
+            }
+            _ => {
+                return Err(RTError::new(
+                    &format!("Invalid ethernet property '{}'", prop),
+                    line,
+                ));
+            }
+        };
+        Ok(obj)
+    }
+
+    fn exec_prop_vlan(
+        &mut self,
+        vlan: Rc<Vlan>,
+        prop: PacketPropType,
+        setval: Option<Rc<Object>>,
+        line: usize,
+    ) -> Result<Rc<Object>, RTError> {
+        let obj = match prop {
+            PacketPropType::Priority => {
+                if let Some(val) = setval {
+                    if let Err(e) = vlan.set_pcp(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    vlan.get_pcp()
+                }
+            }
+            PacketPropType::Dei => {
+                if let Some(val) = setval {
+                    if let Err(e) = vlan.set_dei(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    vlan.get_dei()
+                }
+            }
+            PacketPropType::Id => {
+                if let Some(val) = setval {
+                    if let Err(e) = vlan.set_vlan_id(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    vlan.get_vlan_id()
+                }
+            }
+            PacketPropType::EtherType => {
+                if let Some(val) = setval {
+                    if let Err(e) = vlan.set_ethertype(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    vlan.get_ethertype()
+                }
+            }
+            _ => {
+                return Err(RTError::new(
+                    &format!("Invalid vlan property '{}'", prop),
+                    line,
+                ));
+            }
+        };
+        Ok(obj)
     }
 
     pub fn update_builtin_var(&mut self, vt: BuiltinVarType, obj: Rc<Object>) {

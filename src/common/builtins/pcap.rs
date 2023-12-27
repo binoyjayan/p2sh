@@ -1,8 +1,10 @@
+use std::cell::RefCell;
 use std::fmt;
 use std::io::{self, Read};
 use std::rc::Rc;
 
 use crate::common::object::FileHandle;
+use crate::common::object::Object;
 
 const PCAP_MAGIC_MS: u32 = 0xA1B2C3D4;
 const PCAP_MAGIC_NS: u32 = 0xA1B23C4D;
@@ -16,13 +18,13 @@ enum PcapTsFormat {
 #[allow(unused)]
 #[derive(Debug)]
 pub struct PcapGlobalHeader {
-    pub magic_number: u32,
-    pub version_major: u16,
-    pub version_minor: u16,
-    pub thiszone: i32,
-    pub sigfigs: u32,
-    pub snaplen: u32,
-    pub linktype: u32,
+    magic_number: u32,
+    version_major: u16,
+    version_minor: u16,
+    thiszone: i32,
+    sigfigs: u32,
+    snaplen: u32,
+    linktype: u32,
 }
 
 impl Default for PcapGlobalHeader {
@@ -113,20 +115,76 @@ impl PcapPacketHeader {
             wirelen: u32::from_le_bytes([data[12], data[13], data[14], data[15]]),
         })
     }
-    pub fn caplen(&self) -> u32 {
-        self.caplen
-    }
 }
 
 #[derive(Debug)]
 pub struct PcapPacket {
-    pub header: PcapPacketHeader,
+    header: RefCell<PcapPacketHeader>,
     pub rawdata: Rc<Vec<u8>>,
 }
 
 impl fmt::Display for PcapPacket {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} [len: {}]", self.header, self.rawdata.len())
+        write!(f, "{} [len: {}]", self.header.borrow(), self.rawdata.len())
+    }
+}
+
+impl PcapPacket {
+    pub fn get_ts_sec(&self) -> Rc<Object> {
+        Rc::new(Object::Integer(self.header.borrow().ts_sec as i64))
+    }
+    pub fn get_ts_usec(&self) -> Rc<Object> {
+        Rc::new(Object::Integer(self.header.borrow().ts_usec as i64))
+    }
+    pub fn get_caplen(&self) -> Rc<Object> {
+        Rc::new(Object::Integer(self.header.borrow().caplen as i64))
+    }
+    pub fn get_wirelen(&self) -> Rc<Object> {
+        Rc::new(Object::Integer(self.header.borrow().wirelen as i64))
+    }
+    pub fn set_ts_sec(&self, obj: Rc<Object>) -> Result<(), String> {
+        match obj.as_ref() {
+            Object::Integer(n) => {
+                self.header.borrow_mut().ts_sec = *n as u32;
+            }
+            _ => {
+                return Err("Invalid value for packet property sec".to_string());
+            }
+        };
+        Ok(())
+    }
+    pub fn set_ts_usec(&self, obj: Rc<Object>) -> Result<(), String> {
+        match obj.as_ref() {
+            Object::Integer(n) => {
+                self.header.borrow_mut().ts_usec = *n as u32;
+            }
+            _ => {
+                return Err("Invalid value for packet property usec".to_string());
+            }
+        };
+        Ok(())
+    }
+    pub fn set_caplen(&self, obj: Rc<Object>) -> Result<(), String> {
+        match obj.as_ref() {
+            Object::Integer(n) => {
+                self.header.borrow_mut().caplen = *n as u32;
+            }
+            _ => {
+                return Err("Invalid value for packet property caplen".to_string());
+            }
+        };
+        Ok(())
+    }
+    pub fn set_wirelen(&self, obj: Rc<Object>) -> Result<(), String> {
+        match obj.as_ref() {
+            Object::Integer(n) => {
+                self.header.borrow_mut().wirelen = *n as u32;
+            }
+            _ => {
+                return Err("Invalid value for packet property wirelen".to_string());
+            }
+        };
+        Ok(())
     }
 }
 
@@ -134,7 +192,7 @@ impl fmt::Display for PcapPacket {
 #[derive(Debug)]
 pub struct Pcap {
     pub file: Rc<FileHandle>,
-    pub header: PcapGlobalHeader,
+    pub header: RefCell<PcapGlobalHeader>,
     ts_format: PcapTsFormat,
 }
 
@@ -145,6 +203,105 @@ impl fmt::Display for Pcap {
 }
 
 impl Pcap {
+    pub fn get_magic_number(&self) -> Rc<Object> {
+        Rc::new(Object::Integer(self.header.borrow().magic_number as i64))
+    }
+    pub fn get_version_major(&self) -> Rc<Object> {
+        Rc::new(Object::Integer(self.header.borrow().version_major as i64))
+    }
+    pub fn get_version_minor(&self) -> Rc<Object> {
+        Rc::new(Object::Integer(self.header.borrow().version_minor as i64))
+    }
+    pub fn get_thiszone(&self) -> Rc<Object> {
+        Rc::new(Object::Integer(self.header.borrow().thiszone as i64))
+    }
+    pub fn get_sigfigs(&self) -> Rc<Object> {
+        Rc::new(Object::Integer(self.header.borrow().sigfigs as i64))
+    }
+    pub fn get_snaplen(&self) -> Rc<Object> {
+        Rc::new(Object::Integer(self.header.borrow().snaplen as i64))
+    }
+    pub fn get_linktype(&self) -> Rc<Object> {
+        Rc::new(Object::Integer(self.header.borrow().linktype as i64))
+    }
+    pub fn set_magic_number(&self, obj: Rc<Object>) -> Result<(), String> {
+        match obj.as_ref() {
+            Object::Integer(n) => {
+                self.header.borrow_mut().magic_number = *n as u32;
+            }
+            _ => {
+                return Err("Invalid value for pcap property magic_number".to_string());
+            }
+        };
+        Ok(())
+    }
+    pub fn set_version_major(&self, obj: Rc<Object>) -> Result<(), String> {
+        match obj.as_ref() {
+            Object::Integer(n) => {
+                self.header.borrow_mut().version_major = *n as u16;
+            }
+            _ => {
+                return Err("Invalid value for pcap property version_major".to_string());
+            }
+        };
+        Ok(())
+    }
+    pub fn set_version_minor(&self, obj: Rc<Object>) -> Result<(), String> {
+        match obj.as_ref() {
+            Object::Integer(n) => {
+                self.header.borrow_mut().version_minor = *n as u16;
+            }
+            _ => {
+                return Err("Invalid value for pcap property version_minor".to_string());
+            }
+        };
+        Ok(())
+    }
+    pub fn set_thiszone(&self, obj: Rc<Object>) -> Result<(), String> {
+        match obj.as_ref() {
+            Object::Integer(n) => {
+                self.header.borrow_mut().thiszone = *n as i32;
+            }
+            _ => {
+                return Err("Invalid value for pcap property thiszone".to_string());
+            }
+        };
+        Ok(())
+    }
+    pub fn set_sigfigs(&self, obj: Rc<Object>) -> Result<(), String> {
+        match obj.as_ref() {
+            Object::Integer(n) => {
+                self.header.borrow_mut().sigfigs = *n as u32;
+            }
+            _ => {
+                return Err("Invalid value for pcap property sigfigs".to_string());
+            }
+        };
+        Ok(())
+    }
+    pub fn set_snaplen(&self, obj: Rc<Object>) -> Result<(), String> {
+        match obj.as_ref() {
+            Object::Integer(n) => {
+                self.header.borrow_mut().snaplen = *n as u32;
+            }
+            _ => {
+                return Err("Invalid value for pcap property snaplen".to_string());
+            }
+        };
+        Ok(())
+    }
+    pub fn set_linktype(&self, obj: Rc<Object>) -> Result<(), String> {
+        match obj.as_ref() {
+            Object::Integer(n) => {
+                self.header.borrow_mut().linktype = *n as u32;
+            }
+            _ => {
+                return Err("Invalid value for pcap property linktype".to_string());
+            }
+        };
+        Ok(())
+    }
+
     pub fn from_file(file: Rc<FileHandle>) -> io::Result<Self> {
         let mut global_header_data = [0u8; 24]; // Size of pcap global header
         match file.as_ref() {
@@ -170,7 +327,7 @@ impl Pcap {
 
         Ok(Self {
             file,
-            header: global_header,
+            header: RefCell::new(global_header),
             ts_format,
         })
     }
@@ -184,7 +341,7 @@ impl Pcap {
                 let packet_header = PcapPacketHeader::from_bytes(&packet_header_data)?;
 
                 // Check if caplen is greater than the snaplen to avoid potential issues
-                if packet_header.caplen() > self.header.snaplen() {
+                if packet_header.caplen > self.header.borrow().snaplen {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidData,
                         "Invalid caplen value exceeds snaplen",
@@ -192,12 +349,12 @@ impl Pcap {
                 }
 
                 // Read the payload data based on the caplen from the packet header
-                let mut packet_data = vec![0u8; packet_header.caplen() as usize];
+                let mut packet_data = vec![0u8; packet_header.caplen as usize];
                 reader.borrow_mut().read_exact(&mut packet_data)?;
 
                 // return whole packet
                 Ok(PcapPacket {
-                    header: packet_header,
+                    header: RefCell::new(packet_header),
                     rawdata: Rc::new(packet_data),
                 })
             }
@@ -206,16 +363,16 @@ impl Pcap {
                 io::stdin().read_exact(&mut packet_header_data)?;
                 let packet_header = PcapPacketHeader::from_bytes(&packet_header_data)?;
                 // Check if caplen is greater than the snaplen to avoid potential issues
-                if packet_header.caplen() > self.header.snaplen() {
+                if packet_header.caplen > self.header.borrow().snaplen {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidData,
                         "Invalid caplen value exceeds snaplen",
                     ));
                 }
-                let mut packet_data = vec![0u8; packet_header.caplen() as usize];
+                let mut packet_data = vec![0u8; packet_header.caplen as usize];
                 io::stdin().read_exact(&mut packet_data)?;
                 Ok(PcapPacket {
-                    header: packet_header,
+                    header: RefCell::new(packet_header),
                     rawdata: Rc::new(packet_data),
                 })
             }

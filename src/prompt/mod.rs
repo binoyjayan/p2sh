@@ -29,6 +29,7 @@ impl Completion for Commands {
             n if n > 1 => {
                 // Default to the first item if an error occurs
                 let selection = Select::with_theme(&ColorfulTheme::default())
+                    .with_prompt("choose from:")
                     .items(&matches[..])
                     .interact_opt()
                     .unwrap_or(None);

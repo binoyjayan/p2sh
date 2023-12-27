@@ -15,7 +15,7 @@ let i = 1;
 let pcap = null;
 
 while pcap = pcap_read_next(f) {
-   let pkt = decode_ethernet(pcap);
+   let pkt = pcap.eth;
    println("[{}] {}", i, pkt);
    i = i + 1;
 }

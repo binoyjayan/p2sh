@@ -8,16 +8,18 @@ use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct EthernetHeader {
-    pub dest: MacAddress,   // Destination MAC address
-    pub source: MacAddress, // Source MAC address
-    pub ethertype: EtherType,
+    dest: MacAddress,   // Destination MAC address
+    source: MacAddress, // Source MAC address
+    ethertype: EtherType,
 }
 
 #[derive(Debug)]
 pub struct Ethernet {
-    pub header: RefCell<EthernetHeader>, // Header of the ethernet packet
-    pub rawdata: Rc<Vec<u8>>,            // Raw data of the entire packet
-    pub offset: usize,                   // Offset of the ethernet header
+    header: RefCell<EthernetHeader>, // Header of the ethernet packet
+    #[allow(unused)]
+    rawdata: Rc<Vec<u8>>,            // Raw data of the entire packet
+    #[allow(unused)]
+    offset: usize,                   // Offset of the ethernet header
 }
 
 pub const ETHERNET_HEADER_SIZE: usize = 14;

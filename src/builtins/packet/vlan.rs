@@ -8,17 +8,19 @@ use crate::object::Object;
 
 #[derive(Debug)]
 pub struct VlanHeader {
-    pub pcp: ClassOfService, // Priority Code Point
-    pub dei: u8,             // Drop Eligible Indicator
-    pub vlan_id: u16,        // VLAN Identifier
-    pub ethertype: EtherType,
+    pcp: ClassOfService, // Priority Code Point
+    dei: u8,             // Drop Eligible Indicator
+    vlan_id: u16,        // VLAN Identifier
+    ethertype: EtherType,
 }
 
 #[derive(Debug)]
 pub struct Vlan {
-    pub header: RefCell<VlanHeader>,
-    pub rawdata: Rc<Vec<u8>>, // Raw data of the entire packet
-    pub offset: usize,        // Offset of the VLAN header
+    header: RefCell<VlanHeader>,
+    #[allow(unused)]
+    rawdata: Rc<Vec<u8>>, // Raw data of the entire packet
+    #[allow(unused)]
+    offset: usize,        // Offset of the VLAN header
 }
 
 #[allow(unused)]

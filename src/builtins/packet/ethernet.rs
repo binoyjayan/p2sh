@@ -1,6 +1,6 @@
 use super::error::PacketError;
 use super::macaddress::MacAddress;
-use crate::common::object::Object;
+use crate::object::Object;
 
 use std::cell::RefCell;
 use std::fmt;

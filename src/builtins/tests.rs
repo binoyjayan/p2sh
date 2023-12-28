@@ -3,7 +3,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::functions::builtin_format;
-use crate::common::object::Object;
+use crate::object::Object;
 use std::collections::HashMap;
 
 #[test]

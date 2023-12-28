@@ -3,9 +3,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::*;
-use crate::common::builtins::variables::BuiltinVarType;
-use crate::common::object::*;
+use crate::builtins::variables::BuiltinVarType;
 use crate::compiler::*;
+use crate::object::*;
 use crate::parser::*;
 use crate::scanner::*;
 use crate::vm::interpreter::VM;

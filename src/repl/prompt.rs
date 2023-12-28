@@ -1,5 +1,5 @@
-use dialoguer::{theme::ColorfulTheme, BasicHistory, Input};
 use super::completion::Commands;
+use dialoguer::{theme::ColorfulTheme, BasicHistory, Input};
 
 pub const PROMPT_MAIN: &str = ">>";
 pub const PROMPT_CONTINUE: &str = ">";

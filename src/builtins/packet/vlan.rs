@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use super::error::PacketError;
 use super::ethernet::EtherType;
-use crate::common::object::Object;
+use crate::object::Object;
 
 #[derive(Debug)]
 pub struct VlanHeader {

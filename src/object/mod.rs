@@ -9,12 +9,12 @@ use std::io;
 use std::ops;
 use std::rc::Rc;
 
-use super::builtins::packet::error::PacketError;
-use super::builtins::packet::ethernet::Ethernet;
-use super::builtins::packet::vlan::Vlan;
-use super::builtins::pcap::PcapPacket;
+use crate::builtins::packet::error::PacketError;
+use crate::builtins::packet::ethernet::Ethernet;
+use crate::builtins::packet::vlan::Vlan;
+use crate::builtins::pcap::Pcap;
+use crate::builtins::pcap::PcapPacket;
 use crate::code::definitions::Instructions;
-use crate::common::builtins::pcap::Pcap;
 
 #[derive(Debug)]
 pub enum Object {

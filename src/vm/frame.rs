@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use crate::code::definitions::Instructions;
-use crate::common::object::Closure;
+use crate::object::Closure;
 
 #[derive(Debug, Clone, Default)]
 pub struct Frame {

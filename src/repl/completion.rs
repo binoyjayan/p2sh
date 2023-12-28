@@ -1,6 +1,5 @@
 use dialoguer::{theme::ColorfulTheme, Completion, Select};
 
-
 pub struct Commands {
     options: Vec<String>,
 }

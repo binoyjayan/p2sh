@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::pcap::Pcap;
 use super::print::format_buf;
-use crate::common::object::*;
+use crate::object::*;
 
 pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("len", builtin_len),

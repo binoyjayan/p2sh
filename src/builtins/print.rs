@@ -2,7 +2,7 @@ use std::fmt;
 use std::fmt::Write;
 use std::rc::Rc;
 
-use crate::common::object::*;
+use crate::object::*;
 
 enum NumberFormat {
     Boolean,

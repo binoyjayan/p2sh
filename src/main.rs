@@ -2,28 +2,29 @@ use std::env;
 use std::fs;
 use std::rc::Rc;
 
-use common::builtins::functions::BUILTINFNS;
-use common::builtins::variables::BuiltinVarType;
-use common::object::Array;
-use common::object::Object;
+use builtins::functions::BUILTINFNS;
+use builtins::variables::BuiltinVarType;
 use compiler::symtab::SymbolTable;
 use compiler::*;
+use object::Array;
+use object::Object;
 use parser::ast::Program;
 use parser::*;
+use repl::prompt;
 use scanner::*;
 use vm::interpreter::GLOBALS_SIZE;
 use vm::interpreter::VM;
-use repl::prompt;
 
+mod builtins;
 mod code;
-mod common;
 mod compiler;
+mod object;
 mod parser;
 mod repl;
 mod scanner;
 mod vm;
 
-const HISTORY_LINES: usize = 16;
+const HISTORY_LINES: usize = 8;
 const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 const PKG_DESC: &str = env!("CARGO_PKG_DESCRIPTION");
 

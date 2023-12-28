@@ -5,9 +5,11 @@ use std::rc::Rc;
 use super::*;
 use crate::builtins::variables::BuiltinVarType;
 use crate::compiler::*;
-use crate::object::*;
-use crate::parser::*;
-use crate::scanner::*;
+use crate::object::array::Array;
+use crate::object::hmap::HMap;
+use crate::object::Object;
+use crate::parser::Parser;
+use crate::scanner::Scanner;
 use crate::vm::interpreter::VM;
 
 #[cfg(test)]

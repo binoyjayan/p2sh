@@ -6,9 +6,9 @@ use super::*;
 use crate::code::definitions;
 use crate::code::opcode::*;
 use crate::compiler::error::*;
-use crate::object::*;
-use crate::parser::*;
-use crate::scanner::*;
+use crate::object::Object;
+use crate::parser::Parser;
+use crate::scanner::Scanner;
 
 #[cfg(test)]
 struct CompilerTestCase {

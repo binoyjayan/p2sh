@@ -3,7 +3,7 @@ use std::fmt;
 use std::io::{self, Read};
 use std::rc::Rc;
 
-use crate::object::FileHandle;
+use crate::object::file::FileHandle;
 use crate::object::Object;
 
 const PCAP_MAGIC_MS: u32 = 0xA1B2C3D4;

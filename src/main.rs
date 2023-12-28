@@ -6,7 +6,7 @@ use builtins::functions::BUILTINFNS;
 use builtins::variables::BuiltinVarType;
 use compiler::symtab::SymbolTable;
 use compiler::*;
-use object::Array;
+use object::array::Array;
 use object::Object;
 use parser::ast::Program;
 use parser::*;

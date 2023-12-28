@@ -17,9 +17,9 @@ pub struct EthernetHeader {
 pub struct Ethernet {
     header: RefCell<EthernetHeader>, // Header of the ethernet packet
     #[allow(unused)]
-    rawdata: Rc<Vec<u8>>,            // Raw data of the entire packet
+    rawdata: Rc<Vec<u8>>, // Raw data of the entire packet
     #[allow(unused)]
-    offset: usize,                   // Offset of the ethernet header
+    offset: usize, // Offset of the ethernet header
 }
 
 pub const ETHERNET_HEADER_SIZE: usize = 14;

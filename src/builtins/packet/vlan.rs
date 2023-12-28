@@ -20,7 +20,7 @@ pub struct Vlan {
     #[allow(unused)]
     rawdata: Rc<Vec<u8>>, // Raw data of the entire packet
     #[allow(unused)]
-    offset: usize,        // Offset of the VLAN header
+    offset: usize, // Offset of the VLAN header
 }
 
 #[allow(unused)]

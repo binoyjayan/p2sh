@@ -10,7 +10,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::pcap::Pcap;
 use super::print::format_buf;
-use crate::object::*;
+use crate::object::array::Array;
+use crate::object::error::ErrorObj;
+use crate::object::file::FileHandle;
+use crate::object::func::BuiltinFunction;
+use crate::object::Object;
 
 pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("len", builtin_len),

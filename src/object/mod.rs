@@ -1,20 +1,26 @@
-use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::fmt;
-use std::fmt::Write;
-use std::fs;
 use std::hash::{Hash, Hasher};
-use std::io;
 use std::ops;
 use std::rc::Rc;
 
-use crate::builtins::packet::error::PacketError;
 use crate::builtins::packet::ethernet::Ethernet;
 use crate::builtins::packet::vlan::Vlan;
 use crate::builtins::pcap::Pcap;
 use crate::builtins::pcap::PcapPacket;
-use crate::code::definitions::Instructions;
+use crate::object::array::Array;
+use crate::object::error::ErrorObj;
+use crate::object::file::FileHandle;
+use crate::object::func::BuiltinFunction;
+use crate::object::func::Closure;
+use crate::object::func::CompiledFunction;
+use crate::object::hmap::HMap;
+
+pub mod array;
+pub mod error;
+pub mod file;
+pub mod func;
+pub mod hmap;
 
 #[derive(Debug)]
 pub enum Object {
@@ -342,301 +348,6 @@ impl Hash for Object {
             Object::Str(ref s) => s.hash(state),
             Object::Builtin(f) => f.name.hash(state),
             _ => "".hash(state),
-        }
-    }
-}
-
-pub type BuiltinFunctionProto = fn(Vec<Rc<Object>>) -> Result<Rc<Object>, String>;
-
-#[derive(Debug, Clone)]
-pub struct BuiltinFunction {
-    pub name: &'static str,
-    pub func: BuiltinFunctionProto,
-}
-
-impl fmt::Display for BuiltinFunction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<built-in function {}>", self.name)
-    }
-}
-
-impl BuiltinFunction {
-    pub const fn new(name: &'static str, func: BuiltinFunctionProto) -> BuiltinFunction {
-        BuiltinFunction { name, func }
-    }
-}
-
-impl PartialEq for BuiltinFunction {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-    }
-}
-
-#[derive(Debug)]
-pub struct Array {
-    pub elements: RefCell<Vec<Rc<Object>>>,
-}
-
-impl Array {
-    pub fn new(elements: Vec<Rc<Object>>) -> Self {
-        Self {
-            elements: RefCell::new(elements),
-        }
-    }
-    pub fn len(&self) -> usize {
-        self.elements.borrow().len()
-    }
-    pub fn is_empty(&self) -> bool {
-        self.elements.borrow().is_empty()
-    }
-    pub fn get(&self, idx: usize) -> Rc<Object> {
-        match self.elements.borrow().get(idx) {
-            Some(value) => value.clone(),
-            None => Rc::new(Object::Null),
-        }
-    }
-    pub fn last(&self) -> Rc<Object> {
-        match self.elements.borrow().last() {
-            Some(value) => value.clone(),
-            None => Rc::new(Object::Null),
-        }
-    }
-    pub fn push(&self, obj: Rc<Object>) {
-        self.elements.borrow_mut().push(obj);
-    }
-    pub fn set(&self, idx: usize, obj: Rc<Object>) {
-        self.elements.borrow_mut()[idx] = obj;
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct HMap {
-    pub pairs: RefCell<HashMap<Rc<Object>, Rc<Object>>>,
-}
-
-impl HMap {
-    pub fn new(pairs: HashMap<Rc<Object>, Rc<Object>>) -> Self {
-        Self {
-            pairs: RefCell::new(pairs),
-        }
-    }
-    pub fn len(&self) -> usize {
-        self.pairs.borrow().len()
-    }
-    pub fn get(&self, key: &Rc<Object>) -> Rc<Object> {
-        match self.pairs.borrow().get(key) {
-            Some(value) => value.clone(),
-            None => Rc::new(Object::Null),
-        }
-    }
-    pub fn contains(&self, key: &Rc<Object>) -> bool {
-        self.pairs.borrow().contains_key(key)
-    }
-    pub fn insert(&self, key: Rc<Object>, val: Rc<Object>) -> Rc<Object> {
-        match self.pairs.borrow_mut().insert(key, val) {
-            Some(v) => v,
-            None => Rc::new(Object::Null),
-        }
-    }
-}
-
-impl fmt::Display for Array {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let elements_str = self
-            .elements
-            .borrow()
-            .iter()
-            .fold(String::new(), |mut acc, p| {
-                let _ = write!(&mut acc, "{}, ", p);
-                acc
-            });
-        let elements_str = elements_str.trim_end_matches(|c| c == ' ' || c == ',');
-        write!(f, "[{}]", elements_str)
-    }
-}
-
-impl PartialEq for Array {
-    fn eq(&self, other: &Self) -> bool {
-        let self_elements = self.elements.borrow();
-        let other_elements = other.elements.borrow();
-
-        if self_elements.len() != other_elements.len() {
-            return false;
-        }
-
-        for (a, b) in self_elements.iter().zip(other_elements.iter()) {
-            if *a != *b {
-                return false;
-            }
-        }
-        true
-    }
-}
-
-impl Eq for Array {}
-
-impl fmt::Display for HMap {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let pairs_str = self
-            .pairs
-            .borrow()
-            .iter()
-            .fold(String::new(), |mut acc, (k, v)| {
-                let _ = write!(&mut acc, "{}: {}, ", k, v);
-                acc
-            });
-        let pairs_str = pairs_str.trim_end_matches(|c| c == ' ' || c == ',');
-        write!(f, "map {{{}}}", pairs_str)
-    }
-}
-
-// compare HMap objects without considering the order of key-value pairs
-impl PartialEq for HMap {
-    fn eq(&self, other: &Self) -> bool {
-        let self_pairs = self.pairs.borrow();
-        let other_pairs = other.pairs.borrow();
-
-        if self_pairs.len() != other_pairs.len() {
-            return false;
-        }
-
-        for (key, value) in self_pairs.iter() {
-            if let Some(other_value) = other_pairs.get(key) {
-                if value != other_value {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        }
-
-        true
-    }
-}
-
-impl Eq for HMap {}
-
-// Hold the instructions of a compiled function and to pass them
-// from the compiler to the VM as part of the bytecode, as a constant
-// OpCall tells the VM to start executing an object of type CompiledFunction
-// sitting on top of the stack.
-// OpReturnValue tells the VM to return the value on top of the stack
-// to the calling context.
-// OpReturn is similar to OpReturnValue except that it returns Null.
-#[derive(Debug, Default)]
-pub struct CompiledFunction {
-    pub instructions: Rc<Instructions>,
-    pub num_locals: usize,
-    pub num_params: usize,
-}
-
-impl CompiledFunction {
-    pub fn new(instructions: Instructions, num_locals: usize, num_params: usize) -> Self {
-        Self {
-            instructions: Rc::new(instructions),
-            num_locals,
-            num_params,
-        }
-    }
-}
-
-impl fmt::Display for CompiledFunction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<compiled function>")
-    }
-}
-
-impl PartialEq for CompiledFunction {
-    fn eq(&self, other: &Self) -> bool {
-        self.instructions == other.instructions
-    }
-}
-
-impl Eq for CompiledFunction {}
-
-// A closure object has a pointer to the function it wraps, a function, and
-// a place to keep the free variables it carries around, 'free'. This object
-// is used to represent functions that 'close over' their environment at the
-// time of their definition. The environment here is captured in a vector of
-// Object's. Note that closures are only created at runtime and aren't
-// available to the compiler. Instead an opcode 'OpClosure' is used by the
-// compiler to inform the VM to create a closure and wrap the function and
-// its environment.
-#[derive(Debug, Default)]
-pub struct Closure {
-    pub func: Rc<CompiledFunction>,
-    pub free: RefCell<Vec<Rc<Object>>>,
-}
-
-impl Closure {
-    pub fn new(func: Rc<CompiledFunction>, free: Vec<Rc<Object>>) -> Self {
-        Self {
-            func,
-            free: RefCell::new(free),
-        }
-    }
-}
-
-impl fmt::Display for Closure {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<closure>")
-    }
-}
-
-impl PartialEq for Closure {
-    fn eq(&self, other: &Self) -> bool {
-        self.func == other.func
-    }
-}
-
-#[derive(Debug)]
-pub enum FileHandle {
-    Reader(RefCell<io::BufReader<fs::File>>),
-    Writer(RefCell<io::BufWriter<fs::File>>),
-    Stdin,
-    Stdout,
-    Stderr,
-}
-
-impl FileHandle {
-    pub fn new_reader(reader: io::BufReader<fs::File>) -> Self {
-        Self::Reader(RefCell::new(reader))
-    }
-    pub fn new_writer(writer: io::BufWriter<fs::File>) -> Self {
-        Self::Writer(RefCell::new(writer))
-    }
-}
-
-impl fmt::Display for FileHandle {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            Self::Reader(_) => write!(f, "<file: reader>"),
-            Self::Writer(_) => write!(f, "<file: writer>"),
-            Self::Stdin => write!(f, "<stdin>"),
-            Self::Stdout => write!(f, "<stdout>"),
-            Self::Stderr => write!(f, "<stderr>"),
-        }
-    }
-}
-
-/// The error object.
-/// It is different from runtime error in the sense that a runtime error
-/// is not interpreted by the programming language but will terminate the
-/// program. However, the error objects are used in the builtin functions
-/// for error handling.
-#[derive(Debug)]
-pub enum ErrorObj {
-    IO(io::Error),
-    Utf8(std::string::FromUtf8Error),
-    Packet(PacketError),
-}
-
-impl fmt::Display for ErrorObj {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            Self::IO(e) => write!(f, "io-error: {e}"),
-            Self::Utf8(e) => write!(f, "utf8-error: {e}"),
-            Self::Packet(e) => write!(f, "packet-error: {}", e),
         }
     }
 }

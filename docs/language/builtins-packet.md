@@ -1,7 +1,8 @@
 # Packet processing Builtins
 
 The following table lists the builtin functions available for packet processing.
-The main set of builtin functions can be found [here](./builtins.md)
+The packet objects can be manipulated using [property expressions](./property.md).
+The main set of builtin functions can be found [here](./builtins.md).
 
 | Name | Description |
 |------|-------------|

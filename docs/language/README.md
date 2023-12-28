@@ -7,5 +7,7 @@ This document serves as a reference to the language.
 - [Operators](./operators.md)
 - [Expression precedence](./expression-precedence.md)
 - [Builtin Functions](./builtins.md)
+- [Builtin Functions for packet processing ](./builtins-packet.md)
+- [Property expressions](./property.md)
 
 This is a work in progress.

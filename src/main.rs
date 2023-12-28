@@ -13,12 +13,13 @@ use parser::*;
 use scanner::*;
 use vm::interpreter::GLOBALS_SIZE;
 use vm::interpreter::VM;
+use repl::prompt;
 
 mod code;
 mod common;
 mod compiler;
 mod parser;
-mod prompt;
+mod repl;
 mod scanner;
 mod vm;
 

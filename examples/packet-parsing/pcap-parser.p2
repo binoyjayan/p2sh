@@ -11,11 +11,13 @@ if is_error(f) {
     exit(1);
 }
 
-let i = 1;
 let pcap = null;
 
 while pcap = pcap_read_next(f) {
-   let pkt = pcap.eth;
-   println("[{}] {}", i, pkt);
-   i = i + 1;
+   let sec = pcap.sec;
+   let usec = pcap.usec;
+   let eth = pcap.eth;
+   let src = eth.src;
+
+   println("[{}.{}] {}", sec, usec, eth);
 }

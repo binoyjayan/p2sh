@@ -730,8 +730,8 @@ impl Compiler {
         if self.is_last_instruction(Opcode::Pop) {
             self.remove_last_pop();
         }
+        // If 'then' statement does not produce a value, then use a Null
         if no_value {
-            // If 'then' statement does not produce a value, then use a Null
             self.emit(Opcode::Null, &[0], expr.token.line);
         }
 
@@ -759,8 +759,8 @@ impl Compiler {
                 if self.is_last_instruction(Opcode::Pop) {
                     self.remove_last_pop();
                 }
+                // If 'else' statement does not produce a value, then use a Null
                 if no_value {
-                    // If 'else' statement does not produce a value, then use a Null
                     self.emit(Opcode::Null, &[0], expr.token.line);
                 }
             }
@@ -919,13 +919,24 @@ impl Compiler {
 
             // Pop the original scrutinee expression when there is a match
             self.emit(Opcode::Pop, &[0], arm.token.line);
+            // Check if the match arm body produces a value
+            let match_arm_body = arm.body.clone();
+            let no_value = if let Some(last) = match_arm_body.statements.last() {
+                !last.is_expression()
+            } else {
+                true
+            };
             // Compile the block statement for this match arm
-            self.compile_block_statement(arm.body.clone())?;
+            self.compile_block_statement(match_arm_body)?;
             // Get rid of the extra Pop that is emitted as a result of
             // compiling 'arm.body'. This is so that we don't loose the result
             // of the 'match' expression
             if self.is_last_instruction(Opcode::Pop) {
                 self.remove_last_pop();
+            }
+            // If 'then' statement does not produce a value, then use a Null
+            if no_value {
+                self.emit(Opcode::Null, &[0], arm.token.line);
             }
 
             // Jump to the end of the match expression after executing the block

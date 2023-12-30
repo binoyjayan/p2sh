@@ -2889,3 +2889,32 @@ fn test_match_expressions_byte() {
     }];
     run_vm_tests(&tests);
 }
+
+#[test]
+fn test_match_expressions_null() {
+    let tests = vec![
+        VmTestCase {
+            // Test match expressions with byte patterns and a mix of range expressions
+            input: r#"
+                let x = 1;
+                match 1 {
+                    1 => { let p = 1; }
+                    _ => { 999 }
+                };
+            "#,
+            expected: Object::Null,
+        },
+        VmTestCase {
+            // Test match expressions with byte patterns and a mix of range expressions
+            input: r#"
+                let x = 0;
+                match x {
+                    1 => { 111 }
+                    _ => { let p = 1; }
+                };
+            "#,
+            expected: Object::Null,
+        },
+    ];
+    run_vm_tests(&tests);
+}

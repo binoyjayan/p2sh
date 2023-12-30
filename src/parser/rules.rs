@@ -60,9 +60,15 @@ lazy_static! {
             ParseRule::new(Some(Parser::parse_underscore), None, Precedence::Lowest);
         rules[TokenType::Identifier as usize] =
             ParseRule::new(Some(Parser::parse_identifier), None, Precedence::Lowest);
-        rules[TokenType::Integer as usize] =
-            ParseRule::new(Some(Parser::parse_integer), None, Precedence::Lowest);
-            rules[TokenType::Float as usize] =
+        rules[TokenType::Decimal as usize] =
+            ParseRule::new(Some(Parser::parse_decimal), None, Precedence::Lowest);
+        rules[TokenType::Octal as usize] =
+            ParseRule::new(Some(Parser::parse_octal), None, Precedence::Lowest);
+        rules[TokenType::Hexadecimal as usize] =
+            ParseRule::new(Some(Parser::parse_hexadecimal), None, Precedence::Lowest);
+        rules[TokenType::Binary as usize] =
+            ParseRule::new(Some(Parser::parse_binary), None, Precedence::Lowest);
+        rules[TokenType::Float as usize] =
             ParseRule::new(Some(Parser::parse_float), None, Precedence::Lowest);
         rules[TokenType::Str as usize] =
             ParseRule::new(Some(Parser::parse_string), None, Precedence::Lowest);
@@ -350,7 +356,7 @@ impl Parser {
         })
     }
 
-    fn parse_integer(&mut self, _: bool) -> Expression {
+    fn parse_decimal(&mut self, _: bool) -> Expression {
         self.peek_invalid_assignment(false);
         if let Ok(value) = self.current.literal.parse() {
             Expression::Integer(IntegerLiteral {
@@ -358,7 +364,61 @@ impl Parser {
                 value,
             })
         } else {
-            let msg = format!("could not parse {} as an integer", self.current.literal);
+            let msg = format!("could not parse '{}' as an integer", self.current.literal);
+            self.push_error(&msg);
+            Expression::Invalid
+        }
+    }
+
+    fn parse_octal(&mut self, _: bool) -> Expression {
+        self.peek_invalid_assignment(false);
+        let str_value = &self.current.literal[2..];
+        if let Ok(value) = i64::from_str_radix(str_value, 8) {
+            Expression::Integer(IntegerLiteral {
+                token: self.current.clone(),
+                value,
+            })
+        } else {
+            let msg = format!(
+                "could not parse '{}' as an octal integer",
+                self.current.literal
+            );
+            self.push_error(&msg);
+            Expression::Invalid
+        }
+    }
+
+    fn parse_hexadecimal(&mut self, _: bool) -> Expression {
+        self.peek_invalid_assignment(false);
+        let str_value = &self.current.literal[2..];
+        if let Ok(value) = i64::from_str_radix(str_value, 16) {
+            Expression::Integer(IntegerLiteral {
+                token: self.current.clone(),
+                value,
+            })
+        } else {
+            let msg = format!(
+                "could not parse '{}' as a hexadecimal integer",
+                self.current.literal
+            );
+            self.push_error(&msg);
+            Expression::Invalid
+        }
+    }
+
+    fn parse_binary(&mut self, _: bool) -> Expression {
+        self.peek_invalid_assignment(false);
+        let str_value = &self.current.literal[2..];
+        if let Ok(value) = i64::from_str_radix(str_value, 2) {
+            Expression::Integer(IntegerLiteral {
+                token: self.current.clone(),
+                value,
+            })
+        } else {
+            let msg = format!(
+                "could not parse '{}' as a binary integer",
+                self.current.literal
+            );
             self.push_error(&msg);
             Expression::Invalid
         }

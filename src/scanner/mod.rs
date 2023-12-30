@@ -206,13 +206,35 @@ impl Scanner {
     fn read_number(&mut self) -> Token {
         let mut is_float = false;
         let position = self.position;
+        let mut is_octal = false;
+        let mut is_hex = false;
+        let mut is_binary = false;
 
-        // digits before the period(.)
-        while self.ch.is_ascii_digit() {
+        // Check for octal, hexadecimal, or decimal prefix
+        // Handle a single '0' as a starting character for decimal
+        if self.ch == '0' {
+            self.read_char(); // Consume '0'
+
+            if self.ch == 'x' || self.ch == 'X' {
+                is_hex = true;
+                self.read_char(); // Consume 'x' or 'X'
+            } else if self.ch == 'o' || self.ch == 'O' {
+                is_octal = true;
+                self.read_char(); // Consume 'o' or 'O'
+            } else if self.ch == 'b' || self.ch == 'B' {
+                is_binary = true;
+                self.read_char(); // Consume 'b' or 'B'
+            }
+        }
+
+        // Read digits (decimal, octal, hexadecimal, or binary) but stop if the
+        // is_hex is false and if encountered hexadecimal digits so we get
+        // a chance to handle the exponent (scientific notation)
+        while self.ch.is_ascii_digit() || is_hex && self.ch.is_ascii_hexdigit() {
             self.read_char();
         }
 
-        // Check for a decimal point but not a range operator (..)
+        // Check for a decimal point
         if self.ch == '.' && self.peek_char() != '.' {
             is_float = true;
             self.read_char(); // Consume the '.'
@@ -220,6 +242,7 @@ impl Scanner {
                 self.read_char();
             }
         }
+
         // Check for an exponent (scientific notation)
         if self.ch == 'e' || self.ch == 'E' {
             is_float = true;
@@ -239,11 +262,23 @@ impl Scanner {
             }
         }
 
+        // Read remaining digits if any so we can handle
+        // bad cases such as '0o12FF' and '0b10FF', '0xFFX' etc.
+        while Self::is_identifier_first(self.ch) {
+            self.read_char();
+        }
+
         let number: String = self.input[position..self.position].iter().collect();
         let token_type = if is_float {
             TokenType::Float
+        } else if is_hex {
+            TokenType::Hexadecimal
+        } else if is_octal {
+            TokenType::Octal
+        } else if is_binary {
+            TokenType::Binary
         } else {
-            TokenType::Integer
+            TokenType::Decimal
         };
 
         self.make_token(token_type, &number)

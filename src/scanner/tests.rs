@@ -30,8 +30,9 @@ fn test_tokens_constants() {
     let input = r#"
         "foobar"
         "foo bar"
-        [1, 2];
+        [1, 2]
         map {"foo": "bar"}
+        [0b1010, 0o7, 0xFF, 5.0, 5e10]
     "#;
     let tests = vec![
         // "foobar"
@@ -40,11 +41,10 @@ fn test_tokens_constants() {
         ExpectedToken(TokenType::Str, "foo bar"),
         // [1, 2];
         ExpectedToken(TokenType::LeftBracket, "["),
-        ExpectedToken(TokenType::Integer, "1"),
+        ExpectedToken(TokenType::Decimal, "1"),
         ExpectedToken(TokenType::Comma, ","),
-        ExpectedToken(TokenType::Integer, "2"),
+        ExpectedToken(TokenType::Decimal, "2"),
         ExpectedToken(TokenType::RightBracket, "]"),
-        ExpectedToken(TokenType::Semicolon, ";"),
         // map {"foo": "bar"}
         ExpectedToken(TokenType::Map, "map"),
         ExpectedToken(TokenType::LeftBrace, "{"),
@@ -52,6 +52,18 @@ fn test_tokens_constants() {
         ExpectedToken(TokenType::Colon, ":"),
         ExpectedToken(TokenType::Str, "bar"),
         ExpectedToken(TokenType::RightBrace, "}"),
+        // [0b1010, 0o7, 0xFF, 5.0, 5e10]
+        ExpectedToken(TokenType::LeftBracket, "["),
+        ExpectedToken(TokenType::Binary, "0b1010"),
+        ExpectedToken(TokenType::Comma, ","),
+        ExpectedToken(TokenType::Octal, "0o7"),
+        ExpectedToken(TokenType::Comma, ","),
+        ExpectedToken(TokenType::Hexadecimal, "0xFF"),
+        ExpectedToken(TokenType::Comma, ","),
+        ExpectedToken(TokenType::Float, "5.0"),
+        ExpectedToken(TokenType::Comma, ","),
+        ExpectedToken(TokenType::Float, "5e10"),
+        ExpectedToken(TokenType::RightBracket, "]"),
         // EOF
         ExpectedToken(TokenType::Eof, ""),
     ];
@@ -79,13 +91,13 @@ fn test_tokens_let() {
         ExpectedToken(TokenType::Let, "let"),
         ExpectedToken(TokenType::Identifier, "five"),
         ExpectedToken(TokenType::Assign, "="),
-        ExpectedToken(TokenType::Integer, "5"),
+        ExpectedToken(TokenType::Decimal, "5"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // let ten = 10;
         ExpectedToken(TokenType::Let, "let"),
         ExpectedToken(TokenType::Identifier, "ten"),
         ExpectedToken(TokenType::Assign, "="),
-        ExpectedToken(TokenType::Integer, "10"),
+        ExpectedToken(TokenType::Decimal, "10"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // let ch = 'a';
         ExpectedToken(TokenType::Let, "let"),
@@ -120,9 +132,9 @@ fn test_tokens_arithmetic() {
         ExpectedToken(TokenType::Minus, "-"),
         ExpectedToken(TokenType::Slash, "/"),
         ExpectedToken(TokenType::Asterisk, "*"),
-        ExpectedToken(TokenType::Integer, "5"),
+        ExpectedToken(TokenType::Decimal, "5"),
         ExpectedToken(TokenType::Modulo, "%"),
-        ExpectedToken(TokenType::Integer, "2"),
+        ExpectedToken(TokenType::Decimal, "2"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // 5. + .1;
         ExpectedToken(TokenType::Float, "5."),
@@ -156,28 +168,28 @@ fn test_tokens_relational() {
     "#;
     let tests = vec![
         // 10 == 10;
-        ExpectedToken(TokenType::Integer, "10"),
+        ExpectedToken(TokenType::Decimal, "10"),
         ExpectedToken(TokenType::Equal, "=="),
-        ExpectedToken(TokenType::Integer, "10"),
+        ExpectedToken(TokenType::Decimal, "10"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // 10 != 9;
-        ExpectedToken(TokenType::Integer, "10"),
+        ExpectedToken(TokenType::Decimal, "10"),
         ExpectedToken(TokenType::BangEqual, "!="),
-        ExpectedToken(TokenType::Integer, "9"),
+        ExpectedToken(TokenType::Decimal, "9"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // 5 < 10 > 5;
-        ExpectedToken(TokenType::Integer, "5"),
+        ExpectedToken(TokenType::Decimal, "5"),
         ExpectedToken(TokenType::Less, "<"),
-        ExpectedToken(TokenType::Integer, "10"),
+        ExpectedToken(TokenType::Decimal, "10"),
         ExpectedToken(TokenType::Greater, ">"),
-        ExpectedToken(TokenType::Integer, "5"),
+        ExpectedToken(TokenType::Decimal, "5"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // 5 <= 10 >= 5;
-        ExpectedToken(TokenType::Integer, "5"),
+        ExpectedToken(TokenType::Decimal, "5"),
         ExpectedToken(TokenType::LessEqual, "<="),
-        ExpectedToken(TokenType::Integer, "10"),
+        ExpectedToken(TokenType::Decimal, "10"),
         ExpectedToken(TokenType::GreaterEqual, ">="),
-        ExpectedToken(TokenType::Integer, "5"),
+        ExpectedToken(TokenType::Decimal, "5"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // a == b && c != d || e <= f;
         ExpectedToken(TokenType::Identifier, "a"),
@@ -220,9 +232,9 @@ fn test_tokens_bitwise() {
         ExpectedToken(TokenType::BitwiseOr, "|"),
         ExpectedToken(TokenType::Identifier, "b"),
         ExpectedToken(TokenType::LeftShift, "<<"),
-        ExpectedToken(TokenType::Integer, "1"),
+        ExpectedToken(TokenType::Decimal, "1"),
         ExpectedToken(TokenType::RightShift, ">>"),
-        ExpectedToken(TokenType::Integer, "2"),
+        ExpectedToken(TokenType::Decimal, "2"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // EOF
         ExpectedToken(TokenType::Eof, ""),
@@ -237,13 +249,13 @@ fn test_tokens_ranges() {
     "#;
     let tests = vec![
         // 1..2 == 1..=2;
-        ExpectedToken(TokenType::Integer, "1"),
+        ExpectedToken(TokenType::Decimal, "1"),
         ExpectedToken(TokenType::RangeEx, ".."),
-        ExpectedToken(TokenType::Integer, "2"),
+        ExpectedToken(TokenType::Decimal, "2"),
         ExpectedToken(TokenType::Equal, "=="),
-        ExpectedToken(TokenType::Integer, "1"),
+        ExpectedToken(TokenType::Decimal, "1"),
         ExpectedToken(TokenType::RangeInc, "..="),
-        ExpectedToken(TokenType::Integer, "2"),
+        ExpectedToken(TokenType::Decimal, "2"),
         ExpectedToken(TokenType::Semicolon, ";"),
         // EOF
         ExpectedToken(TokenType::Eof, ""),
@@ -265,9 +277,9 @@ fn test_tokens_conditionals() {
         // if (5 < 10) { return true; } else { return false; }
         ExpectedToken(TokenType::If, "if"),
         ExpectedToken(TokenType::LeftParen, "("),
-        ExpectedToken(TokenType::Integer, "5"),
+        ExpectedToken(TokenType::Decimal, "5"),
         ExpectedToken(TokenType::Less, "<"),
-        ExpectedToken(TokenType::Integer, "10"),
+        ExpectedToken(TokenType::Decimal, "10"),
         ExpectedToken(TokenType::RightParen, ")"),
         ExpectedToken(TokenType::LeftBrace, "{"),
         ExpectedToken(TokenType::Return, "return"),
@@ -284,13 +296,13 @@ fn test_tokens_conditionals() {
         ExpectedToken(TokenType::Match, "match"),
         ExpectedToken(TokenType::Identifier, "x"),
         ExpectedToken(TokenType::LeftBrace, "{"),
-        ExpectedToken(TokenType::Integer, "0"),
+        ExpectedToken(TokenType::Decimal, "0"),
         ExpectedToken(TokenType::MatchArm, "=>"),
-        ExpectedToken(TokenType::Integer, "1"),
+        ExpectedToken(TokenType::Decimal, "1"),
         ExpectedToken(TokenType::Comma, ","),
         ExpectedToken(TokenType::Underscore, "_"),
         ExpectedToken(TokenType::MatchArm, "=>"),
-        ExpectedToken(TokenType::Integer, "0"),
+        ExpectedToken(TokenType::Decimal, "0"),
         ExpectedToken(TokenType::Comma, ","),
         ExpectedToken(TokenType::RightBrace, "}"),
         // EOF

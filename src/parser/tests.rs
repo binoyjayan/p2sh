@@ -401,6 +401,93 @@ fn test_string_literal_expression() {
 }
 
 #[test]
+fn test_parsing_constant_expressions() {
+    struct ConstantTest {
+        input: &'static str,
+        number: Literal,
+    }
+    let prefix_tests = vec![
+        ConstantTest {
+            input: "0b1010",
+            number: Literal::Integer(10),
+        },
+        ConstantTest {
+            input: "0o10",
+            number: Literal::Integer(8),
+        },
+        ConstantTest {
+            input: "10",
+            number: Literal::Integer(10),
+        },
+        ConstantTest {
+            input: "0xFF",
+            number: Literal::Integer(255),
+        },
+        ConstantTest {
+            input: "5.0",
+            number: Literal::Float(5.),
+        },
+        ConstantTest {
+            input: "5e1",
+            number: Literal::Float(50.),
+        },
+    ];
+
+    for test in prefix_tests {
+        let program = parse_test_program(test.input, 1);
+
+        let stmt = &program.statements[0];
+        if let Statement::Expr(stmt) = stmt {
+            test_literal(&stmt.value, test.number);
+        } else {
+            panic!(
+                "program.statements[0] is not an expression statement. got={}",
+                stmt
+            );
+        }
+    }
+}
+
+#[test]
+fn test_parsing_constant_expressions_negative() {
+    struct ConstantTest {
+        input: &'static str,
+        errors: Vec<&'static str>,
+    }
+    let tests = vec![
+        ConstantTest {
+            input: "0b102",
+            errors: vec!["[line 1] could not parse '0b102' as a binary integer"],
+        },
+        ConstantTest {
+            input: "0o108",
+            errors: vec!["[line 1] could not parse '0o108' as an octal integer"],
+        },
+        ConstantTest {
+            input: "11FF",
+            errors: vec!["[line 1] could not parse '11FF' as an integer"],
+        },
+        ConstantTest {
+            input: "0xFAN",
+            errors: vec!["[line 1] could not parse '0xFAN' as a hexadecimal integer"],
+        },
+    ];
+
+    for (i, test) in tests.iter().enumerate() {
+        let errors = parse_test_program_failures(test.input);
+        assert_eq!(
+            errors.len(),
+            test.errors.len(),
+            "[{}] Error count mismatch",
+            i
+        );
+        for (j, error) in errors.iter().enumerate() {
+            assert_eq!(error, test.errors[j], "[{}][{}] Error mismatch", i, j);
+        }
+    }
+}
+
+#[test]
 fn test_parsing_prefix_expressions() {
     struct PrefixTest {
         input: &'static str,

@@ -61,7 +61,12 @@ impl fmt::Display for Vlan {
             "<id:{},type:{}>",
             self.header.borrow().vlan_id,
             self.header.borrow().ethertype,
-        )
+        )?;
+        if let Some(inner) = self.inner.borrow().clone() {
+            write!(f, " {}", inner)
+        } else {
+            write!(f, " [len: {}]", self.rawdata.len())
+        }
     }
 }
 
@@ -103,7 +108,7 @@ impl Vlan {
         Rc::new(Object::Integer(self.header.borrow().vlan_id as i64))
     }
     pub fn get_ethertype(&self) -> Rc<Object> {
-        Rc::new(Object::Str(self.header.borrow().ethertype.to_string()))
+        Rc::new(Object::Integer(self.header.borrow().ethertype.0 as i64))
     }
     pub fn set_pcp(&self, pcp: Rc<Object>) -> Result<(), String> {
         match pcp.as_ref() {

@@ -31,7 +31,12 @@ impl fmt::Display for Ethernet {
             self.header.borrow().ethertype,
             self.header.borrow().source,
             self.header.borrow().dest
-        )
+        )?;
+        if let Some(inner) = self.inner.borrow().clone() {
+            write!(f, " {}", inner)
+        } else {
+            write!(f, " [len: {}]", self.rawdata.len() - self.offset)
+        }
     }
 }
 
@@ -67,7 +72,7 @@ impl Ethernet {
         Rc::new(Object::Str(self.header.borrow().dest.to_string()))
     }
     pub fn get_ethertype(&self) -> Rc<Object> {
-        Rc::new(Object::Str(self.header.borrow().ethertype.to_string()))
+        Rc::new(Object::Integer(self.header.borrow().ethertype.0 as i64))
     }
     pub fn set_src(&self, src: Rc<Object>) -> Result<(), String> {
         match src.as_ref() {
@@ -93,13 +98,16 @@ impl Ethernet {
             _ => Err("Invalid value for ethernet property dest".to_string()),
         }
     }
-    pub fn set_ethertype(&self, src: Rc<Object>) -> Result<(), String> {
-        match src.as_ref() {
+    pub fn set_ethertype(&self, ethertype: Rc<Object>) -> Result<(), String> {
+        match ethertype.as_ref() {
             Object::Integer(ethertype) => {
+                if *ethertype < 0 || *ethertype > 65535 {
+                    return Err("Invalid value for VLAN property ethertype".to_string());
+                }
                 self.header.borrow_mut().ethertype = EtherType(*ethertype as u16);
                 Ok(())
             }
-            _ => Err("Invalid value for ethernet property ethertype".to_string()),
+            _ => Err("Invalid value for VLAN property ethertype".to_string()),
         }
     }
 }

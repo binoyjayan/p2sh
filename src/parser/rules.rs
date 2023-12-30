@@ -254,7 +254,7 @@ lazy_static! {
         map.insert("eth".to_string(), PacketPropType::Eth);
         map.insert("src".to_string(), PacketPropType::Src);
         map.insert("dst".to_string(), PacketPropType::Dst);
-        map.insert("ethertype".to_string(), PacketPropType::EtherType);
+        map.insert("type".to_string(), PacketPropType::EtherType);
         map.insert("vlan".to_string(), PacketPropType::Vlan);
         map.insert("id".to_string(), PacketPropType::Id);
         map.insert("priority".to_string(), PacketPropType::Priority);

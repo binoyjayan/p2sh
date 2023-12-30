@@ -126,7 +126,12 @@ pub struct PcapPacket {
 
 impl fmt::Display for PcapPacket {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} [len: {}]", self.header.borrow(), self.rawdata.len())
+        write!(f, "{}", self.header.borrow().clone())?;
+        if let Some(inner) = self.inner.borrow().clone() {
+            write!(f, " {}", inner)
+        } else {
+            write!(f, " [len: {}]", self.rawdata.len())
+        }
     }
 }
 

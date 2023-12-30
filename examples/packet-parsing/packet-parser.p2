@@ -17,7 +17,16 @@ while pcap = pcap_read_next(f) {
    let sec = pcap.sec;
    let usec = pcap.usec;
    let eth = pcap.eth;
-   let src = eth.src;
 
+   let vlan = match eth.type {
+     0x8100 => {
+       match eth.vlan.type {
+         0x8100 => {
+           eth.vlan.vlan;
+         }
+       }
+     }
+   };
+   // println("{}", pcap);
    println("[{}.{}] {}", sec, usec, eth);
 }

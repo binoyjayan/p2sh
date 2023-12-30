@@ -717,15 +717,21 @@ impl Compiler {
         // The target for this jump is the 'pop' instruction following the 'then' statement
         let jump_if_false_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], expr.token.line);
         // JumpIfFalse consumes the result of 'condition'.
-        let is_then_empty = expr.then_stmt.statements.is_empty();
+        // If the 'then' statement is empty, or if the last statement
+        // does not produce a value, then emit a Null.
+        let no_value = if let Some(last) = expr.then_stmt.statements.last() {
+            !last.is_expression()
+        } else {
+            true
+        };
         self.compile_block_statement(expr.then_stmt)?;
         // Get rid of the extra Pop that is emitted as a result of compiling 'then_stmt'.
         // This is so that we don't loose the result of the 'if' expression
         if self.is_last_instruction(Opcode::Pop) {
             self.remove_last_pop();
         }
-        if is_then_empty {
-            // If 'then' statement is empty, then use a Null
+        if no_value {
+            // If 'then' statement does not produce a value, then use a Null
             self.emit(Opcode::Null, &[0], expr.token.line);
         }
 
@@ -743,14 +749,18 @@ impl Compiler {
                 self.emit(Opcode::Null, &[0], expr.token.line);
             }
             ElseIfExpr::Else(else_stmt) => {
-                let is_else_empty = else_stmt.statements.is_empty();
+                let no_value = if let Some(last) = else_stmt.statements.last() {
+                    !last.is_expression()
+                } else {
+                    true
+                };
                 // TODO: Find line number of 'else_stmt'
                 self.compile_block_statement(else_stmt)?;
                 if self.is_last_instruction(Opcode::Pop) {
                     self.remove_last_pop();
                 }
-                if is_else_empty {
-                    // If 'else' statement is empty, then use a Null
+                if no_value {
+                    // If 'else' statement does not produce a value, then use a Null
                     self.emit(Opcode::Null, &[0], expr.token.line);
                 }
             }

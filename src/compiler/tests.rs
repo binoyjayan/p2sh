@@ -1671,10 +1671,11 @@ fn test_closures_with_depth() {
             Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
                     definitions::make(Opcode::True, &[], 1),
-                    definitions::make(Opcode::JumpIfFalse, &[12], 1),
+                    definitions::make(Opcode::JumpIfFalse, &[13], 1),
                     definitions::make(Opcode::Constant, &[0], 1),
                     definitions::make(Opcode::DefineLocal, &[1], 1),
-                    definitions::make(Opcode::Jump, &[13], 1),
+                    definitions::make(Opcode::Null, &[], 1),
+                    definitions::make(Opcode::Jump, &[14], 1),
                     definitions::make(Opcode::Null, &[], 1),
                     definitions::make(Opcode::Pop, &[], 1),
                     definitions::make(Opcode::GetLocal, &[0], 1),
@@ -2464,20 +2465,22 @@ fn test_loop_statements() {
                 // 0012 : Instruction to compare 'a' and 10
                 definitions::make(Opcode::Equal, &[], 3),
                 // 0013 : Jump over the 'then' statement if condition is false
-                definitions::make(Opcode::JumpIfFalse, &[22], 3),
+                definitions::make(Opcode::JumpIfFalse, &[23], 3),
                 // 0016 : Jump for the break instruction
-                definitions::make(Opcode::Jump, &[27], 4),
-                // 0019 : Jump to the end of the 'if' expression
-                definitions::make(Opcode::Jump, &[23], 3),
-                // 0022 : Null else case
+                definitions::make(Opcode::Jump, &[28], 4),
+                // 0019 : then produces Null
                 definitions::make(Opcode::Null, &[], 3),
-                // 0023 : Pop the result of the 'if' expression
+                // 0020 : Jump to the end of the 'if' expression
+                definitions::make(Opcode::Jump, &[24], 3),
+                // 0023 : Null else case
+                definitions::make(Opcode::Null, &[], 3),
+                // 0024 : Pop the result of the 'if' expression
                 definitions::make(Opcode::Pop, &[], 3),
-                // 0024 : Jump to the start of the loop
+                // 0025 : Jump to the start of the loop
                 definitions::make(Opcode::Jump, &[6], 5),
-                // 0027 : The constant '1111'
+                // 0028 : The constant '1111'
                 definitions::make(Opcode::Constant, &[2], 7),
-                // 0030 : Pop the result of the expression
+                // 0031 : Pop the result of the expression
                 definitions::make(Opcode::Pop, &[], 7),
             ],
         },

@@ -117,6 +117,12 @@ impl Statement {
             Statement::Invalid => "null".to_string(),
         }
     }
+    pub fn is_expression(&self) -> bool {
+        match &self {
+            Statement::Expr(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for Statement {

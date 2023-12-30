@@ -678,12 +678,21 @@ fn test_conditionals() {
             input: "if 1 > 2 { 10 }",
             expected: Object::Null,
         },
+        // force return a null for then and else branches that do not return a value
         VmTestCase {
             input: "if true { }",
             expected: Object::Null,
         },
         VmTestCase {
+            input: "if true { let a = 1; }",
+            expected: Object::Null,
+        },
+        VmTestCase {
             input: "if false { 10 }",
+            expected: Object::Null,
+        },
+        VmTestCase {
+            input: "if false { 10 } else { let a = 1; }",
             expected: Object::Null,
         },
         VmTestCase {

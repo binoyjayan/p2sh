@@ -17,10 +17,9 @@ pub struct VlanHeader {
 #[derive(Debug)]
 pub struct Vlan {
     header: RefCell<VlanHeader>,
-    #[allow(unused)]
-    rawdata: Rc<Vec<u8>>, // Raw data of the entire packet
-    #[allow(unused)]
-    offset: usize, // Offset of the VLAN header
+    pub rawdata: Rc<Vec<u8>>,               // Raw data of the entire packet
+    pub offset: usize,                      // Offset of the VLAN header
+    pub inner: RefCell<Option<Rc<Object>>>, // Inner packet
 }
 
 #[allow(unused)]
@@ -43,6 +42,12 @@ pub mod ClassesOfService {
     pub const Reserved: ClassOfService = ClassOfService(7);
 }
 
+impl fmt::Display for ClassOfService {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl From<ClassOfService> for u8 {
     fn from(item: ClassOfService) -> Self {
         item.0
@@ -53,9 +58,9 @@ impl fmt::Display for Vlan {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "<id: {}, eth: {}>",
+            "<id:{},type:{}>",
             self.header.borrow().vlan_id,
-            self.header.borrow().ethertype
+            self.header.borrow().ethertype,
         )
     }
 }
@@ -84,6 +89,7 @@ impl Vlan {
             header,
             rawdata,
             offset,
+            inner: RefCell::new(None),
         })
     }
     pub fn get_pcp(&self) -> Rc<Object> {

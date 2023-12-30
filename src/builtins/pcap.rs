@@ -120,6 +120,7 @@ impl PcapPacketHeader {
 #[derive(Debug)]
 pub struct PcapPacket {
     header: RefCell<PcapPacketHeader>,
+    pub inner: RefCell<Option<Rc<Object>>>,
     pub rawdata: Rc<Vec<u8>>,
 }
 
@@ -352,10 +353,11 @@ impl Pcap {
                 let mut packet_data = vec![0u8; packet_header.caplen as usize];
                 reader.borrow_mut().read_exact(&mut packet_data)?;
 
-                // return whole packet
+                // Do not parse the inner packet yet. Parse it only when referred to.
                 Ok(PcapPacket {
                     header: RefCell::new(packet_header),
                     rawdata: Rc::new(packet_data),
+                    inner: RefCell::new(None),
                 })
             }
             FileHandle::Stdin => {
@@ -374,6 +376,7 @@ impl Pcap {
                 Ok(PcapPacket {
                     header: RefCell::new(packet_header),
                     rawdata: Rc::new(packet_data),
+                    inner: RefCell::new(None),
                 })
             }
             _ => Err(io::Error::new(

@@ -16,10 +16,9 @@ pub struct EthernetHeader {
 #[derive(Debug)]
 pub struct Ethernet {
     header: RefCell<EthernetHeader>, // Header of the ethernet packet
-    #[allow(unused)]
-    rawdata: Rc<Vec<u8>>, // Raw data of the entire packet
-    #[allow(unused)]
-    offset: usize, // Offset of the ethernet header
+    pub rawdata: Rc<Vec<u8>>,        // Raw data of the entire packet
+    pub offset: usize,               // Offset of the ethernet header
+    pub inner: RefCell<Option<Rc<Object>>>, // Inner packet
 }
 
 pub const ETHERNET_HEADER_SIZE: usize = 14;
@@ -28,7 +27,7 @@ impl fmt::Display for Ethernet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "<{}: {} -> {}>",
+            "<{}:{}->{}>",
             self.header.borrow().ethertype,
             self.header.borrow().source,
             self.header.borrow().dest
@@ -53,10 +52,12 @@ impl Ethernet {
             source,
             ethertype,
         });
+        // Do not parse the inner packet yet. Parse it only when referred to.
         Ok(Self {
             header,
             rawdata,
             offset,
+            inner: RefCell::new(None),
         })
     }
     pub fn get_src(&self) -> Rc<Object> {

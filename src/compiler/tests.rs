@@ -3292,3 +3292,45 @@ fn test_match_expressions_negative() {
     ];
     run_compiler_failed_tests(&tests);
 }
+
+#[test]
+fn test_dot_expressions() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "let eth = null; eth.type",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::Null, &[], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::GetProp, &[15], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "let vlan = null; vlan.type",
+            expected_constants: vec![],
+            expected_instructions: vec![
+                definitions::make(Opcode::Null, &[], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::GetProp, &[15], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "let vlan = null; vlan.type = 1",
+            expected_constants: vec![Object::Integer(1)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Null, &[], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::SetProp, &[15], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}

@@ -1,5 +1,6 @@
 #![allow(unused_imports)]
 use super::*;
+use crate::code::prop::PacketPropType;
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -13,6 +14,7 @@ enum Literal {
     Char(char),
     Byte(u8),
     Range(i64, i64),
+    Prop(PacketPropType),
 }
 
 #[cfg(test)]
@@ -105,6 +107,17 @@ fn test_byte_literal(expr: &Expression, expected: u8) {
 }
 
 #[cfg(test)]
+fn test_prop_literal(expr: &Expression, expected: PacketPropType) {
+    if let Expression::Prop(p) = expr {
+        if p.value != expected {
+            panic!("prop.value not '{}'. got='{}'", expected, p.value);
+        }
+    } else {
+        panic!("expr not a property. got={:?}", expr);
+    }
+}
+
+#[cfg(test)]
 fn test_boolean_literal(expr: &Expression, expected: bool) {
     if let Expression::Bool(num) = expr {
         if num.value != expected {
@@ -166,6 +179,9 @@ fn test_literal(expression: &Expression, value: Literal) {
             test_integer_literal(expression, begin);
             test_integer_literal(expression, end);
         }
+        Literal::Prop(value) => {
+            test_prop_literal(expression, value);
+        }
     }
 }
 
@@ -199,6 +215,17 @@ fn test_infix_expression(expression: &Expression, left: Literal, operator: &str,
         test_literal(&*expr.right, right);
     } else {
         panic!("expr not an Infix expression. got={:?}", expression);
+    }
+}
+
+// Generic dot expression test helper
+#[cfg(test)]
+fn test_dot_expression(expression: &Expression, left: Literal, right: Literal) {
+    if let Expression::Dot(expr) = expression {
+        test_literal(&*expr.left, left);
+        test_literal(&*&expr.property, right);
+    } else {
+        panic!("expr not an dot expression. got={:?}", expression);
     }
 }
 
@@ -1954,6 +1981,91 @@ fn test_match_expressions_negative() {
                 }
             "#,
             errors: vec![],
+        },
+    ];
+
+    for (i, test) in tests.iter().enumerate() {
+        let errors = parse_test_program_failures(test.input);
+        assert_eq!(
+            errors.len(),
+            test.errors.len(),
+            "[{}] Error count mismatch",
+            i
+        );
+        for (j, error) in errors.iter().enumerate() {
+            assert_eq!(error, test.errors[j], "[{}][{}] Error mismatch", i, j);
+        }
+    }
+}
+
+#[test]
+fn test_parsing_dot_expressions() {
+    struct DotExprTest {
+        input: &'static str,
+        left: Literal,
+        prop: Literal,
+    }
+    let infix_tests = vec![
+        DotExprTest {
+            input: "pcap.magic",
+            left: Literal::Ident("pcap"),
+            prop: Literal::Prop(PacketPropType::Magic),
+        },
+        DotExprTest {
+            input: "eth.src",
+            left: Literal::Ident("eth"),
+            prop: Literal::Prop(PacketPropType::Src),
+        },
+        DotExprTest {
+            input: "eth.dst",
+            left: Literal::Ident("eth"),
+            prop: Literal::Prop(PacketPropType::Dst),
+        },
+        DotExprTest {
+            input: "eth.type",
+            left: Literal::Ident("eth"),
+            prop: Literal::Prop(PacketPropType::EtherType),
+        },
+        DotExprTest {
+            input: "vlan.id",
+            left: Literal::Ident("vlan"),
+            prop: Literal::Prop(PacketPropType::Id),
+        },
+        DotExprTest {
+            input: "vlan.type",
+            left: Literal::Ident("vlan"),
+            prop: Literal::Prop(PacketPropType::EtherType),
+        },
+    ];
+
+    for test in infix_tests {
+        let program = parse_test_program(test.input, 1);
+        let stmt = &program.statements[0];
+        if let Statement::Expr(stmt) = stmt {
+            test_dot_expression(&stmt.value, test.left, test.prop);
+        } else {
+            panic!(
+                "program.statements[0] is not an expression statement. got={}",
+                stmt
+            );
+        }
+    }
+}
+
+#[test]
+fn test_parsing_dot_expressions_negative() {
+    struct DotExprTest {
+        input: &'static str,
+        errors: Vec<&'static str>,
+    }
+    let tests = vec![
+        DotExprTest {
+            input: "eth.unknown",
+            errors: vec!["[line 1] invalid property 'unknown'"],
+        },
+        DotExprTest {
+            input: "vlan.unknown",
+            errors: vec!["[line 1] invalid property 'unknown'"],
         },
     ];
 

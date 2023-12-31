@@ -233,6 +233,7 @@ impl fmt::Display for IfExpr {
 
 #[derive(Clone, Debug)]
 pub enum MatchPattern {
+    Boolean(BooleanExpr),
     Integer(IntegerLiteral),
     Char(CharLiteral),
     Byte(ByteLiteral),
@@ -244,6 +245,7 @@ pub enum MatchPattern {
 impl fmt::Display for MatchPattern {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
+            MatchPattern::Boolean(b) => write!(f, "{}", b),
             MatchPattern::Integer(num) => write!(f, "{}", num),
             MatchPattern::Str(s) => write!(f, "{}", s),
             MatchPattern::Char(c) => write!(f, "{}", c),
@@ -267,7 +269,8 @@ impl MatchPattern {
         }
 
         match (self, other) {
-            (MatchPattern::Integer(_), MatchPattern::Integer(_))
+            (MatchPattern::Boolean(_), MatchPattern::Boolean(_))
+            | (MatchPattern::Integer(_), MatchPattern::Integer(_))
             | (MatchPattern::Str(_), MatchPattern::Str(_))
             | (MatchPattern::Char(_), MatchPattern::Char(_))
             | (MatchPattern::Byte(_), MatchPattern::Byte(_)) => true,

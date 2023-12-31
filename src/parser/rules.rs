@@ -732,6 +732,7 @@ impl Parser {
         let mut patterns = Vec::new();
         let pattern_exp = match expr {
             Expression::Score(expr) => MatchPattern::Default(expr),
+            Expression::Bool(expr) => MatchPattern::Boolean(expr),
             Expression::Integer(expr) => MatchPattern::Integer(expr),
             Expression::Char(expr) => MatchPattern::Char(expr),
             Expression::Byte(expr) => MatchPattern::Byte(expr),

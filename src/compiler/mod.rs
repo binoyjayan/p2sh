@@ -813,6 +813,23 @@ impl Compiler {
                     ));
                 }
                 match pattern_variant {
+                    MatchPattern::Boolean(b) => {
+                        // Duplicate the scrutinee expression on the stack
+                        self.emit(Opcode::Dup, &[0], arm.token.line);
+                        // Push the boolean pattern variant onto the stack
+                        if b.value {
+                            self.emit(Opcode::True, &[0], b.token.line);
+                        } else {
+                            self.emit(Opcode::False, &[0], b.token.line);
+                        }
+                        // Compare with OpNotEqual (inverse of OpEqual)
+                        self.emit(Opcode::NotEqual, &[0], b.token.line);
+                        // If the result of OpNotEqual is false, i.e. If Equal,
+                        // then jump to the block statement. Otherwise,
+                        // continue to the next pattern variant
+                        let jump_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], b.token.line);
+                        jump_body_v.push(jump_pos);
+                    }
                     MatchPattern::Integer(num) => {
                         // Duplicate the scrutinee expression on the stack
                         self.emit(Opcode::Dup, &[0], arm.token.line);

@@ -2894,7 +2894,6 @@ fn test_match_expressions_byte() {
 fn test_match_expressions_null() {
     let tests = vec![
         VmTestCase {
-            // Test match expressions with byte patterns and a mix of range expressions
             input: r#"
                 let x = 1;
                 match 1 {
@@ -2905,7 +2904,6 @@ fn test_match_expressions_null() {
             expected: Object::Null,
         },
         VmTestCase {
-            // Test match expressions with byte patterns and a mix of range expressions
             input: r#"
                 let x = 0;
                 match x {
@@ -2914,6 +2912,33 @@ fn test_match_expressions_null() {
                 };
             "#,
             expected: Object::Null,
+        },
+    ];
+    run_vm_tests(&tests);
+}
+
+#[test]
+fn test_match_expressions_boolean() {
+    let tests = vec![
+        VmTestCase {
+            input: r#"
+                let b = true;
+                match b {
+                    true  => { 1 }
+                    false => { 0 }
+                }
+            "#,
+            expected: Object::Integer(1),
+        },
+        VmTestCase {
+            input: r#"
+                let b = false;
+                match b {
+                    true  => { 1 }
+                    false => { 0 }
+                }
+            "#,
+            expected: Object::Integer(0),
         },
     ];
     run_vm_tests(&tests);

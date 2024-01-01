@@ -3,21 +3,34 @@ use super::macaddress::MacAddress;
 use crate::object::Object;
 
 use std::cell::RefCell;
+use std::convert::From;
 use std::fmt;
 use std::rc::Rc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EthernetHeader {
     dest: MacAddress,   // Destination MAC address
     source: MacAddress, // Source MAC address
     ethertype: EtherType,
 }
 
+impl From<&EthernetHeader> for Vec<u8> {
+    fn from(hdr: &EthernetHeader) -> Self {
+        let mut bytes = Vec::new();
+        let b: Vec<u8> = (&hdr.dest).into();
+        bytes.extend_from_slice(&b);
+        let b: Vec<u8> = (&hdr.source).into();
+        bytes.extend_from_slice(&b);
+        bytes.extend_from_slice(&hdr.ethertype.0.to_be_bytes());
+        bytes
+    }
+}
+
 #[derive(Debug)]
 pub struct Ethernet {
-    header: RefCell<EthernetHeader>, // Header of the ethernet packet
-    pub rawdata: Rc<Vec<u8>>,        // Raw data of the entire packet
-    pub offset: usize,               // Offset of the ethernet header
+    header: RefCell<EthernetHeader>,   // Header of the ethernet packet
+    pub rawdata: RefCell<Rc<Vec<u8>>>, // Raw data of the entire packet
+    pub offset: usize,                 // Offset of the ethernet header
     pub inner: RefCell<Option<Rc<Object>>>, // Inner packet
 }
 
@@ -35,8 +48,23 @@ impl fmt::Display for Ethernet {
         if let Some(inner) = self.inner.borrow().clone() {
             write!(f, " {}", inner)
         } else {
-            write!(f, " [len: {}]", self.rawdata.len() - self.offset)
+            write!(f, " [len: {}]", self.rawdata.borrow().len() - self.offset)
         }
+    }
+}
+
+impl From<&Ethernet> for Vec<u8> {
+    fn from(eth: &Ethernet) -> Self {
+        let header = eth.header.borrow().clone();
+        let mut bytes: Vec<u8> = (&header).into();
+        if let Some(inner) = eth.inner.borrow().clone() {
+            let data: Vec<u8> = inner.as_ref().into();
+            bytes.extend_from_slice(&data);
+        } else {
+            let data = eth.rawdata.borrow().clone();
+            bytes.extend_from_slice(&data[eth.offset..]);
+        }
+        bytes
     }
 }
 
@@ -60,7 +88,7 @@ impl Ethernet {
         // Do not parse the inner packet yet. Parse it only when referred to.
         Ok(Self {
             header,
-            rawdata,
+            rawdata: RefCell::new(rawdata),
             offset,
             inner: RefCell::new(None),
         })
@@ -112,7 +140,7 @@ impl Ethernet {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EtherType(pub u16);
 
 #[allow(unused, non_upper_case_globals, non_snake_case)]

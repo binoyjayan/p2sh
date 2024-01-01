@@ -1,8 +1,9 @@
+use std::convert::From;
 use std::fmt;
 
 use super::error::PacketError;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MacAddress(pub u8, pub u8, pub u8, pub u8, pub u8, pub u8);
 
 impl MacAddress {
@@ -37,5 +38,18 @@ impl fmt::Display for MacAddress {
             "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
             self.0, self.1, self.2, self.3, self.4, self.5
         )
+    }
+}
+
+impl From<&MacAddress> for Vec<u8> {
+    fn from(eth: &MacAddress) -> Self {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&eth.0.to_be_bytes());
+        bytes.extend_from_slice(&eth.1.to_be_bytes());
+        bytes.extend_from_slice(&eth.2.to_be_bytes());
+        bytes.extend_from_slice(&eth.3.to_be_bytes());
+        bytes.extend_from_slice(&eth.4.to_be_bytes());
+        bytes.extend_from_slice(&eth.5.to_be_bytes());
+        bytes
     }
 }

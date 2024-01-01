@@ -57,6 +57,17 @@ impl fmt::Display for Array {
     }
 }
 
+impl From<&Array> for Vec<u8> {
+    fn from(obj: &Array) -> Self {
+        let mut bytes = Vec::new();
+        for element in obj.elements.borrow().iter() {
+            let b: Vec<u8> = element.as_ref().into();
+            bytes.extend_from_slice(&b);
+        }
+        bytes
+    }
+}
+
 impl PartialEq for Array {
     fn eq(&self, other: &Self) -> bool {
         let self_elements = self.elements.borrow();

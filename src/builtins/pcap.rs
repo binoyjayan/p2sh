@@ -1,6 +1,7 @@
 use std::cell::RefCell;
+use std::convert::From;
 use std::fmt;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::rc::Rc;
 
 use crate::object::file::FileHandle;
@@ -15,7 +16,6 @@ enum PcapTsFormat {
     NanoSeconds,
 }
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct PcapGlobalHeader {
     magic_number: u32,
@@ -38,6 +38,23 @@ impl Default for PcapGlobalHeader {
             snaplen: 65535,
             linktype: 1,
         }
+    }
+}
+
+impl From<&PcapGlobalHeader> for Vec<u8> {
+    fn from(header: &PcapGlobalHeader) -> Self {
+        let mut bytes = Vec::new();
+
+        // Convert each field to its byte representation and append to the bytes Vec
+        bytes.extend_from_slice(&header.magic_number.to_le_bytes());
+        bytes.extend_from_slice(&header.version_major.to_le_bytes());
+        bytes.extend_from_slice(&header.version_minor.to_le_bytes());
+        bytes.extend_from_slice(&header.thiszone.to_le_bytes());
+        bytes.extend_from_slice(&header.sigfigs.to_le_bytes());
+        bytes.extend_from_slice(&header.snaplen.to_le_bytes());
+        bytes.extend_from_slice(&header.linktype.to_le_bytes());
+
+        bytes
     }
 }
 
@@ -80,8 +97,7 @@ impl PcapGlobalHeader {
     }
 }
 
-#[allow(unused)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct PcapPacketHeader {
     pub ts_sec: u32,  // Timestamp seconds
     pub ts_usec: u32, // Timestamp in nanoseconds or microseconds
@@ -96,6 +112,18 @@ impl fmt::Display for PcapPacketHeader {
             "<pcap-packet caplen: {}, wirelen: {}>",
             self.caplen, self.wirelen
         )
+    }
+}
+
+impl From<&PcapPacketHeader> for Vec<u8> {
+    fn from(header: &PcapPacketHeader) -> Self {
+        let mut bytes = Vec::new();
+        // Convert each field to its byte representation and append to the bytes Vec
+        bytes.extend_from_slice(&header.ts_sec.to_le_bytes());
+        bytes.extend_from_slice(&header.ts_usec.to_le_bytes());
+        bytes.extend_from_slice(&header.caplen.to_le_bytes());
+        bytes.extend_from_slice(&header.wirelen.to_le_bytes());
+        bytes
     }
 }
 
@@ -121,7 +149,7 @@ impl PcapPacketHeader {
 pub struct PcapPacket {
     header: RefCell<PcapPacketHeader>,
     pub inner: RefCell<Option<Rc<Object>>>,
-    pub rawdata: Rc<Vec<u8>>,
+    pub rawdata: RefCell<Rc<Vec<u8>>>,
 }
 
 impl fmt::Display for PcapPacket {
@@ -130,8 +158,22 @@ impl fmt::Display for PcapPacket {
         if let Some(inner) = self.inner.borrow().clone() {
             write!(f, " {}", inner)
         } else {
-            write!(f, " [len: {}]", self.rawdata.len())
+            write!(f, " [len: {}]", self.rawdata.borrow().len())
         }
+    }
+}
+
+impl From<&PcapPacket> for Vec<u8> {
+    fn from(pkt: &PcapPacket) -> Self {
+        let header = pkt.header.borrow().clone();
+        let mut bytes: Vec<u8> = (&header).into();
+        if let Some(inner) = pkt.inner.borrow().clone() {
+            let data: Vec<u8> = inner.as_ref().into();
+            bytes.extend_from_slice(&data);
+        } else {
+            bytes.extend_from_slice(&pkt.rawdata.borrow().clone());
+        }
+        bytes
     }
 }
 
@@ -194,11 +236,11 @@ impl PcapPacket {
     }
 }
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct Pcap {
     pub file: Rc<FileHandle>,
     pub header: RefCell<PcapGlobalHeader>,
+    #[allow(unused)]
     ts_format: PcapTsFormat,
 }
 
@@ -308,6 +350,7 @@ impl Pcap {
         Ok(())
     }
 
+    /// Read the pcap global header from a pcap file
     pub fn from_file(file: Rc<FileHandle>) -> io::Result<Self> {
         let mut global_header_data = [0u8; 24]; // Size of pcap global header
         match file.as_ref() {
@@ -338,6 +381,34 @@ impl Pcap {
         })
     }
 
+    /// Write global header to a newly created pcap file
+    pub fn new(file: Rc<FileHandle>) -> io::Result<Self> {
+        // Write the pcap global header to the file
+        let global_header = PcapGlobalHeader::default();
+        let bytes: Vec<u8> = (&global_header).into();
+        match file.as_ref() {
+            FileHandle::Writer(writer) => {
+                writer.borrow_mut().write_all(&bytes)?;
+            }
+            FileHandle::Stdout => {
+                io::stdout().write_all(&bytes)?;
+            }
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Invalid file handle",
+                ))
+            }
+        }
+
+        Ok(Self {
+            file,
+            header: RefCell::new(global_header),
+            ts_format: PcapTsFormat::MicroSeconds,
+        })
+    }
+
+    /// Read next packet from a pcap file
     pub fn next_packet(&self) -> io::Result<PcapPacket> {
         let mut packet_header_data = [0u8; 16]; // Size of pcap packet header
 
@@ -361,7 +432,7 @@ impl Pcap {
                 // Do not parse the inner packet yet. Parse it only when referred to.
                 Ok(PcapPacket {
                     header: RefCell::new(packet_header),
-                    rawdata: Rc::new(packet_data),
+                    rawdata: RefCell::new(Rc::new(packet_data)),
                     inner: RefCell::new(None),
                 })
             }
@@ -380,10 +451,24 @@ impl Pcap {
                 io::stdin().read_exact(&mut packet_data)?;
                 Ok(PcapPacket {
                     header: RefCell::new(packet_header),
-                    rawdata: Rc::new(packet_data),
+                    rawdata: RefCell::new(Rc::new(packet_data)),
                     inner: RefCell::new(None),
                 })
             }
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Invalid file handle",
+            )),
+        }
+    }
+
+    /// Function to write a packet to a pcap file
+    pub fn write(&self, pkt: Rc<PcapPacket>) -> io::Result<usize> {
+        let bytes: Vec<u8> = pkt.as_ref().into();
+
+        match self.file.as_ref() {
+            FileHandle::Writer(writer) => writer.borrow_mut().write(&bytes),
+            FileHandle::Stdout => io::stdout().write(&bytes),
             _ => Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "Invalid file handle",

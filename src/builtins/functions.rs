@@ -63,6 +63,7 @@ pub const BUILTINFNS: &[BuiltinFunction] = &[
     BuiltinFunction::new("pcap_stream", builtin_pcap_stream),
     BuiltinFunction::new("pcap_read_next", builtin_pcap_read_next),
     BuiltinFunction::new("pcap_read_all", builtin_pcap_read_all),
+    BuiltinFunction::new("pcap_write", builtin_pcap_write),
 ];
 
 fn builtin_len(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
@@ -610,7 +611,7 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 
     match mode {
         "r" => {
-            // opens a file for reading, returns null if the file does not exist
+            // opens a file for reading, returns error if the file does not exist
             let file = fs::File::open(path);
             match file {
                 Ok(file) => {
@@ -651,8 +652,8 @@ fn builtin_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             }
         }
         "x" => {
-            // create the specified file, returns null if the file exist
-            // return null if the operation fails.
+            // create the specified file, returns error if the file exist
+            // or if the operation fails.
             let file = fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
@@ -1151,21 +1152,32 @@ fn builtin_rand(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
 /// Apart from opening the file, read the pcap header and validate
 /// the magic number and the endianness. Return error if the validation fails.
 fn builtin_pcap_open(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
-    let obj = builtin_open(args)?;
-    match obj.as_ref() {
-        Object::File(f) => {
-            match Pcap::from_file(f.clone()) {
-                Ok(pcap) => {
-                    // Return the pcap object
-                    Ok(Rc::new(Object::Pcap(Rc::new(pcap))))
-                }
-                Err(e) => {
-                    // Failed to open pcap file
-                    Ok(Rc::new(Object::Err(ErrorObj::IO(e))))
-                }
-            }
+    let obj = builtin_open(args.clone())?;
+    let mode = if args.len() == 2 {
+        if let Object::Str(s) = args[1].as_ref() {
+            s
+        } else {
+            return Err(String::from("invalid mode"));
         }
+    } else {
+        "r"
+    };
+    let res = match obj.as_ref() {
+        Object::File(f) => match mode {
+            "r" => Ok(Pcap::from_file(f.clone())),
+            "a" => Err(String::from("append mode not supported for pcap files")),
+            "w" => Ok(Pcap::new(f.clone())),
+            "x" => Ok(Pcap::new(f.clone())),
+            _ => Err(String::from("invalid file open mode")),
+        },
         _ => Err(String::from("unsupported argument")),
+    }?;
+    match res {
+        Ok(pcap) => Ok(Rc::new(Object::Pcap(Rc::new(pcap)))),
+        Err(e) => {
+            // Failed to open pcap file
+            Ok(Rc::new(Object::Err(ErrorObj::IO(e))))
+        }
     }
 }
 
@@ -1264,24 +1276,49 @@ fn builtin_pcap_stream(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
     if args.len() > 1 {
         return Err(format!("takes one or no arguments. got={}", args.len()));
     }
+    let result = match args[0].as_ref() {
+        Object::File(f) => match f.as_ref() {
+            FileHandle::Stdin => Pcap::from_file(f.clone()),
+            FileHandle::Stdout => Pcap::new(f.clone()),
+            _ => Err(String::from("invalid file handle"))?,
+        },
+        _ => Err(String::from("unsupported argument"))?,
+    };
+    match result {
+        Ok(pcap) => {
+            // Return the pcap object
+            Ok(Rc::new(Object::Pcap(Rc::new(pcap))))
+        }
+        Err(e) => {
+            // Failed to open pcap file
+            Ok(Rc::new(Object::Err(ErrorObj::IO(e))))
+        }
+    }
+}
+
+/// Write a packet to the pcap file
+/// # Arguments
+/// * `args` - A vector of Rc<Object> containing the pcap file handle
+/// # Returns
+/// Returns a Result containing a object wrapped in an Object::Integer,
+/// that represents the number of bytes written, or an error if the
+/// operation fails. An I/O error will result in the last error being set
+/// which can be retrieved using get_errno().
+fn builtin_pcap_write(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
+    if args.len() != 2 {
+        return Err(format!("takes two arguments. got={}", args.len()));
+    }
     match args[0].as_ref() {
-        Object::File(f) => {
-            match f.as_ref() {
-                FileHandle::Stdin | FileHandle::Stdout => {
-                    match Pcap::from_file(f.clone()) {
-                        Ok(pcap) => {
-                            // Return the pcap object
-                            Ok(Rc::new(Object::Pcap(Rc::new(pcap))))
-                        }
-                        Err(e) => {
-                            // Failed to open pcap file
-                            Ok(Rc::new(Object::Err(ErrorObj::IO(e))))
-                        }
-                    }
-                }
-                _ => Err(String::from("invalid file handle")),
+        Object::Pcap(f) => {
+            let packet = match args[1].as_ref() {
+                Object::Packet(p) => p,
+                _ => return Err(String::from("second argument should be a packet")),
+            };
+            match f.write(packet.clone()) {
+                Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
+                Err(e) => Ok(Rc::new(Object::Err(ErrorObj::IO(e)))),
             }
         }
-        _ => Err(String::from("unsupported argument")),
+        _ => Err(String::from("first argument should be a file handle")),
     }
 }

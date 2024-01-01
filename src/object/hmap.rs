@@ -52,6 +52,19 @@ impl fmt::Display for HMap {
     }
 }
 
+impl From<&HMap> for Vec<u8> {
+    fn from(obj: &HMap) -> Self {
+        let mut bytes = Vec::new();
+        for (key, val) in obj.pairs.borrow().iter() {
+            let b: Vec<u8> = key.as_ref().into();
+            bytes.extend_from_slice(&b);
+            let b: Vec<u8> = val.as_ref().into();
+            bytes.extend_from_slice(&b);
+        }
+        bytes
+    }
+}
+
 // compare HMap objects without considering the order of key-value pairs
 impl PartialEq for HMap {
     fn eq(&self, other: &Self) -> bool {

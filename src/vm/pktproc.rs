@@ -208,7 +208,7 @@ impl VM {
                     if let Some(inner) = pkt.inner.borrow().as_ref() {
                         return Ok(inner.clone());
                     }
-                    let obj = match Ethernet::from_bytes(Rc::clone(&pkt.rawdata), 0) {
+                    let obj = match Ethernet::from_bytes(Rc::clone(&pkt.rawdata.borrow()), 0) {
                         Ok(ethernet) => Rc::new(Object::Eth(Rc::new(ethernet))),
                         Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
                     };
@@ -284,7 +284,7 @@ impl VM {
                     if let Some(inner) = eth.inner.borrow().as_ref() {
                         return Ok(inner.clone());
                     }
-                    let obj = match Vlan::from_bytes(Rc::clone(&eth.rawdata), eth.offset) {
+                    let obj = match Vlan::from_bytes(Rc::clone(&eth.rawdata.borrow()), eth.offset) {
                         Ok(vlan) => Rc::new(Object::Vlan(Rc::new(vlan))),
                         Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
                     };
@@ -313,12 +313,12 @@ impl VM {
         let obj = match prop {
             PacketPropType::Priority => {
                 if let Some(val) = setval {
-                    if let Err(e) = vlan.set_pcp(val.clone()) {
+                    if let Err(e) = vlan.set_priority(val.clone()) {
                         return Err(RTError::new(&e, line));
                     }
                     val
                 } else {
-                    vlan.get_pcp()
+                    vlan.get_priority()
                 }
             }
             PacketPropType::Dei => {
@@ -364,7 +364,8 @@ impl VM {
                     if let Some(inner) = vlan.inner.borrow().as_ref() {
                         return Ok(inner.clone());
                     }
-                    let obj = match Vlan::from_bytes(Rc::clone(&vlan.rawdata), vlan.offset) {
+                    let obj = match Vlan::from_bytes(Rc::clone(&vlan.rawdata.borrow()), vlan.offset)
+                    {
                         Ok(vlan) => Rc::new(Object::Vlan(Rc::new(vlan))),
                         Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
                     };

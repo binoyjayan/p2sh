@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::convert::From;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops;
@@ -43,6 +44,26 @@ pub enum Object {
     Packet(Rc<PcapPacket>),
     Eth(Rc<Ethernet>),
     Vlan(Rc<Vlan>),
+}
+
+impl From<&Object> for Vec<u8> {
+    fn from(obj: &Object) -> Self {
+        match obj {
+            Object::Null => Vec::new(),
+            Object::Str(v) => v.as_bytes().to_vec(),
+            Object::Char(v) => v.to_string().as_bytes().to_vec(),
+            Object::Byte(v) => vec![*v],
+            Object::Integer(v) => v.to_be_bytes().to_vec(),
+            Object::Float(v) => v.to_be_bytes().to_vec(),
+            Object::Bool(v) => vec![*v as u8],
+            Object::Arr(v) => v.as_ref().into(),
+            Object::Map(v) => v.as_ref().into(),
+            Object::Packet(v) => v.as_ref().into(),
+            Object::Eth(v) => v.as_ref().into(),
+            Object::Vlan(v) => v.as_ref().into(),
+            _ => Vec::new(),
+        }
+    }
 }
 
 impl PartialEq for Object {

@@ -118,10 +118,7 @@ impl Statement {
         }
     }
     pub fn is_expression(&self) -> bool {
-        match &self {
-            Statement::Expr(_) => true,
-            _ => false,
-        }
+        matches!(self, Statement::Expr(_))
     }
 }
 

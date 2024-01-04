@@ -1,6 +1,13 @@
 #!/usr/bin/env p2sh
 
+// To be invoked as:
+// ./pcap-read-stdin-next.p2 < file.pcap
+
 let f = pcap_stream(stdin);
+if is_error(f) {
+    puts("stdin: ", f);
+    exit(1);
+}
 let p = null;
 let i = 1;
 

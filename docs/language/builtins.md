@@ -3,6 +3,8 @@
 ## Builtin functions
 
 The following table lists the builtin functions available.
+Additional functions for packet processing can be found [here](./builtins-packet.md)
+
 
 | Name | Description |
 |------|-------------|

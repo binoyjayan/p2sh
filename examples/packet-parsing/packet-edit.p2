@@ -1,0 +1,42 @@
+#!/usr/bin/env p2sh
+
+if len(argv) < 3 {
+  println("Usage: {} <pcap-src-file> <pcap-target-file>", argv[0]);
+  exit(1);
+}
+
+let f1 = pcap_open(argv[1]);
+if is_error(f1) {
+    puts(f1);
+    exit(1);
+}
+
+let f2 = pcap_open(argv[2], "w");
+if is_error(f2) {
+    puts(f2);
+    exit(1);
+}
+
+let pcap = null;
+
+while pcap = pcap_read_next(f1) {
+   let sec = pcap.sec;
+   let usec = pcap.usec;
+   let eth = pcap.eth;
+
+   let vlan = match eth.type {
+     0x8100 => {
+       eth.vlan.id = eth.vlan.id + 7;
+       let prio = eth.vlan.priority = 1;
+       match eth.vlan.type {
+         0x8100 => {
+           eth.vlan.vlan.id = eth.vlan.vlan.id + 3;
+           eth.vlan.vlan.priority = 1;
+           eth.vlan.vlan.dei = true;
+         }
+       }
+     }
+   };
+   println("[{}.{}] {}", sec, usec, eth);
+   pcap_write(f2, pcap);
+}

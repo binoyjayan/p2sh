@@ -1,5 +1,9 @@
 #!/usr/bin/env p2sh
 
+// Quick sort algorithm implementation
+// Alternatively, the inbuilt 'sort()' method
+// may also be used to sort an array of objects.
+
 fn swap(a, i, j) {
     let t = a[i];
     a[i] = a[j];
@@ -52,5 +56,7 @@ fn sort_quick(a, lo, hi) {
 let a = [141, 1, 17, -7, -17, -27, 18, 541, 8, 7, 7];
 puts(a);
 shuffle(a);
+// Builtin sort method
+// sort(a, 0, len(a) - 1);
 sort_quick(a, 0, len(a) - 1);
 puts(a);

@@ -48,6 +48,7 @@ pub enum Opcode {
     Dup,
     GetProp,
     SetProp,
+    Dollar,
     #[default]
     Invalid,
 }
@@ -102,6 +103,7 @@ impl From<u8> for Opcode {
             44 => Opcode::Dup,
             45 => Opcode::GetProp,
             46 => Opcode::SetProp,
+            47 => Opcode::Dollar,
             _ => Opcode::Invalid,
         }
     }

@@ -491,6 +491,7 @@ impl VM {
                     self.exec_prop_expr(left, prop, Some(obj), line)?;
                     self.current_frame().ip += 1;
                 }
+                Opcode::Dollar => {}
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),

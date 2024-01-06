@@ -331,6 +331,34 @@ fn test_unary_expressions() {
 }
 
 #[test]
+fn test_unary_expressions_dollar() {
+    let tests = vec![
+        CompilerTestCase {
+            input: "$0",
+            expected_constants: vec![Object::Integer(0)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::Dollar, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+        CompilerTestCase {
+            input: "let n = 0; $n",
+            expected_constants: vec![Object::Integer(0)],
+            expected_instructions: vec![
+                definitions::make(Opcode::Constant, &[0], 1),
+                definitions::make(Opcode::DefineGlobal, &[0], 1),
+                definitions::make(Opcode::GetGlobal, &[0], 1),
+                definitions::make(Opcode::Dollar, &[], 1),
+                definitions::make(Opcode::Pop, &[], 1),
+            ],
+        },
+    ];
+
+    run_compiler_tests(&tests);
+}
+
+#[test]
 fn test_bitwise_expressions() {
     let tests = vec![
         CompilerTestCase {

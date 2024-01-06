@@ -579,7 +579,6 @@ fn test_parsing_prefix_expressions() {
     }
 }
 
-
 #[test]
 fn test_parsing_prefix_expressions_special() {
     struct PrefixTest {

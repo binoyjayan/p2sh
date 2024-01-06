@@ -71,6 +71,7 @@ lazy_static! {
         map.insert(Opcode::Dup, Definition::new("OpDup", &[]));
         map.insert(Opcode::GetProp, Definition::new("OpGetProp", &[1]));
         map.insert(Opcode::SetProp, Definition::new("OpSetProp", &[1]));
+        map.insert(Opcode::Dollar, Definition::new("OpDollar", &[]));
         map
     };
 }

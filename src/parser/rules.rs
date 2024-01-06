@@ -556,7 +556,6 @@ impl Parser {
                 ElseIfExpr::ElseIf(Box::new(self.parse_if_expr(false)))
             } else if self.peek_token_is(&TokenType::LeftBrace) {
                 self.next_token();
-                // Some(self.parse_block_statement())
                 ElseIfExpr::Else(self.parse_block_statement())
             } else {
                 return Expression::Invalid;
@@ -570,21 +569,18 @@ impl Parser {
                 token,
                 condition: Box::new(condition),
                 then_stmt,
-                // else_stmt: None,
                 else_if: ElseIfExpr::ElseIf(Box::new(*else_if)),
             }),
             ElseIfExpr::Else(else_stmt) => Expression::If(IfExpr {
                 token,
                 condition: Box::new(condition),
                 then_stmt,
-                // else_stmt: Some(else_stmt.clone()),
                 else_if: ElseIfExpr::Else(else_stmt),
             }),
             ElseIfExpr::Empty => Expression::If(IfExpr {
                 token,
                 condition: Box::new(condition),
                 then_stmt,
-                // else_stmt: None,
                 else_if: ElseIfExpr::Empty,
             }),
         }

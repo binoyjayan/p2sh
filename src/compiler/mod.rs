@@ -496,6 +496,7 @@ impl Compiler {
                     self.emit(Opcode::DefineLocal, &[symbol.index], line);
                 }
             }
+            Statement::Filter(_f) => {}
             Statement::Invalid => {
                 panic!("Invalid statement encountered");
             }

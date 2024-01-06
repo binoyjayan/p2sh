@@ -2122,3 +2122,34 @@ fn test_parsing_dot_expressions_negative() {
         }
     }
 }
+
+#[test]
+fn test_filter_statement() {
+    let input = "@ x == y { x }";
+    let program = parse_test_program(input, 1);
+
+    let stmt = &program.statements[0];
+    if let Statement::Filter(stmt) = stmt {
+        test_infix_expression(
+            &stmt.pattern,
+            Literal::Ident("x"),
+            "==",
+            Literal::Ident("y"),
+        );
+        let num_stmts = stmt.action.statements.len();
+        assert_eq!(num_stmts, 1, "then_stmt count not 1. got={}", num_stmts);
+        if let Statement::Expr(expr) = &stmt.action.statements[0] {
+            test_identifier(&expr.value, "x");
+        } else {
+            panic!(
+                "action.statements[0] is not an expression statement. got={}",
+                stmt.action.statements[0]
+            );
+        }
+    } else {
+        panic!(
+            "program.statements[0] is not an expression statement. got={}",
+            stmt
+        );
+    }
+}

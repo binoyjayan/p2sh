@@ -106,6 +106,8 @@ pub enum TokenType {
     RangeEx,
     RangeInc,
     Match,
+    // Filter
+    Filter,
     // Struct
     Struct,
     Dot,
@@ -184,6 +186,7 @@ impl From<TokenType> for &'static str {
             TokenType::RangeEx => "..",
             TokenType::RangeInc => "..=",
             TokenType::Match => "MATCH",
+            TokenType::Filter => "FILTER",
             TokenType::Struct => "STRUCT",
             TokenType::Dot => ".",
             TokenType::Src => "SRC",

@@ -136,6 +136,7 @@ impl Parser {
             TokenType::Continue => self.parse_continue_statement(),
             TokenType::Function => self.parse_function_statement(),
             TokenType::LeftBrace => self.parse_block_begin(),
+            TokenType::Filter => self.parse_filter_statement(),
             _ => self.parse_expr_statement(),
         }
     }
@@ -295,6 +296,23 @@ impl Parser {
             token,
             params,
             body,
+        }))
+    }
+
+    fn parse_filter_statement(&mut self) -> Result<Statement, ParseError> {
+        let token: Token = self.current.clone();
+        // advance to the condition expression
+        self.next_token();
+        let pattern = self.parse_expression(Precedence::Assignment, false);
+        if !self.expect_peek(&TokenType::LeftBrace) {
+            return Ok(Statement::Invalid);
+        }
+        let action = self.parse_block_statement();
+
+        Ok(Statement::Filter(FilterStmt {
+            token,
+            pattern: Box::new(pattern),
+            action,
         }))
     }
 

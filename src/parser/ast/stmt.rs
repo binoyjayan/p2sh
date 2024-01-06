@@ -14,6 +14,7 @@ pub enum Statement {
     Break(BreakStmt),
     Continue(ContinueStmt),
     Function(FunctionLiteral),
+    Filter(FilterStmt),
     Invalid,
 }
 
@@ -102,6 +103,20 @@ impl fmt::Display for BlockStatement {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct FilterStmt {
+    pub token: Token, // '@' token
+    pub pattern: Box<Expression>,
+    pub action: BlockStatement,
+}
+
+impl fmt::Display for FilterStmt {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "@ {} {{ {} }}", self.pattern, self.action)?;
+        Ok(())
+    }
+}
+
 impl Statement {
     pub fn token_literal(&self) -> String {
         match &self {
@@ -114,6 +129,7 @@ impl Statement {
             Statement::Break(brk) => brk.token.literal.clone(),
             Statement::Continue(con) => con.token.literal.clone(),
             Statement::Function(stmt) => stmt.token.literal.clone(),
+            Statement::Filter(stmt) => stmt.token.literal.clone(),
             Statement::Invalid => "null".to_string(),
         }
     }
@@ -134,6 +150,7 @@ impl fmt::Display for Statement {
             Statement::Break(_) => write!(f, "break"),
             Statement::Continue(_) => write!(f, "continue"),
             Statement::Function(fun) => write!(f, "{}", fun),
+            Statement::Filter(s) => write!(f, "{}", s),
             Statement::Invalid => write!(f, "invalid"),
         }
     }

@@ -103,6 +103,7 @@ impl Scanner {
             '^' => self.make_token_ch(TokenType::BitwiseXor),
             '~' => self.make_token_ch(TokenType::BitwiseNot),
             '$' => self.make_token_ch(TokenType::Dollar),
+            '@' => self.make_token_ch(TokenType::Filter),
             '!' => self.make_token_twin(TokenType::Bang, &[('=', TokenType::BangEqual)]),
             '&' => self.make_token_twin(TokenType::BitwiseAnd, &[('&', TokenType::LogicalAnd)]),
             '|' => self.make_token_twin(TokenType::BitwiseOr, &[('|', TokenType::LogicalOr)]),

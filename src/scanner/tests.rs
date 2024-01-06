@@ -459,3 +459,26 @@ fn test_tokens_special() {
 
     run_scanner_tests(input, tests);
 }
+
+#[test]
+fn test_tokens_filter() {
+    let input = r#"
+        @ $0 == null { 1 }
+    "#;
+
+    let tests = vec![
+        // @ $0 == null { 1 }
+        ExpectedToken(TokenType::Filter, "@"),
+        ExpectedToken(TokenType::Dollar, "$"),
+        ExpectedToken(TokenType::Decimal, "0"),
+        ExpectedToken(TokenType::Equal, "=="),
+        ExpectedToken(TokenType::Null, "null"),
+        ExpectedToken(TokenType::LeftBrace, "{"),
+        ExpectedToken(TokenType::Decimal, "1"),
+        ExpectedToken(TokenType::RightBrace, "}"),
+        // EOF
+        ExpectedToken(TokenType::Eof, ""),
+    ];
+
+    run_scanner_tests(input, tests);
+}

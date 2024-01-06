@@ -105,7 +105,7 @@ let a = [1, 2, 3];
 push(a, 4);
 ```
 
-### <a name="pop"></a>push
+### <a name="pop"></a>pop
 Remove an element from the end of an array
 
 Example:

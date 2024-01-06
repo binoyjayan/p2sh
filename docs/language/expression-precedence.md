@@ -1,5 +1,7 @@
 # Expression precedence
 
+The operators are listed in order of precedence, from the highest to the lowest.
+
 | Operators / Expression     | Associativity |
 |----------------------------|---------------|
 | [] . ()                    | left to right |

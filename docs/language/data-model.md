@@ -52,7 +52,7 @@ pairs that can each be evaluated as an expression and is enclosed with a pair
 of curly braces.
 
 ```
-{ key1: value1, key2: value2 }
+map { key1: value1, key2: value2 }
 ```
 
 The values of the hash literal can be anything. However, they keys can only be

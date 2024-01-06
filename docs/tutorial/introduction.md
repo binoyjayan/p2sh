@@ -1,5 +1,13 @@
 # Introduction
 
+This tutorial offers an informal introduction to the fundamental concepts and
+features of the language and system. While having an interpreter at hand can
+enhance your hands-on experience, all examples provided are self-contained,
+allowing you to read the tutorial offline as well. Rather than aiming for
+comprehensiveness by covering every single feature or even every commonly used
+one, this tutorial focuses on introducing many of the most notable features. It
+will provide you with a solid understanding of the language's flavor and style.
+
 ## The interactive mode
 
 When p2sh is executed without any arguments, it enters interactive mode,

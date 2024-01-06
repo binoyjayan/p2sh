@@ -4,8 +4,10 @@
 
 🦀 🦀 🦀 Interpreter for the p2sh programming language 🦀 🦀 🦀
 
-The project served as a way for me to learn Rust, so many parts of the code may not be the most idiomatic.
-A p2sh script can be edited using the [kilo editor](https://github.com/binoyjayan/kilo-rs/tree/main) that knows its syntax.
+## Introduction
+
+`p2sh` is a scripting language designed for packet processing. The Documentation can be found [here](./docs/README.md).
+This project served as a means for me to learn Rust; therefore, some parts of the code might not adhere strictly to Rust idioms. A p2sh script can be edited using the [kilo editor](https://github.com/binoyjayan/kilo-rs/tree/main) which is tailored to recognize its syntax.
 
 ## Dependencies
 
@@ -93,7 +95,7 @@ cargo run --release --features  'debug_print_code'
 Run an example:
 
 ```bash
-cargo run --release --features  'debug_print_code' examples/fibonacci-recursive.p2
+cargo run --release --features  'debug_print_code' examples/algorithms/fibonacci-recursive.p2
 ```
 
 #### debug_trace_execution

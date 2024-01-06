@@ -13,6 +13,7 @@ use crate::object::func::CompiledFunction;
 use crate::object::Object;
 use crate::parser::ast::expr::*;
 use crate::parser::ast::stmt::BlockStatement;
+use crate::parser::ast::stmt::FilterStmt;
 use crate::parser::ast::stmt::Statement;
 use crate::parser::ast::*;
 
@@ -24,6 +25,7 @@ pub mod tests;
 pub struct Bytecode {
     pub instructions: Instructions,
     pub constants: Vec<Rc<Object>>,
+    pub filters: Vec<Rc<Object>>,
 }
 
 #[derive(Default, Clone)]
@@ -73,6 +75,7 @@ pub struct Compiler {
     pub symtab: SymbolTable,
     scopes: Vec<CompilationScope>,
     scope_index: usize,
+    pub filters: Vec<Rc<Object>>,
 }
 
 impl Compiler {
@@ -96,6 +99,7 @@ impl Compiler {
             symtab,
             scopes: vec![main_scope],
             scope_index: 0,
+            filters: Vec::new(),
         }
     }
 
@@ -106,6 +110,7 @@ impl Compiler {
         compiler
     }
 
+    /// Enter a local scope. This is used when compiling a function body.
     pub fn enter_scope(&mut self) {
         let scope = CompilationScope::default();
         self.scopes.push(scope);
@@ -113,6 +118,7 @@ impl Compiler {
         self.symtab = SymbolTable::new_enclosed(self.symtab.clone());
     }
 
+    /// Leave a local scope used while compiling a function body.
     pub fn leave_scope(&mut self) -> Instructions {
         let instructions = self.get_curr_instructions();
         self.scopes.truncate(self.scopes.len() - 1);
@@ -129,14 +135,17 @@ impl Compiler {
     pub fn bytecode(&self) -> Bytecode {
         let instructions = self.get_curr_instructions();
         let constants = self.constants.clone();
+        let filters = self.filters.clone();
         #[cfg(feature = "debug_print_code")]
         {
             instructions.disassemble();
             self.print_constants();
+            self.print_filters();
         }
         Bytecode {
             instructions,
             constants,
+            filters,
         }
     }
 
@@ -162,6 +171,32 @@ impl Compiler {
             }
         }
         println!("------------------------------------------------------");
+    }
+
+    #[allow(dead_code)]
+    fn print_filters(&self) {
+        let filters = self.filters.clone();
+        if filters.is_empty() {
+            return;
+        }
+        println!(
+            "------------- Filters [len: {:<4}] --------------------",
+            filters.len(),
+        );
+
+        for (i, obj) in filters.iter().enumerate() {
+            println!("[{}] {}", i, obj);
+            match obj.as_ref() {
+                Object::Clos(cl) => {
+                    let closure = cl.clone();
+                    closure.func.instructions.disassemble();
+                }
+                Object::Func(func) => {
+                    func.instructions.disassemble();
+                }
+                _ => {}
+            }
+        }
     }
 
     // Helper to add a constant to the constants pool
@@ -496,7 +531,9 @@ impl Compiler {
                     self.emit(Opcode::DefineLocal, &[symbol.index], line);
                 }
             }
-            Statement::Filter(_f) => {}
+            Statement::Filter(f) => {
+                self.compile_filter_statement(f)?;
+            }
             Statement::Invalid => {
                 panic!("Invalid statement encountered");
             }
@@ -1166,6 +1203,35 @@ impl Compiler {
                 self.emit(Opcode::SetProp, &[val], expr.token.line);
             }
         }
+        Ok(())
+    }
+
+    /// Compile the filter statement in a different scope so that the bytecode
+    /// for the patterns and actions can be captured separately. This is done
+    /// The compilation happens in the current scope and while leaving the scope
+    /// the bytecode for the filter statement is captured and stored separately.
+    fn compile_filter_statement(&mut self, expr: FilterStmt) -> Result<(), CompileError> {
+        self.enter_scope();
+        self.compile_expression(*expr.pattern)?;
+        // Emit an 'JumpIfFalse' with a placeholder. Save it's position so it can be altered later
+        // The target for this jump is the 'pop' instruction following the 'action' statement
+        let jump_if_false_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], expr.token.line);
+        // JumpIfFalse consumes the result of 'condition'.
+        self.compile_block_statement(expr.action)?;
+        // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
+        // position of the instruction that comes after the 'then' statement
+        self.patch_jump(jump_if_false_pos);
+        let num_locals = self.symtab.get_num_definitions();
+        let free_symbols = self.symtab.free_symbols.clone();
+        let instructions = self.leave_scope();
+
+        // load free symbols on stack
+        for f in &free_symbols {
+            self.load_symbol(f.clone(), expr.token.line);
+        }
+        // The filter statements are compiled as closures that takes no parameters
+        let filter = Object::Func(Rc::new(CompiledFunction::new(instructions, num_locals, 0)));
+        self.filters.push(Rc::new(filter));
         Ok(())
     }
 }

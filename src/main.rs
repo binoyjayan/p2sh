@@ -33,15 +33,21 @@ const PKG_DESC: &str = env!("CARGO_PKG_DESCRIPTION");
 fn main() {
     let cliargs = CliArgs::new();
     let args = cliargs.get_args().to_vec();
-    let _filter_mode = cliargs.is_filter();
-    match args.len() {
-        0 => run_prompt(args),
-        _ => {
-            run_file(&args[0].clone(), args);
-        }
+    let filter_mode = cliargs.is_filter();
+    let command = cliargs.get_cmd();
+
+    if let Some(cmd) = command {
+        run_buf(cmd, args, true, filter_mode);
+        return;
+    }
+    if args.is_empty() {
+        run_prompt(args);
+    } else {
+        run_file(&args[0].clone(), args, filter_mode);
     }
 }
 
+/// Function to run the REPL
 pub fn run_prompt(args: Vec<String>) {
     println!("{} v{}", PKG_DESC, PKG_VERSION);
     println!("Type quit to quit REPL");
@@ -112,33 +118,57 @@ pub fn run_prompt(args: Vec<String>) {
     println!("\nExiting...");
 }
 
-pub fn run_file(path: &str, args: Vec<String>) {
+/// Function to run a script file
+/// # Arguments
+/// * `path` - Path to the script file
+/// * `args` - Arguments to the script
+/// * `filter_mode` - Flag to indicate filter mode
+pub fn run_file(path: &str, args: Vec<String>, filter_mode: bool) {
     let buf = fs::read_to_string(path);
     if buf.is_err() {
         eprintln!("Failed to read file {}", path);
         return;
     }
     let buf = buf.unwrap();
+    run_buf(buf, args, false, filter_mode);
+}
+
+/// Function to run a script stored in a buffer
+/// # Arguments
+/// * `buf` - Buffer containing the script
+/// * `args` - Arguments to the script
+/// * `cmd_mode` - Flag to indicate command mode
+/// * `filter_mode` - Flag to indicate filter mode
+pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool, _filter_mode: bool) {
     let data = Rc::new(Object::Null);
     let globals = vec![data; GLOBALS_SIZE];
 
-    if !buf.trim().is_empty() {
-        let program = match parse_program(&buf) {
-            Some(program) => program,
-            None => return,
-        };
+    if buf.trim().is_empty() {
+        return;
+    }
+    let program = match parse_program(&buf) {
+        Some(program) => program,
+        None => return,
+    };
 
-        let mut compiler = Compiler::new();
-        if let Err(e) = compiler.compile(program) {
-            eprintln!("{}", e);
-            return;
-        }
-        let bytecode = compiler.bytecode();
-        let mut vm = VM::new_with_global_store(bytecode, globals);
-        update_builtin_vars(&mut vm, args);
-        let err = vm.run();
-        if let Err(err) = err {
-            eprintln!("{}", err);
+    let mut compiler = Compiler::new();
+    if let Err(e) = compiler.compile(program) {
+        eprintln!("{}", e);
+        return;
+    }
+    let bytecode = compiler.bytecode();
+    let mut vm = VM::new_with_global_store(bytecode, globals);
+    update_builtin_vars(&mut vm, args);
+    let err = vm.run();
+    if let Err(err) = err {
+        eprintln!("{}", err);
+    }
+    if cmd_mode {
+        // Get the object at the top of the VM's stack
+        let stack_elem = vm.last_popped();
+        // print last popped element if it is not null
+        if !matches!(stack_elem.as_ref(), Object::Null) {
+            println!("{}", stack_elem);
         }
     }
 }

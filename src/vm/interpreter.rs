@@ -85,7 +85,7 @@ impl VM {
     // peek element from the top and return error if underflow
     pub fn top(&self, distance: usize, line: usize) -> Result<Rc<Object>, RTError> {
         if self.sp - distance == 0 {
-            Err(RTError::new("Stack overflow!", line))
+            Err(RTError::new("Stack underflow!", line))
         } else {
             Ok(Rc::clone(&self.stack[self.sp - distance - 1]))
         }

@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use builtins::functions::BUILTINFNS;
 use builtins::variables::BuiltinVarType;
+use cliargs::CliArgs;
 use compiler::symtab::SymbolTable;
 use compiler::*;
 use object::array::Array;
@@ -16,6 +17,7 @@ use vm::interpreter::GLOBALS_SIZE;
 use vm::interpreter::VM;
 
 mod builtins;
+mod cliargs;
 mod code;
 mod compiler;
 mod object;
@@ -29,9 +31,9 @@ const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 const PKG_DESC: &str = env!("CARGO_PKG_DESCRIPTION");
 
 fn main() {
-    let mut args: Vec<String> = env::args().collect();
-    // Remove the interpreter path from the args
-    args.remove(0);
+    let cliargs = CliArgs::new();
+    let args = cliargs.get_args().to_vec();
+    let _filter_mode = cliargs.is_filter();
     match args.len() {
         0 => run_prompt(args),
         _ => {
@@ -43,6 +45,7 @@ fn main() {
 pub fn run_prompt(args: Vec<String>) {
     println!("{} v{}", PKG_DESC, PKG_VERSION);
     println!("Type quit to quit REPL");
+
     let mut cmds = vec!["quit".to_string()];
 
     let mut constants = vec![];

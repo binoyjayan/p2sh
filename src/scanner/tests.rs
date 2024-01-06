@@ -435,3 +435,27 @@ fn test_tokens_ethernet_fields() {
     ];
     run_scanner_tests(input, tests);
 }
+
+#[test]
+fn test_tokens_special() {
+    let input = r#"
+        $0;$9;$n;
+    "#;
+
+    let tests = vec![
+        // $0;$9;$n;
+        ExpectedToken(TokenType::Dollar, "$"),
+        ExpectedToken(TokenType::Decimal, "0"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::Dollar, "$"),
+        ExpectedToken(TokenType::Decimal, "9"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::Dollar, "$"),
+        ExpectedToken(TokenType::Identifier, "n"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        // EOF
+        ExpectedToken(TokenType::Eof, ""),
+    ];
+
+    run_scanner_tests(input, tests);
+}

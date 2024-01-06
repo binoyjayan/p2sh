@@ -579,6 +579,47 @@ fn test_parsing_prefix_expressions() {
     }
 }
 
+
+#[test]
+fn test_parsing_prefix_expressions_special() {
+    struct PrefixTest {
+        input: &'static str,
+        operator: &'static str,
+        number: Literal,
+    }
+    let prefix_tests = vec![
+        PrefixTest {
+            input: "$0",
+            operator: "$",
+            number: Literal::Integer(0),
+        },
+        PrefixTest {
+            input: "$11",
+            operator: "$",
+            number: Literal::Integer(11),
+        },
+        PrefixTest {
+            input: "$n",
+            operator: "$",
+            number: Literal::Ident("n"),
+        },
+    ];
+
+    for test in prefix_tests {
+        let program = parse_test_program(test.input, 1);
+
+        let stmt = &program.statements[0];
+        if let Statement::Expr(stmt) = stmt {
+            test_prefix_expression(&stmt.value, test.operator, test.number);
+        } else {
+            panic!(
+                "program.statements[0] is not an expression statement. got={}",
+                stmt
+            );
+        }
+    }
+}
+
 #[test]
 fn test_parsing_infix_expressions() {
     struct InfixTest {

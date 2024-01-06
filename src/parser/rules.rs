@@ -94,6 +94,12 @@ lazy_static! {
             None,
             Precedence::Lowest,
         );
+        // Unary - Dollar '$'
+        rules[TokenType::Dollar as usize] = ParseRule::new(
+            Some(Parser::parse_prefix_expression),
+            None,
+            Precedence::Lowest,
+        );
         // Binary - Relational
         rules[TokenType::Equal as usize] = ParseRule::new(
             None,

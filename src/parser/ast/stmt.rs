@@ -106,13 +106,16 @@ impl fmt::Display for BlockStatement {
 #[derive(Clone, Debug)]
 pub struct FilterStmt {
     pub token: Token, // '@' token
-    pub pattern: Box<Expression>,
-    pub action: BlockStatement,
+    pub filter: Box<Expression>,
+    pub action: Option<BlockStatement>,
 }
 
 impl fmt::Display for FilterStmt {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "@ {} {{ {} }}", self.pattern, self.action)?;
+        write!(f, "@ {}", self.filter)?;
+        if let Some(ref action) = self.action {
+            write!(f, " {{ {} }}", action)?;
+        }
         Ok(())
     }
 }

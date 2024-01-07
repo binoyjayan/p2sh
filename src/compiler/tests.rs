@@ -1091,6 +1091,7 @@ fn test_function_expressions() {
                 ]),
                 0,
                 0,
+                1,
             )))],
             expected_instructions: vec![
                 // Number of free variables is '0'
@@ -1112,6 +1113,7 @@ fn test_function_expressions() {
                     ]),
                     0,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -1134,6 +1136,7 @@ fn test_function_expressions() {
                     ]),
                     0,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -1158,6 +1161,7 @@ fn test_function_expressions() {
                     ]),
                     0,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -1186,6 +1190,7 @@ fn test_function_statement() {
                     ]),
                     0,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -1209,6 +1214,7 @@ fn test_function_statement() {
                     ]),
                     0,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -1234,6 +1240,7 @@ fn test_function_statement() {
                     ]),
                     0,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -1254,6 +1261,7 @@ fn test_functions_without_return_value() {
             definitions::make(Opcode::Return, &[], 1),
             0,
             0,
+            1,
         )))],
         expected_instructions: vec![
             definitions::make(Opcode::Closure, &[0, 0], 1),
@@ -1338,6 +1346,7 @@ fn test_function_calls() {
                     ]),
                     0,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -1360,6 +1369,7 @@ fn test_function_calls() {
                     ]),
                     0,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -1383,6 +1393,7 @@ fn test_function_calls() {
                         definitions::make(Opcode::ReturnValue, &[], 1),
                     ]),
                     0,
+                    1,
                     1,
                 ))),
                 Object::Integer(24),
@@ -1415,6 +1426,7 @@ fn test_function_calls() {
                     ]),
                     0,
                     3,
+                    1,
                 ))),
                 Object::Integer(24),
                 Object::Integer(25),
@@ -1450,6 +1462,7 @@ fn test_let_statement_scopes() {
                     ]),
                     0,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -1478,6 +1491,7 @@ fn test_let_statement_scopes() {
                     ]),
                     1,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -1510,6 +1524,7 @@ fn test_let_statement_scopes() {
                     ]),
                     2,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -1571,6 +1586,7 @@ fn test_builtins() {
                 ]),
                 1,
                 0,
+                1,
             )))],
             expected_instructions: vec![
                 definitions::make(Opcode::Closure, &[0, 0], 1), // compiled fn (closure)
@@ -1610,6 +1626,7 @@ fn test_builtins() {
                 ]),
                 1,
                 0,
+                1,
             )))],
             expected_instructions: vec![
                 definitions::make(Opcode::Closure, &[0, 0], 1), // compiled fn (closure)
@@ -1645,6 +1662,7 @@ fn test_closures() {
                 ]),
                 1,
                 0,
+                1,
             ))),
             Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
@@ -1656,6 +1674,7 @@ fn test_closures() {
                 ]),
                 1,
                 0,
+                1,
             ))),
         ],
 
@@ -1695,6 +1714,7 @@ fn test_closures_with_depth() {
                 ]),
                 1,
                 0,
+                1,
             ))),
             Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
@@ -1714,6 +1734,7 @@ fn test_closures_with_depth() {
                 ]),
                 1,
                 0,
+                1,
             ))),
         ],
 
@@ -1761,6 +1782,7 @@ fn test_nested_closures() {
                 ]),
                 1,
                 0,
+                1,
             ))),
             Object::Func(Rc::new(CompiledFunction::new(
                 // middle function has one free variable 'a' and defines the
@@ -1775,6 +1797,7 @@ fn test_nested_closures() {
                 ]),
                 1,
                 0,
+                1,
             ))),
             Object::Func(Rc::new(CompiledFunction::new(
                 // outer-most function has no free variables but compiles
@@ -1786,6 +1809,7 @@ fn test_nested_closures() {
                 ]),
                 1,
                 0,
+                1,
             ))),
         ],
         expected_instructions: vec![
@@ -1832,6 +1856,7 @@ fn test_closures_with_scopes() {
                 ]),
                 1,
                 0,
+                1,
             ))),
             Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
@@ -1844,6 +1869,7 @@ fn test_closures_with_scopes() {
                 ]),
                 1,
                 0,
+                1,
             ))),
             Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
@@ -1855,6 +1881,7 @@ fn test_closures_with_scopes() {
                 ]),
                 1,
                 0,
+                1,
             ))),
         ],
         expected_instructions: vec![
@@ -1890,6 +1917,7 @@ fn test_recursive_functions() {
                     ]),
                     1,
                     0,
+                    1,
                 ))),
                 Object::Integer(1),
             ],
@@ -1923,6 +1951,7 @@ fn test_recursive_functions() {
                     ]),
                     1,
                     0,
+                    1,
                 ))),
                 Object::Integer(1),
                 Object::Func(Rc::new(CompiledFunction::new(
@@ -1936,6 +1965,7 @@ fn test_recursive_functions() {
                     ]),
                     1,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -2064,6 +2094,7 @@ fn test_assignment_expression_scopes() {
                     ]),
                     0,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -2097,6 +2128,7 @@ fn test_assignment_expression_scopes() {
                     ]),
                     1,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -2141,6 +2173,7 @@ fn test_assignment_expression_scopes() {
                     ]),
                     2,
                     0,
+                    1,
                 ))),
             ],
             expected_instructions: vec![
@@ -2180,6 +2213,7 @@ fn test_assignment_expressions_free_variables() {
                 ]),
                 1,
                 0,
+                1,
             ))),
             Object::Func(Rc::new(CompiledFunction::new(
                 concat_instructions(&[
@@ -2191,6 +2225,7 @@ fn test_assignment_expressions_free_variables() {
                 ]),
                 1,
                 0,
+                1,
             ))),
         ],
 
@@ -2415,6 +2450,7 @@ fn test_block_statements() {
                         definitions::make(Opcode::ReturnValue, &[], 1),
                     ]),
                     0,
+                    1,
                     1,
                 ))),
             ],
@@ -3244,6 +3280,7 @@ fn test_match_expressions() {
                 ]),
                 0,
                 0,
+                1,
             ))),
         ],
         expected_instructions: vec![

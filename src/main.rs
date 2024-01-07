@@ -1,13 +1,17 @@
 use std::env;
 use std::fs;
+use std::io;
 use std::rc::Rc;
 
 use builtins::functions::BUILTINFNS;
+use builtins::pcap::Pcap;
 use builtins::variables::BuiltinVarType;
 use cliargs::CliArgs;
 use compiler::symtab::SymbolTable;
 use compiler::*;
 use object::array::Array;
+use object::file::FileHandle;
+use object::func::CompiledFunction;
 use object::Object;
 use parser::ast::Program;
 use parser::*;
@@ -33,17 +37,16 @@ const PKG_DESC: &str = env!("CARGO_PKG_DESCRIPTION");
 fn main() {
     let cliargs = CliArgs::new();
     let args = cliargs.get_args().to_vec();
-    let filter_mode = cliargs.is_filter();
     let command = cliargs.get_cmd();
 
     if let Some(cmd) = command {
-        run_buf(cmd, args, true, filter_mode);
+        run_buf(cmd, args, true);
         return;
     }
     if args.is_empty() {
         run_prompt(args);
     } else {
-        run_file(&args[0].clone(), args, filter_mode);
+        run_file(&args[0].clone(), args);
     }
 }
 
@@ -122,15 +125,14 @@ pub fn run_prompt(args: Vec<String>) {
 /// # Arguments
 /// * `path` - Path to the script file
 /// * `args` - Arguments to the script
-/// * `filter_mode` - Flag to indicate filter mode
-pub fn run_file(path: &str, args: Vec<String>, filter_mode: bool) {
+pub fn run_file(path: &str, args: Vec<String>) {
     let buf = fs::read_to_string(path);
     if buf.is_err() {
         eprintln!("Failed to read file {}", path);
         return;
     }
     let buf = buf.unwrap();
-    run_buf(buf, args, false, filter_mode);
+    run_buf(buf, args, false);
 }
 
 /// Function to run a script stored in a buffer
@@ -139,7 +141,7 @@ pub fn run_file(path: &str, args: Vec<String>, filter_mode: bool) {
 /// * `args` - Arguments to the script
 /// * `cmd_mode` - Flag to indicate command mode
 /// * `filter_mode` - Flag to indicate filter mode
-pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool, _filter_mode: bool) {
+pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool) {
     let data = Rc::new(Object::Null);
     let globals = vec![data; GLOBALS_SIZE];
 
@@ -157,18 +159,90 @@ pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool, _filter_mode: boo
         return;
     }
     let bytecode = compiler.bytecode();
+    let filters = bytecode.filters.clone();
+    let filter_mode = !filters.is_empty();
+
+    // Run the bytecode that excludes the filter statements
     let mut vm = VM::new_with_global_store(bytecode, globals);
     update_builtin_vars(&mut vm, args);
     let err = vm.run();
     if let Err(err) = err {
         eprintln!("{}", err);
     }
-    if cmd_mode {
+
+    if cmd_mode && !filter_mode {
         // Get the object at the top of the VM's stack
         let stack_elem = vm.last_popped();
         // print last popped element if it is not null
         if !matches!(stack_elem.as_ref(), Object::Null) {
             println!("{}", stack_elem);
+        }
+    }
+
+    // Run all the filter statements
+    if filter_mode {
+        run_filters(vm, filters);
+    }
+}
+
+/// Run the filter statements on the input pcap stream and
+/// write the output pcap stream to stdout
+/// # Arguments
+/// * `vm` - VM instance
+/// * `filters` - Vector of filter statements
+fn run_filters(mut vm: VM, filters: Vec<Rc<CompiledFunction>>) {
+    let pcap_out = match Pcap::new(Rc::new(FileHandle::Stdout)) {
+        Ok(pcap) => pcap,
+        Err(err) => {
+            eprintln!("{}", err);
+            return;
+        }
+    };
+    let pcap_in = match Pcap::from_file(Rc::new(FileHandle::Stdin)) {
+        Ok(pcap) => pcap,
+        Err(err) => {
+            eprintln!("{}", err);
+            return;
+        }
+    };
+
+    // Read packet stream from stdin and write to stdout in a loop
+    'out: loop {
+        let result = pcap_in.next_packet();
+        match result {
+            Ok(pkt) => {
+                // Run filter statements on the packet
+                for filter in &filters {
+                    if let Err(err) = vm.push_filter_frame(filter) {
+                        eprintln!("{}", err);
+                        break 'out;
+                    }
+                    if let Err(err) = vm.run() {
+                        eprintln!("{}", err);
+                        break 'out;
+                    }
+                    // If the result of the filter is true, then write the packet to stdout
+                    match vm.pop_filter_frame() {
+                        Ok(true) => {
+                            if let Err(err) = pcap_out.write_all(pkt.clone()) {
+                                eprintln!("{}", err);
+                                break 'out;
+                            }
+                        }
+                        Err(err) => {
+                            eprintln!("{}", err);
+                            break;
+                        }
+                        Ok(false) => {}
+                    }
+                }
+            }
+            Err(err) => {
+                if err.kind() != io::ErrorKind::UnexpectedEof {
+                    eprintln!("{}", err);
+                }
+                break;
+            }
         }
     }
 }

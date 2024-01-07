@@ -6,9 +6,6 @@ struct Args {
     /// Program via command line argument
     #[arg(short, long)]
     command: Option<String>,
-    /// Enables filter mode
-    #[arg(default_value_t = false, short = 'f', long)]
-    filter: bool,
     /// Script to run
     script: Option<String>,
     /// Script arguments
@@ -17,7 +14,6 @@ struct Args {
 
 pub struct CliArgs {
     args: Vec<String>,
-    filter: bool,
     cmd: Option<String>,
 }
 
@@ -34,12 +30,8 @@ impl CliArgs {
 
         Self {
             args,
-            filter: cliargs.filter,
             cmd: cliargs.command,
         }
-    }
-    pub fn is_filter(&self) -> bool {
-        self.filter
     }
     pub fn get_args(&self) -> &[String] {
         self.args.as_slice()

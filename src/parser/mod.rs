@@ -303,15 +303,19 @@ impl Parser {
         let token: Token = self.current.clone();
         // advance to the condition expression
         self.next_token();
-        let pattern = self.parse_expression(Precedence::Assignment, false);
-        if !self.expect_peek(&TokenType::LeftBrace) {
-            return Ok(Statement::Invalid);
-        }
-        let action = self.parse_block_statement();
+        let filter = self.parse_expression(Precedence::Assignment, false);
+
+        // The action block is optional
+        let action = if self.peek_token_is(&TokenType::LeftBrace) {
+            self.next_token();
+            Some(self.parse_block_statement())
+        } else {
+            None
+        };
 
         Ok(Statement::Filter(FilterStmt {
             token,
-            pattern: Box::new(pattern),
+            filter: Box::new(filter),
             action,
         }))
     }

@@ -25,7 +25,7 @@ pub mod tests;
 pub struct Bytecode {
     pub instructions: Instructions,
     pub constants: Vec<Rc<Object>>,
-    pub filters: Vec<Rc<Object>>,
+    pub filters: Vec<Rc<CompiledFunction>>,
 }
 
 #[derive(Default, Clone)]
@@ -75,7 +75,7 @@ pub struct Compiler {
     pub symtab: SymbolTable,
     scopes: Vec<CompilationScope>,
     scope_index: usize,
-    pub filters: Vec<Rc<Object>>,
+    pub filters: Vec<Rc<CompiledFunction>>,
 }
 
 impl Compiler {
@@ -184,18 +184,9 @@ impl Compiler {
             filters.len(),
         );
 
-        for (i, obj) in filters.iter().enumerate() {
-            println!("[{}] {}", i, obj);
-            match obj.as_ref() {
-                Object::Clos(cl) => {
-                    let closure = cl.clone();
-                    closure.func.instructions.disassemble();
-                }
-                Object::Func(func) => {
-                    func.instructions.disassemble();
-                }
-                _ => {}
-            }
+        for (i, func) in filters.iter().enumerate() {
+            println!("[{}] {}", i, func);
+            func.instructions.disassemble();
         }
     }
 
@@ -1101,6 +1092,7 @@ impl Compiler {
             instructions,
             num_locals,
             num_params,
+            func.token.line,
         )));
         let idx = self.add_constant(compiled_fn);
         // emit closure instruction with the index to the compiled fn
@@ -1207,31 +1199,44 @@ impl Compiler {
     }
 
     /// Compile the filter statement in a different scope so that the bytecode
-    /// for the patterns and actions can be captured separately. This is done
+    /// for the filters and actions can be captured separately. This is done
     /// The compilation happens in the current scope and while leaving the scope
     /// the bytecode for the filter statement is captured and stored separately.
     fn compile_filter_statement(&mut self, expr: FilterStmt) -> Result<(), CompileError> {
         self.enter_scope();
-        self.compile_expression(*expr.pattern)?;
-        // Emit an 'JumpIfFalse' with a placeholder. Save it's position so it can be altered later
+        self.compile_expression(*expr.filter)?;
+        // Emit an 'JumpIfFalseNoPop' with a placeholder. Save it's position so it can be altered later
         // The target for this jump is the 'pop' instruction following the 'action' statement
-        let jump_if_false_pos = self.emit(Opcode::JumpIfFalse, &[0xFFFF], expr.token.line);
-        // JumpIfFalse consumes the result of 'condition'.
-        self.compile_block_statement(expr.action)?;
+        // Do not pop the result of the filter since it is returned by the filter
+        // statement when the action is 'None'. In this case the caller of the filter
+        // statement is responsible for popping the result.
+        let jump_if_false_pos = self.emit(Opcode::JumpIfFalseNoPop, &[0xFFFF], expr.token.line);
+        // JumpIfFalseNoPop does not consume the result of 'filter'.
+        // Do not pop the result of the filter action is None
+        if let Some(action) = expr.action {
+            // Consume the result of the filter condition
+            self.emit(Opcode::Pop, &[0], expr.token.line);
+            self.compile_block_statement(action)?;
+            // Emit false to indicate that no action needs to be performed by
+            // the caller of the filter statement since it is already done here.
+            self.emit(Opcode::False, &[0], expr.token.line);
+        }
+
         // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
         // position of the instruction that comes after the 'then' statement
         self.patch_jump(jump_if_false_pos);
         let num_locals = self.symtab.get_num_definitions();
-        let free_symbols = self.symtab.free_symbols.clone();
         let instructions = self.leave_scope();
 
-        // load free symbols on stack
-        for f in &free_symbols {
-            self.load_symbol(f.clone(), expr.token.line);
-        }
+        // There are not free variables for the function wrapping a filter
         // The filter statements are compiled as closures that takes no parameters
-        let filter = Object::Func(Rc::new(CompiledFunction::new(instructions, num_locals, 0)));
-        self.filters.push(Rc::new(filter));
+        let filter = Rc::new(CompiledFunction::new(
+            instructions,
+            num_locals,
+            0,
+            expr.token.line,
+        ));
+        self.filters.push(filter);
         Ok(())
     }
 }

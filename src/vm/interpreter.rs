@@ -49,7 +49,7 @@ enum BinaryOperation {
 impl VM {
     pub fn new(bytecode: Bytecode) -> VM {
         let data = Rc::new(Object::Null);
-        let fn_main = Rc::new(CompiledFunction::new(bytecode.instructions, 0, 0));
+        let fn_main = Rc::new(CompiledFunction::new(bytecode.instructions, 0, 0, 0));
         let closure_m: Rc<Closure> = Rc::new(Closure::new(fn_main, Vec::new()));
         let frame_e = Frame::default();
         let frame_m = Frame::new(closure_m, 0);
@@ -795,6 +795,41 @@ impl VM {
         } else {
             Err(RTError::new(
                 &format!("not a function: {:?}", constant),
+                line,
+            ))
+        }
+    }
+
+    /// Push a frame used to run the filter statement onto the stack.
+    /// The frame expects a closure, so convert the compiled function into one.
+    /// A closure here is simply a compiled function with a list of free variables.
+    /// There are no free variables in a function that wraps a filter statement.
+    /// num_locals represents the local variables used in the filter statement.
+    /// Save the stack pointer (sp) in the frame so that it can be restored later.
+    pub fn push_filter_frame(&mut self, filter: &Rc<CompiledFunction>) -> Result<(), RTError> {
+        let bp = self.sp;
+        let num_locals = filter.num_locals;
+        let closure: Rc<Closure> = Rc::new(Closure::new(filter.clone(), Vec::new()));
+        let frame = Frame::new(closure.clone(), bp);
+        self.sp = frame.bp + num_locals;
+        self.push_frame(frame);
+        Ok(())
+    }
+
+    /// Pop the frame used to run the filter statement from the stack.
+    /// This is done after the filter statement has been executed.
+    /// Also restore the stack by popping the local bindings.
+    pub fn pop_filter_frame(&mut self) -> Result<bool, RTError> {
+        let frame = self.pop_frame();
+        let line = frame.closure.func.line;
+        let obj = self.pop(line)?;
+        // Reset stack frame by popping the local bindings
+        self.sp = frame.bp;
+        if let Object::Bool(b) = &*obj {
+            Ok(*b)
+        } else {
+            Err(RTError::new(
+                "filter expression must evaluate to a boolean",
                 line,
             ))
         }

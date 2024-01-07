@@ -1198,7 +1198,7 @@ fn builtin_pcap_read_next(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             match f.next_packet() {
                 Ok(packet) => {
                     // Return the packet object
-                    Ok(Rc::new(Object::Packet(Rc::new(packet))))
+                    Ok(Rc::new(Object::Packet(packet)))
                 }
                 Err(e) => {
                     if e.kind() == io::ErrorKind::UnexpectedEof {
@@ -1244,7 +1244,7 @@ fn builtin_pcap_read_all(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
             for _ in 0..num_packets_to_read {
                 match f.next_packet() {
                     Ok(packet) => {
-                        packets.push(Rc::new(Object::Packet(Rc::new(packet))));
+                        packets.push(Rc::new(Object::Packet(packet)));
                     }
                     Err(e) => {
                         if e.kind() == io::ErrorKind::UnexpectedEof {
@@ -1314,7 +1314,7 @@ fn builtin_pcap_write(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                 Object::Packet(p) => p,
                 _ => return Err(String::from("second argument should be a packet")),
             };
-            match f.write(packet.clone()) {
+            match f.write_all(packet.clone()) {
                 Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
                 Err(e) => Ok(Rc::new(Object::Err(ErrorObj::IO(e)))),
             }

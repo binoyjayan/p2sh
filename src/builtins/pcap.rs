@@ -409,7 +409,7 @@ impl Pcap {
     }
 
     /// Read next packet from a pcap file
-    pub fn next_packet(&self) -> io::Result<PcapPacket> {
+    pub fn next_packet(&self) -> io::Result<Rc<PcapPacket>> {
         let mut packet_header_data = [0u8; 16]; // Size of pcap packet header
 
         match self.file.as_ref() {
@@ -430,11 +430,11 @@ impl Pcap {
                 reader.borrow_mut().read_exact(&mut packet_data)?;
 
                 // Do not parse the inner packet yet. Parse it only when referred to.
-                Ok(PcapPacket {
+                Ok(Rc::new(PcapPacket {
                     header: RefCell::new(packet_header),
                     rawdata: RefCell::new(Rc::new(packet_data)),
                     inner: RefCell::new(None),
-                })
+                }))
             }
             FileHandle::Stdin => {
                 // Read bytes from stdin
@@ -449,11 +449,11 @@ impl Pcap {
                 }
                 let mut packet_data = vec![0u8; packet_header.caplen as usize];
                 io::stdin().read_exact(&mut packet_data)?;
-                Ok(PcapPacket {
+                Ok(Rc::new(PcapPacket {
                     header: RefCell::new(packet_header),
                     rawdata: RefCell::new(Rc::new(packet_data)),
                     inner: RefCell::new(None),
-                })
+                }))
             }
             _ => Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -463,16 +463,17 @@ impl Pcap {
     }
 
     /// Function to write a packet to a pcap file
-    pub fn write(&self, pkt: Rc<PcapPacket>) -> io::Result<usize> {
+    pub fn write_all(&self, pkt: Rc<PcapPacket>) -> io::Result<usize> {
         let bytes: Vec<u8> = pkt.as_ref().into();
 
         match self.file.as_ref() {
-            FileHandle::Writer(writer) => writer.borrow_mut().write(&bytes),
-            FileHandle::Stdout => io::stdout().write(&bytes),
+            FileHandle::Writer(writer) => writer.borrow_mut().write_all(&bytes),
+            FileHandle::Stdout => io::stdout().write_all(&bytes),
             _ => Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "Invalid file handle",
             )),
-        }
+        }?;
+        Ok(bytes.len())
     }
 }

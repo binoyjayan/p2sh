@@ -17,14 +17,21 @@ pub struct CompiledFunction {
     pub instructions: Rc<Instructions>,
     pub num_locals: usize,
     pub num_params: usize,
+    pub line: usize,
 }
 
 impl CompiledFunction {
-    pub fn new(instructions: Instructions, num_locals: usize, num_params: usize) -> Self {
+    pub fn new(
+        instructions: Instructions,
+        num_locals: usize,
+        num_params: usize,
+        line: usize,
+    ) -> Self {
         Self {
             instructions: Rc::new(instructions),
             num_locals,
             num_params,
+            line,
         }
     }
 }

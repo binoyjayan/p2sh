@@ -10,7 +10,68 @@ use crate::code::prop::PacketPropType;
 use crate::object::error::ErrorObj;
 use crate::object::Object;
 
+// define constant for max protool depth
+pub const MAX_PROTO_DEPTH: usize = 4;
+
 impl VM {
+    pub fn get_inner(
+        &self,
+        obj: &Rc<Object>,
+        depth: usize,
+        line: usize,
+    ) -> Result<Rc<Object>, RTError> {
+        if depth == 0 {
+            return Ok(obj.clone());
+        }
+        let obj = match obj.as_ref() {
+            Object::Packet(pkt) => {
+                // Clone the wrapped Rc object so we do not get BorrowMutError
+                let wrapped = pkt.inner.borrow().clone();
+                if let Some(inner) = wrapped.as_ref() {
+                    self.get_inner(inner, depth - 1, line)?
+                } else {
+                    // Parse inner packet from bytes
+                    let obj =
+                        self.exec_prop_packet(pkt.clone(), PacketPropType::Eth, None, line)?;
+                    self.get_inner(&obj, depth - 1, line)?
+                }
+            }
+            Object::Eth(eth) => {
+                // Clone the wrapped Rc object so we do not get BorrowMutError
+                let wrapped = eth.inner.borrow().clone();
+                if let Some(inner) = wrapped.as_ref() {
+                    self.get_inner(inner, depth - 1, line)?
+                } else {
+                    // Parse inner packet from bytes
+                    match eth.get_ethertype_raw() {
+                        0x8100 => {
+                            let obj = self.exec_prop_eth(eth.clone(), PacketPropType::Vlan, None, line)?;
+                            self.get_inner(&obj, depth - 1, line)?
+                        }
+                        _ => Rc::new(Object::Null),
+                    }
+                }
+            }
+            Object::Vlan(vlan) => {
+                let wrapped = vlan.inner.borrow().clone();
+                if let Some(inner) = wrapped.as_ref() {
+                    self.get_inner(inner, depth - 1, line)?
+                } else {
+                    // Parse inner packet from bytes
+                    match vlan.get_ethertype_raw() {
+                        0x8100 => {
+                            let obj = self.exec_prop_vlan(vlan.clone(), PacketPropType::Vlan, None, line)?;
+                            self.get_inner(&obj, depth - 1, line)?
+                        }
+                        _ => Rc::new(Object::Null),
+                    }
+                }
+            }
+            _ => obj.clone(),
+        };
+        Ok(obj)
+    }
+
     /// Execute a property expression
     /// left: The object on which the property is being accessed
     /// prop: The property being accessed
@@ -18,35 +79,23 @@ impl VM {
     /// line: The line number of the property expression
     /// Returns: Ok(()) if the property expression is executed successfully
     pub fn exec_prop_expr(
-        &mut self,
+        &self,
         left: Rc<Object>,
         prop: u8,
         setval: Option<Rc<Object>>,
         line: usize,
-    ) -> Result<(), RTError> {
+    ) -> Result<Rc<Object>, RTError> {
         let prop: PacketPropType = PacketPropType::from(prop);
-        match left.as_ref() {
-            Object::Pcap(pcap) => {
-                let obj = self.exec_prop_pcap(pcap.clone(), prop, setval, line)?;
-                self.push(obj, line)?;
-            }
-            Object::Packet(pkt) => {
-                let obj = self.exec_prop_packet(pkt.clone(), prop, setval, line)?;
-                self.push(obj, line)?;
-            }
-            Object::Eth(eth) => {
-                let obj = self.exec_prop_eth(eth.clone(), prop, setval, line)?;
-                self.push(obj, line)?;
-            }
-            Object::Vlan(v) => {
-                let obj = self.exec_prop_vlan(v.clone(), prop, setval, line)?;
-                self.push(obj, line)?;
-            }
+        let obj = match left.as_ref() {
+            Object::Pcap(pcap) => self.exec_prop_pcap(pcap.clone(), prop, setval, line)?,
+            Object::Packet(pkt) => self.exec_prop_packet(pkt.clone(), prop, setval, line)?,
+            Object::Eth(eth) => self.exec_prop_eth(eth.clone(), prop, setval, line)?,
+            Object::Vlan(v) => self.exec_prop_vlan(v.clone(), prop, setval, line)?,
             _ => {
                 return Err(RTError::new("Object does not have any property", line));
             }
-        }
-        Ok(())
+        };
+        Ok(obj)
     }
 
     /// Execute a pcap property expression
@@ -56,7 +105,7 @@ impl VM {
     /// line: The line number of the property expression
     /// Returns: Ok(obj) if the property expression is executed successfully
     fn exec_prop_pcap(
-        &mut self,
+        &self,
         pcap: Rc<Pcap>,
         prop: PacketPropType,
         setval: Option<Rc<Object>>,
@@ -147,8 +196,8 @@ impl VM {
     /// setval: The value to be set if this is a SetProp operation
     /// line: The line number of the property expression
     /// Returns: Ok(obj) if the property expression is executed successfully
-    fn exec_prop_packet(
-        &mut self,
+    pub fn exec_prop_packet(
+        &self,
         pkt: Rc<PcapPacket>,
         prop: PacketPropType,
         setval: Option<Rc<Object>>,
@@ -234,7 +283,7 @@ impl VM {
     /// line: The line number of the property expression
     /// Returns: Ok(obj) if the property expression is executed successfully
     fn exec_prop_eth(
-        &mut self,
+        &self,
         eth: Rc<Ethernet>,
         prop: PacketPropType,
         setval: Option<Rc<Object>>,
@@ -304,7 +353,7 @@ impl VM {
     }
 
     fn exec_prop_vlan(
-        &mut self,
+        &self,
         vlan: Rc<Vlan>,
         prop: PacketPropType,
         setval: Option<Rc<Object>>,

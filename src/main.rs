@@ -211,6 +211,7 @@ fn run_filters(mut vm: VM, filters: Vec<Rc<CompiledFunction>>) {
         let result = pcap_in.next_packet();
         match result {
             Ok(pkt) => {
+                vm.set_curr_pkt(pkt.clone());
                 // Run filter statements on the packet
                 for filter in &filters {
                     if let Err(err) = vm.push_filter_frame(filter) {

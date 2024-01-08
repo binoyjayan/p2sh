@@ -93,6 +93,9 @@ impl Ethernet {
             inner: RefCell::new(None),
         })
     }
+    pub fn get_ethertype_raw(&self) -> u16 {
+        self.header.borrow().ethertype.0
+    }
     pub fn get_src(&self) -> Rc<Object> {
         Rc::new(Object::Str(self.header.borrow().source.to_string()))
     }

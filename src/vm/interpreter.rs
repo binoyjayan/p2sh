@@ -1,9 +1,11 @@
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::builtins::functions::BUILTINFNS;
+use crate::builtins::pcap::PcapPacket;
 use crate::builtins::variables::BuiltinVarType;
 use crate::code::opcode::Opcode;
 use crate::compiler::Bytecode;
@@ -15,6 +17,7 @@ use crate::object::hmap::HMap;
 use crate::object::Object;
 use crate::vm::error::RTError;
 use crate::vm::frame::Frame;
+use crate::vm::pktproc::MAX_PROTO_DEPTH;
 
 const STACK_SIZE: usize = 4096;
 const MAX_FRAMES: usize = 4096;
@@ -35,6 +38,7 @@ pub struct VM {
     pub builtinvars: Vec<Rc<Object>>,
     frames: Vec<Frame>,
     frames_index: usize,
+    curr_pkt: RefCell<Option<Rc<Object>>>,
 }
 
 enum BinaryOperation {
@@ -64,6 +68,7 @@ impl VM {
             builtinvars: vec![data; BUILTINS_SIZE],
             frames,
             frames_index: 1,
+            curr_pkt: RefCell::new(None),
         }
     }
 
@@ -481,7 +486,8 @@ impl VM {
                     // The stack contains the packet expression
                     let prop = instructions.code[ip + 1];
                     let left = self.pop(line)?;
-                    self.exec_prop_expr(left, prop, None, line)?;
+                    let obj = self.exec_prop_expr(left, prop, None, line)?;
+                    self.push(obj, line)?;
                     self.current_frame().ip += 1;
                 }
                 Opcode::SetProp => {
@@ -491,7 +497,9 @@ impl VM {
                     self.exec_prop_expr(left, prop, Some(obj), line)?;
                     self.current_frame().ip += 1;
                 }
-                Opcode::Dollar => {}
+                Opcode::Dollar => {
+                    self.exec_dollar_expr(line)?;
+                }
                 Opcode::Invalid => {
                     return Err(RTError::new(
                         &format!("opcode {} undefined", op as u8),
@@ -833,6 +841,39 @@ impl VM {
                 line,
             ))
         }
+    }
+
+    pub fn set_curr_pkt(&self, pkt: Rc<PcapPacket>) {
+        let obj = Object::Packet(pkt);
+        self.curr_pkt.borrow_mut().replace(Rc::new(obj));
+    }
+
+    /// Evaluate expressions such as $0, $n etc
+    /// The top of the stack contains the index of the dollar expression
+    /// The stack is popped and the result of the dollar expression is pushed
+    /// back onto the stack.
+    fn exec_dollar_expr(&mut self, line: usize) -> Result<(), RTError> {
+        // The stack contains the index of the dollar expression
+        let obj = self.pop(line)?;
+        let depth = match obj.as_ref() {
+            Object::Integer(n) => *n as usize,
+            _ => return Err(RTError::new("IndexError: invalid index.", line)),
+        };
+
+        let curr = self.curr_pkt.borrow().as_ref().cloned();
+        let obj = if let Some(obj) = curr {
+            if depth > MAX_PROTO_DEPTH {
+                return Err(RTError::new(
+                    &format!("IndexError: exceeded max protocol depth - '${}'", depth),
+                    line,
+                ));
+            }
+            self.get_inner(&obj, depth, line)?
+        } else {
+            Rc::new(Object::Null)
+        };
+        self.push(obj, line)?;
+        Ok(())
     }
 
     pub fn update_builtin_var(&mut self, vt: BuiltinVarType, obj: Rc<Object>) {

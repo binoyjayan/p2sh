@@ -211,7 +211,7 @@ fn run_filters(
         };
         Some(out)
     };
-    
+
     let pcap_in = match Pcap::from_file(Rc::new(FileHandle::Stdin)) {
         Ok(pcap) => pcap,
         Err(err) => {

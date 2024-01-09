@@ -184,24 +184,24 @@ impl Instructions {
     // Disassemble instructions after compilation
     #[allow(dead_code)]
     pub fn disassemble(&self) {
-        println!(
+        eprintln!(
             "--------- Instructions [len: {:<4}] -------------------",
             self.len(),
         );
-        print!("{}", self);
-        println!("------------------------------------------------------");
+        eprint!("{}", self);
+        eprintln!("------------------------------------------------------");
     }
 
     // Print current instructions during execution
     #[allow(dead_code)]
     pub fn print(&self, ip: usize) {
-        println!(
+        eprintln!(
             "--------- Instructions [len: {:<4}, ip: {:<4}] ---------",
             self.len(),
             ip
         );
-        print!("{}", self);
-        println!("------------------------------------------------------");
+        eprint!("{}", self);
+        eprintln!("------------------------------------------------------");
     }
 }
 

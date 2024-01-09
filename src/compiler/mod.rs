@@ -158,13 +158,13 @@ impl Compiler {
     #[allow(dead_code)]
     fn print_constants(&self) {
         let constants = self.constants.clone();
-        println!(
+        eprintln!(
             "----------- Constants [len: {:<4}] --------------------",
             constants.len(),
         );
 
         for (i, obj) in constants.iter().enumerate() {
-            println!("[{}] {}", i, obj);
+            eprintln!("[{}] {}", i, obj);
             match obj.as_ref() {
                 Object::Clos(cl) => {
                     let closure = cl.clone();
@@ -176,7 +176,7 @@ impl Compiler {
                 _ => {}
             }
         }
-        println!("------------------------------------------------------");
+        eprintln!("------------------------------------------------------");
     }
 
     #[allow(dead_code)]
@@ -185,13 +185,13 @@ impl Compiler {
         if filters.is_empty() {
             return;
         }
-        println!(
+        eprintln!(
             "------------- Filters [len: {:<4}] --------------------",
             filters.len(),
         );
 
         for (i, func) in filters.iter().enumerate() {
-            println!("[{}] {}", i, func);
+            eprintln!("[{}] {}", i, func);
             func.instructions.disassemble();
         }
     }

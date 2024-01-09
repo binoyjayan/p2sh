@@ -140,21 +140,21 @@ impl VM {
 
     #[allow(dead_code)]
     pub fn print_stack(&self) {
-        println!(
+        eprintln!(
             "------------ Stack [sp: {:<4}, bp:{:<4}] ---------------",
             self.sp,
             self.frames[self.frames_index - 1].bp,
         );
         if self.sp == 0 {
-            println!("[<empty>]");
+            eprintln!("[<empty>]");
             return;
         }
         for i in 0..self.sp {
-            print!("[ ");
-            print!("{}", self.stack[i]);
-            print!(" ]");
+            eprint!("[ ");
+            eprint!("{}", self.stack[i]);
+            eprint!(" ]");
         }
-        println!();
+        eprintln!();
     }
 
     /*

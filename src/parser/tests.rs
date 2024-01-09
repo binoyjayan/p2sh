@@ -2130,7 +2130,11 @@ fn test_filter_statement() {
 
     let stmt = &program.statements[0];
     if let Statement::Filter(stmt) = stmt {
-        test_infix_expression(&stmt.filter, Literal::Ident("x"), "==", Literal::Ident("y"));
+        if let Some(filter) = stmt.filter.clone() {
+            test_infix_expression(&filter, Literal::Ident("x"), "==", Literal::Ident("y"));
+        } else {
+            panic!("filter statement has no filter expression");
+        }
         if let Some(action) = stmt.action.clone() {
             let num_stmts = action.statements.len();
             assert_eq!(num_stmts, 1, "then_stmt count not 1. got={}", num_stmts);

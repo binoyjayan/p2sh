@@ -1204,7 +1204,13 @@ impl Compiler {
     /// the bytecode for the filter statement is captured and stored separately.
     fn compile_filter_statement(&mut self, expr: FilterStmt) -> Result<(), CompileError> {
         self.enter_scope();
-        self.compile_expression(*expr.filter)?;
+        if let Some(filter) = expr.filter {
+            self.compile_expression(*filter)?;
+        } else {
+            // If there is no filter condition, then emit a 'True' to indicate
+            // that the filter condition is true
+            self.emit(Opcode::True, &[0], expr.token.line);
+        }
         // Emit an 'JumpIfFalseNoPop' with a placeholder. Save it's position so it can be altered later
         // The target for this jump is the 'pop' instruction following the 'action' statement
         // Do not pop the result of the filter since it is returned by the filter

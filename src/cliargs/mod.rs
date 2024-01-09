@@ -10,11 +10,15 @@ struct Args {
     script: Option<String>,
     /// Script arguments
     args: Vec<String>,
+    /// Skip pcap output in filter mode; defaults to false
+    #[arg(short, long, default_value_t = false)]
+    skip_pcap: bool,
 }
 
 pub struct CliArgs {
     args: Vec<String>,
     cmd: Option<String>,
+    skip_pcap: bool,
 }
 
 impl CliArgs {
@@ -31,6 +35,7 @@ impl CliArgs {
         Self {
             args,
             cmd: cliargs.command,
+            skip_pcap: cliargs.skip_pcap,
         }
     }
     pub fn get_args(&self) -> &[String] {
@@ -38,5 +43,8 @@ impl CliArgs {
     }
     pub fn get_cmd(&self) -> Option<String> {
         self.cmd.clone()
+    }
+    pub fn skip_pcap(&self) -> bool {
+        self.skip_pcap
     }
 }

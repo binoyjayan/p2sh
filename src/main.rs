@@ -38,15 +38,16 @@ fn main() {
     let cliargs = CliArgs::new();
     let args = cliargs.get_args().to_vec();
     let command = cliargs.get_cmd();
+    let skip_pcap = cliargs.skip_pcap();
 
     if let Some(cmd) = command {
-        run_buf(cmd, args, true);
+        run_buf(cmd, args, true, skip_pcap);
         return;
     }
     if args.is_empty() {
         run_prompt(args);
     } else {
-        run_file(&args[0].clone(), args);
+        run_file(&args[0].clone(), args, skip_pcap);
     }
 }
 
@@ -125,14 +126,14 @@ pub fn run_prompt(args: Vec<String>) {
 /// # Arguments
 /// * `path` - Path to the script file
 /// * `args` - Arguments to the script
-pub fn run_file(path: &str, args: Vec<String>) {
+pub fn run_file(path: &str, args: Vec<String>, skip_pcap: bool) {
     let buf = fs::read_to_string(path);
     if buf.is_err() {
         eprintln!("Failed to read file {}", path);
         return;
     }
     let buf = buf.unwrap();
-    run_buf(buf, args, false);
+    run_buf(buf, args, false, skip_pcap);
 }
 
 /// Function to run a script stored in a buffer
@@ -141,7 +142,7 @@ pub fn run_file(path: &str, args: Vec<String>) {
 /// * `args` - Arguments to the script
 /// * `cmd_mode` - Flag to indicate command mode
 /// * `filter_mode` - Flag to indicate filter mode
-pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool) {
+pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool, skip_pcap: bool) {
     let data = Rc::new(Object::Null);
     let globals = vec![data; GLOBALS_SIZE];
 
@@ -183,7 +184,7 @@ pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool) {
     // Run all the filter statements
     if filter_mode {
         vm.update_builtin_var(BuiltinVarType::NP, Rc::new(Object::Integer(0)));
-        run_filters(vm, filters, filter_end);
+        run_filters(vm, filters, filter_end, skip_pcap);
     }
 }
 
@@ -196,14 +197,21 @@ fn run_filters(
     mut vm: VM,
     filters: Vec<Rc<CompiledFunction>>,
     filter_end: Option<Rc<CompiledFunction>>,
+    skip_pcap: bool,
 ) {
-    let pcap_out = match Pcap::new(Rc::new(FileHandle::Stdout)) {
-        Ok(pcap) => pcap,
-        Err(err) => {
-            eprintln!("{}", err);
-            return;
-        }
+    let pcap_out = if skip_pcap {
+        None
+    } else {
+        let out = match Pcap::new(Rc::new(FileHandle::Stdout)) {
+            Ok(pcap) => pcap,
+            Err(err) => {
+                eprintln!("{}", err);
+                return;
+            }
+        };
+        Some(out)
     };
+    
     let pcap_in = match Pcap::from_file(Rc::new(FileHandle::Stdin)) {
         Ok(pcap) => pcap,
         Err(err) => {
@@ -235,9 +243,11 @@ fn run_filters(
                     // evaluates to true.
                     match vm.pop_filter_frame() {
                         Ok(true) => {
-                            if let Err(err) = pcap_out.write_all(pkt.clone()) {
-                                eprintln!("{}", err);
-                                break 'out;
+                            if let Some(out) = &pcap_out {
+                                if let Err(err) = out.write_all(pkt.clone()) {
+                                    eprintln!("{}", err);
+                                    break 'out;
+                                }
                             }
                         }
                         Err(err) => {

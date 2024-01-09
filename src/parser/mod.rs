@@ -299,16 +299,19 @@ impl Parser {
         }))
     }
 
-    /// Parse a filter statement. The filter condition and action are optional.
+    /// Parse a filter statement. The filter pattern and action are optional.
     /// But either one of them must be present.
     fn parse_filter_statement(&mut self) -> Result<Statement, ParseError> {
         let token: Token = self.current.clone();
-        // advance to the filter condition expression or to the action
+        // advance to the filter pattern expression or to the action
         self.next_token();
-        let filter = if self.curr_token_is(&TokenType::LeftBrace) {
-            None
+        let pattern = if self.curr_token_is(&TokenType::LeftBrace) {
+            FilterPattern::None
+        } else if self.curr_token_is(&TokenType::End) {
+            self.next_token();
+            FilterPattern::End
         } else {
-            let filter = Some(Box::new(
+            let filter = FilterPattern::Expr(Box::new(
                 self.parse_expression(Precedence::Assignment, false),
             ));
             self.next_token();
@@ -321,13 +324,13 @@ impl Parser {
             None
         };
 
-        if filter.is_none() && action.is_none() {
-            self.push_error("a filter statement must have a condition or an action");
+        if pattern.is_none() && action.is_none() {
+            self.push_error("a filter statement must have a pattern or an action");
             return Ok(Statement::Invalid);
         }
         Ok(Statement::Filter(FilterStmt {
             token,
-            filter,
+            pattern,
             action,
         }))
     }

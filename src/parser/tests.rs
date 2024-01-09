@@ -2130,7 +2130,7 @@ fn test_filter_statement() {
 
     let stmt = &program.statements[0];
     if let Statement::Filter(stmt) = stmt {
-        if let Some(filter) = stmt.filter.clone() {
+        if let FilterPattern::Expr(filter) = stmt.pattern.clone() {
             test_infix_expression(&filter, Literal::Ident("x"), "==", Literal::Ident("y"));
         } else {
             panic!("filter statement has no filter expression");

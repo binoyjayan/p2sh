@@ -104,17 +104,35 @@ impl fmt::Display for BlockStatement {
 }
 
 #[derive(Clone, Debug)]
+pub enum FilterPattern {
+    Expr(Box<Expression>),
+    End,
+    None,
+}
+
+impl FilterPattern {
+    pub fn is_none(&self) -> bool {
+        matches!(self, FilterPattern::None)
+    }
+    pub fn is_end(&self) -> bool {
+        matches!(self, FilterPattern::End)
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct FilterStmt {
     pub token: Token, // '@' token
-    pub filter: Option<Box<Expression>>,
+    pub pattern: FilterPattern,
     pub action: Option<BlockStatement>,
 }
 
 impl fmt::Display for FilterStmt {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "@")?;
-        if let Some(ref filter) = self.filter {
-            write!(f, " {}", filter)?;
+        match &self.pattern {
+            FilterPattern::Expr(expr) => write!(f, "{}", expr)?,
+            FilterPattern::End => write!(f, "end")?,
+            FilterPattern::None => write!(f, "")?,
         }
         if let Some(ref action) = self.action {
             write!(f, " {{ {} }}", action)?;

@@ -13,6 +13,7 @@ use crate::object::func::CompiledFunction;
 use crate::object::Object;
 use crate::parser::ast::expr::*;
 use crate::parser::ast::stmt::BlockStatement;
+use crate::parser::ast::stmt::FilterPattern;
 use crate::parser::ast::stmt::FilterStmt;
 use crate::parser::ast::stmt::Statement;
 use crate::parser::ast::*;
@@ -26,6 +27,7 @@ pub struct Bytecode {
     pub instructions: Instructions,
     pub constants: Vec<Rc<Object>>,
     pub filters: Vec<Rc<CompiledFunction>>,
+    pub filter_end: Option<Rc<CompiledFunction>>,
 }
 
 #[derive(Default, Clone)]
@@ -76,6 +78,7 @@ pub struct Compiler {
     scopes: Vec<CompilationScope>,
     scope_index: usize,
     pub filters: Vec<Rc<CompiledFunction>>,
+    pub filter_end: Option<Rc<CompiledFunction>>,
 }
 
 impl Compiler {
@@ -100,6 +103,7 @@ impl Compiler {
             scopes: vec![main_scope],
             scope_index: 0,
             filters: Vec::new(),
+            filter_end: None,
         }
     }
 
@@ -136,6 +140,7 @@ impl Compiler {
         let instructions = self.get_curr_instructions();
         let constants = self.constants.clone();
         let filters = self.filters.clone();
+        let filter_end = self.filter_end.clone();
         #[cfg(feature = "debug_print_code")]
         {
             instructions.disassemble();
@@ -146,6 +151,7 @@ impl Compiler {
             instructions,
             constants,
             filters,
+            filter_end,
         }
     }
 
@@ -1204,36 +1210,35 @@ impl Compiler {
     /// the bytecode for the filter statement is captured and stored separately.
     fn compile_filter_statement(&mut self, expr: FilterStmt) -> Result<(), CompileError> {
         self.enter_scope();
-        if let Some(filter) = expr.filter {
+
+        // If there is no filter pattern, and if it is not an 'end' pattern,
+        // then the control flow executes the action statement unconditionally.
+        // The absence of a pattern default to a true pattern.
+        if let FilterPattern::Expr(filter) = expr.pattern.clone() {
             self.compile_expression(*filter)?;
-        } else {
-            // If there is no filter condition, then emit a 'True' to indicate
-            // that the filter condition is true
-            self.emit(Opcode::True, &[0], expr.token.line);
         }
+
         // Emit an 'JumpIfFalseNoPop' with a placeholder. Save it's position so it can be altered later
         // The target for this jump is the 'pop' instruction following the 'action' statement
         // Do not pop the result of the filter since it is returned by the filter
         // statement when the action is 'None'. In this case the caller of the filter
         // statement is responsible for popping the result.
-        let jump_if_false_pos = self.emit(Opcode::JumpIfFalseNoPop, &[0xFFFF], expr.token.line);
-        // JumpIfFalseNoPop does not consume the result of 'filter'.
-        // Do not pop the result of the filter action is None
-        if let Some(action) = expr.action {
-            // Consume the result of the filter condition
-            self.emit(Opcode::Pop, &[0], expr.token.line);
-            self.compile_block_statement(action)?;
-            // Emit false to indicate that no action needs to be performed by
-            // the caller of the filter statement since it is already done here.
-            self.emit(Opcode::False, &[0], expr.token.line);
+        if expr.pattern.is_none() || expr.pattern.is_end() {
+            // Always execute the action if the filter pattern is 'end'
+            // or if there is no filter pattern that defaults to true
+            // Since a pattern was not evaulated, do not pop the result of the
+            // pattern expression. So, pass 'false'.
+            self.emit_action_stmt(expr.action, false, expr.token.line)?;
+        } else {
+            let jump_if_false_pos = self.emit(Opcode::JumpIfFalseNoPop, &[0xFFFF], expr.token.line);
+            self.emit_action_stmt(expr.action, true, expr.token.line)?;
+            // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
+            // position of the instruction that comes after the 'then' statement
+            self.patch_jump(jump_if_false_pos);
         }
-
-        // Replace the operand of the placeholder 'JumpIfFalse' instruction with the
-        // position of the instruction that comes after the 'then' statement
-        self.patch_jump(jump_if_false_pos);
+        // Get the number of locals and create the function
         let num_locals = self.symtab.get_num_definitions();
         let instructions = self.leave_scope();
-
         // There are not free variables for the function wrapping a filter
         // The filter statements are compiled as closures that takes no parameters
         let filter = Rc::new(CompiledFunction::new(
@@ -1242,7 +1247,41 @@ impl Compiler {
             0,
             expr.token.line,
         ));
-        self.filters.push(filter);
+
+        // Add the filter to the list of filters except for the 'end' pattern
+        if expr.pattern.is_end() {
+            if self.filter_end.is_some() {
+                return Err(CompileError::new(
+                    "multiple 'end' patterns in filter statement",
+                    expr.token.line,
+                ));
+            }
+            self.filter_end = Some(filter);
+        } else {
+            self.filters.push(filter);
+        }
+        Ok(())
+    }
+
+    /// Emit the action statement for a filter statement. If the action is
+    /// JumpIfFalseNoPop does not consume the result of 'filter'.
+    // Do not pop the result of the filter action is None
+    fn emit_action_stmt(
+        &mut self,
+        action: Option<BlockStatement>,
+        pop: bool,
+        line: usize,
+    ) -> Result<(), CompileError> {
+        if let Some(action) = action {
+            // Consume the result of the filter pattern
+            if pop {
+                self.emit(Opcode::Pop, &[0], line);
+            }
+            self.compile_block_statement(action)?;
+            // Emit false to indicate that no action needs to be performed by
+            // the caller of the filter statement since it is already done here.
+            self.emit(Opcode::False, &[0], line);
+        }
         Ok(())
     }
 }

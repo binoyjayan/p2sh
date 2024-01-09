@@ -160,6 +160,7 @@ pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool) {
     }
     let bytecode = compiler.bytecode();
     let filters = bytecode.filters.clone();
+    let filter_end = bytecode.filter_end.clone();
     let filter_mode = !filters.is_empty();
 
     // Run the bytecode that excludes the filter statements
@@ -182,7 +183,7 @@ pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool) {
     // Run all the filter statements
     if filter_mode {
         vm.update_builtin_var(BuiltinVarType::NP, Rc::new(Object::Integer(0)));
-        run_filters(vm, filters);
+        run_filters(vm, filters, filter_end);
     }
 }
 
@@ -191,7 +192,11 @@ pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool) {
 /// # Arguments
 /// * `vm` - VM instance
 /// * `filters` - Vector of filter statements
-fn run_filters(mut vm: VM, filters: Vec<Rc<CompiledFunction>>) {
+fn run_filters(
+    mut vm: VM,
+    filters: Vec<Rc<CompiledFunction>>,
+    filter_end: Option<Rc<CompiledFunction>>,
+) {
     let pcap_out = match Pcap::new(Rc::new(FileHandle::Stdout)) {
         Ok(pcap) => pcap,
         Err(err) => {
@@ -226,6 +231,8 @@ fn run_filters(mut vm: VM, filters: Vec<Rc<CompiledFunction>>) {
                         break 'out;
                     }
                     // If the result of the filter is true, then write the packet to stdout
+                    // The result is true when the action is not specified and the pattern
+                    // evaluates to true.
                     match vm.pop_filter_frame() {
                         Ok(true) => {
                             if let Err(err) = pcap_out.write_all(pkt.clone()) {
@@ -247,6 +254,28 @@ fn run_filters(mut vm: VM, filters: Vec<Rc<CompiledFunction>>) {
                     eprintln!("{}", err);
                 }
                 break;
+            }
+        }
+    }
+    // Reset built-in variables for packets
+    vm.update_builtin_var(BuiltinVarType::PL, Rc::new(Object::Null));
+    vm.update_builtin_var(BuiltinVarType::WL, Rc::new(Object::Null));
+    // Call the end filter
+    if let Some(filter) = filter_end {
+        if let Err(err) = vm.push_filter_frame(&filter) {
+            eprintln!("{}", err);
+            return;
+        }
+        if let Err(err) = vm.run() {
+            eprintln!("{}", err);
+            return;
+        }
+        // There is nothing to write to stdout for the end filter
+        // as there is always an action specified for the end filter
+        match vm.pop_filter_frame() {
+            Ok(_) => {}
+            Err(err) => {
+                eprintln!("{}", err);
             }
         }
     }

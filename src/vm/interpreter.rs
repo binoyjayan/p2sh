@@ -831,6 +831,10 @@ impl VM {
     pub fn pop_filter_frame(&mut self) -> Result<bool, RTError> {
         let frame = self.pop_frame();
         let line = frame.closure.func.line;
+        // Pop the result of the filter statement. This is either pushed as
+        // the result of evaluating the pattern or by the body of the custom
+        // action statement. The custom action statement has a false statement
+        // at the end.
         let obj = self.pop(line)?;
         // Reset stack frame by popping the local bindings
         self.sp = frame.bp;

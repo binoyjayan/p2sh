@@ -45,7 +45,8 @@ impl VM {
                     // Parse inner packet from bytes
                     match eth.get_ethertype_raw() {
                         0x8100 => {
-                            let obj = self.exec_prop_eth(eth.clone(), PacketPropType::Vlan, None, line)?;
+                            let obj =
+                                self.exec_prop_eth(eth.clone(), PacketPropType::Vlan, None, line)?;
                             self.get_inner(&obj, depth - 1, line)?
                         }
                         _ => Rc::new(Object::Null),
@@ -60,7 +61,12 @@ impl VM {
                     // Parse inner packet from bytes
                     match vlan.get_ethertype_raw() {
                         0x8100 => {
-                            let obj = self.exec_prop_vlan(vlan.clone(), PacketPropType::Vlan, None, line)?;
+                            let obj = self.exec_prop_vlan(
+                                vlan.clone(),
+                                PacketPropType::Vlan,
+                                None,
+                                line,
+                            )?;
                             self.get_inner(&obj, depth - 1, line)?
                         }
                         _ => Rc::new(Object::Null),

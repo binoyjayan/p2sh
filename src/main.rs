@@ -97,7 +97,7 @@ pub fn run_prompt(args: Vec<String>) {
                 }
                 let bytecode = compiler.bytecode();
                 let mut vm = VM::new_with_global_store(bytecode, globals);
-                update_builtin_vars(&mut vm, args.clone());
+                init_builtin_vars(&vm, args.clone());
                 let err = vm.run();
                 if let Err(err) = err {
                     eprintln!("{}", err);
@@ -164,7 +164,7 @@ pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool) {
 
     // Run the bytecode that excludes the filter statements
     let mut vm = VM::new_with_global_store(bytecode, globals);
-    update_builtin_vars(&mut vm, args);
+    init_builtin_vars(&vm, args);
     let err = vm.run();
     if let Err(err) = err {
         eprintln!("{}", err);
@@ -181,6 +181,7 @@ pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool) {
 
     // Run all the filter statements
     if filter_mode {
+        vm.update_builtin_var(BuiltinVarType::NP, Rc::new(Object::Integer(0)));
         run_filters(vm, filters);
     }
 }
@@ -207,11 +208,13 @@ fn run_filters(mut vm: VM, filters: Vec<Rc<CompiledFunction>>) {
     };
 
     // Read packet stream from stdin and write to stdout in a loop
+    let mut count = 1;
     'out: loop {
         let result = pcap_in.next_packet();
         match result {
             Ok(pkt) => {
                 vm.set_curr_pkt(pkt.clone());
+                vm.update_builtin_var(BuiltinVarType::NP, Rc::new(Object::Integer(count)));
                 // Run filter statements on the packet
                 for filter in &filters {
                     if let Err(err) = vm.push_filter_frame(filter) {
@@ -237,6 +240,7 @@ fn run_filters(mut vm: VM, filters: Vec<Rc<CompiledFunction>>) {
                         Ok(false) => {}
                     }
                 }
+                count += 1;
             }
             Err(err) => {
                 if err.kind() != io::ErrorKind::UnexpectedEof {
@@ -268,8 +272,11 @@ fn print_parse_errors(parser: &parser::Parser) -> bool {
     }
 }
 
-fn update_builtin_vars(vm: &mut VM, args: Vec<String>) {
+fn init_builtin_vars(vm: &VM, args: Vec<String>) {
     let elements: Vec<Rc<Object>> = args.into_iter().map(|s| Rc::new(Object::Str(s))).collect();
     let arr = Rc::new(Object::Arr(Rc::new(Array::new(elements))));
     vm.update_builtin_var(BuiltinVarType::Argv, arr);
+    vm.update_builtin_var(BuiltinVarType::NP, Rc::new(Object::Null));
+    vm.update_builtin_var(BuiltinVarType::PL, Rc::new(Object::Null));
+    vm.update_builtin_var(BuiltinVarType::WL, Rc::new(Object::Null));
 }

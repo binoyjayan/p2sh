@@ -35,7 +35,7 @@ pub struct VM {
     stack: Vec<Rc<Object>>,
     sp: usize,
     pub globals: Vec<Rc<Object>>,
-    pub builtinvars: Vec<Rc<Object>>,
+    pub builtinvars: RefCell<Vec<Rc<Object>>>,
     frames: Vec<Frame>,
     frames_index: usize,
     curr_pkt: RefCell<Option<Rc<Object>>>,
@@ -65,7 +65,7 @@ impl VM {
             stack: vec![data.clone(); STACK_SIZE],
             sp: 0,
             globals: vec![data.clone(); GLOBALS_SIZE],
-            builtinvars: vec![data; BUILTINS_SIZE],
+            builtinvars: RefCell::new(vec![data; BUILTINS_SIZE]),
             frames,
             frames_index: 1,
             curr_pkt: RefCell::new(None),
@@ -420,7 +420,8 @@ impl VM {
                 Opcode::GetBuiltinVar => {
                     let builtin_index = instructions.code[ip + 1] as usize;
                     self.current_frame().ip += 1;
-                    self.push(self.builtinvars[builtin_index].clone(), line)?;
+                    let obj = self.builtinvars.borrow()[builtin_index].clone();
+                    self.push(obj, line)?;
                 }
                 Opcode::Closure => {
                     // Decode first operand (index to closure in the constant pool)
@@ -843,7 +844,10 @@ impl VM {
         }
     }
 
+    /// Set the current packet and the builtin variables
     pub fn set_curr_pkt(&self, pkt: Rc<PcapPacket>) {
+        self.update_builtin_var(BuiltinVarType::PL, pkt.get_caplen());
+        self.update_builtin_var(BuiltinVarType::WL, pkt.get_wirelen());
         let obj = Object::Packet(pkt);
         self.curr_pkt.borrow_mut().replace(Rc::new(obj));
     }
@@ -876,7 +880,7 @@ impl VM {
         Ok(())
     }
 
-    pub fn update_builtin_var(&mut self, vt: BuiltinVarType, obj: Rc<Object>) {
-        self.builtinvars[vt as usize] = obj;
+    pub fn update_builtin_var(&self, vt: BuiltinVarType, obj: Rc<Object>) {
+        self.builtinvars.borrow_mut()[vt as usize] = obj;
     }
 }

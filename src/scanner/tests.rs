@@ -464,6 +464,7 @@ fn test_tokens_special() {
 fn test_tokens_filter() {
     let input = r#"
         @ $0 == null { 1 }
+        @ end { }
     "#;
 
     let tests = vec![
@@ -475,6 +476,11 @@ fn test_tokens_filter() {
         ExpectedToken(TokenType::Null, "null"),
         ExpectedToken(TokenType::LeftBrace, "{"),
         ExpectedToken(TokenType::Decimal, "1"),
+        ExpectedToken(TokenType::RightBrace, "}"),
+        // @ end { }
+        ExpectedToken(TokenType::Filter, "@"),
+        ExpectedToken(TokenType::End, "end"),
+        ExpectedToken(TokenType::LeftBrace, "{"),
         ExpectedToken(TokenType::RightBrace, "}"),
         // EOF
         ExpectedToken(TokenType::Eof, ""),

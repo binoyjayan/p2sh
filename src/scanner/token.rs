@@ -116,6 +116,8 @@ pub enum TokenType {
     Dest,
     Ethtype,
     Payload,
+    // End
+    End,
     // End of tokens
     NumberOfTokens,
 }
@@ -193,6 +195,7 @@ impl From<TokenType> for &'static str {
             TokenType::Dest => "DEST",
             TokenType::Ethtype => "ETHTYPE",
             TokenType::Payload => "PAYLOAD",
+            TokenType::End => "END",
             TokenType::NumberOfTokens => "",
         }
     }

@@ -28,6 +28,7 @@ lazy_static! {
         m.insert("stdin".into(), TokenType::Stdin);
         m.insert("stdout".into(), TokenType::Stdout);
         m.insert("stderr".into(), TokenType::Stderr);
+        m.insert("end".into(), TokenType::End);
         m
     };
 }

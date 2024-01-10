@@ -495,7 +495,8 @@ impl VM {
                     let prop = instructions.code[ip + 1];
                     let obj = self.pop(line)?.clone();
                     let left = self.pop(line)?.clone();
-                    self.exec_prop_expr(left, prop, Some(obj), line)?;
+                    let obj = self.exec_prop_expr(left, prop, Some(obj), line)?;
+                    self.push(obj, line)?;
                     self.current_frame().ip += 1;
                 }
                 Opcode::Dollar => {

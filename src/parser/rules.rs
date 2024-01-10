@@ -1014,13 +1014,20 @@ impl Parser {
     fn parse_dot_expression(&mut self, left: Expression) -> Expression {
         // The dot ('.') token
         let token = self.current.clone();
-        // advance to the index token
+        // precedence of the operator
+        let op_prec = self.curr_precedence();
+        // advance to the property token
         self.next_token();
-        let property = self.parse_expression(Precedence::Assignment, true);
-        let context = ParseContext {
-            access: self.peek_access_type(),
-        };
+        let access = self.peek_access_type();
 
+        // To avoid expressions such as '0x8100 < eth.type = 1'
+        let precedence = match access {
+            AccessType::Get => op_prec,
+            AccessType::Set => Precedence::Assignment,
+        };
+        let property = self.parse_expression(precedence, true);
+
+        let context = ParseContext { access };
         Expression::Dot(DotExpr {
             token,
             left: Box::new(left),

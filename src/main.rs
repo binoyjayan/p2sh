@@ -162,6 +162,7 @@ pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool, skip_pcap: bool) 
     let bytecode = compiler.bytecode();
     let filters = bytecode.filters.clone();
     let filter_end = bytecode.filter_end.clone();
+
     let filter_mode = !filters.is_empty();
 
     // Run the bytecode that excludes the filter statements

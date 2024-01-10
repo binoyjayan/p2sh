@@ -98,7 +98,8 @@ impl VM {
             Object::Eth(eth) => self.exec_prop_eth(eth.clone(), prop, setval, line)?,
             Object::Vlan(v) => self.exec_prop_vlan(v.clone(), prop, setval, line)?,
             _ => {
-                return Err(RTError::new("Object does not have any property", line));
+                let msg = format!("{}: Object does not have any property", left);
+                return Err(RTError::new(&msg, line));
             }
         };
         Ok(obj)

@@ -1,0 +1,12 @@
+#!/usr/bin/env p2sh -s
+
+let cap_size = 0;
+let wire_size = 0;
+
+@ { cap_size = cap_size + PL; }
+@ { wire_size = wire_size + WL; }
+@ end {
+  eprintln("Number of packets:  {}", NP);
+  eprintln("Total capture size: {}", cap_size);
+  eprintln("Total size on wire: {}", wire_size);
+}

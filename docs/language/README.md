@@ -7,6 +7,7 @@ Note that this is a work in progress.
 
 ## Language constructs
 
+- [Program structure](./program.md)
 - [Keywords](./keywords.md)
 - [Data model](./data-model.md)
 - [Operators](./operators.md)

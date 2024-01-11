@@ -1,5 +1,8 @@
 # Filters
 
+This is formal introduction of filters, please refer to the tutorial for
+concrete examples.
+
 ## Introduction
 
 Filters are potent programming constructs in p2sh. When present in a

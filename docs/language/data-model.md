@@ -65,6 +65,7 @@ of a few types:
 - string
 - boolean
 - builtin function
+- array
 
 
 

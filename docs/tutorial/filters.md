@@ -9,6 +9,7 @@ Filters statements start with a '@' character and is of the following form.
 The pattern is an expression that evaluates to a true or false. Actions are
 statements executed as a consequence.
 
+Filters resemble constructs found in the AWK language.
 
 ```
 @ pattern { action }

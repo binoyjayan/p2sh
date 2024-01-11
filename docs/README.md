@@ -26,3 +26,6 @@ features, you can find a quick walkthrough here.
 
 - [Tutorial](./tutorial)
 - [Language Refrerence](./language)
+
+The language reference offers a more formal introduction to the supported features.
+The tutorial provides hands-on examples.

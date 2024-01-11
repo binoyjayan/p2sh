@@ -897,7 +897,14 @@ fn builtin_write(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                                 Err(e) => Ok(Rc::new(Object::Err(ErrorObj::IO(e)))),
                             }
                         }
-                        _ => Err(String::from("second argument should be a byte or string")),
+                        Object::Packet(s) => {
+                            let bytes: Vec<u8> = s.as_ref().into();
+                            match file.write(&bytes) {
+                                Ok(n) => Ok(Rc::new(Object::Integer(n as i64))),
+                                Err(e) => Ok(Rc::new(Object::Err(ErrorObj::IO(e)))),
+                            }
+                        }
+                        _ => Err(String::from("second argument should be a packet, byte, arr or string")),
                     }
                 }
                 FileHandle::Stdin => Err("cannot write to stdin".to_string()),
@@ -920,7 +927,14 @@ fn builtin_write(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                         print!("{}", s);
                         Ok(Rc::new(Object::Integer(s.len() as i64)))
                     }
-                    _ => Err(String::from("second argument should be a byte or string")),
+                    Object::Packet(s) => {
+                        let bytes: Vec<u8> = s.as_ref().into();
+                        match io::stdout().write_all(&bytes) {
+                            Ok(_) => Ok(Rc::new(Object::Integer(bytes.len() as i64))),
+                            Err(e) => Ok(Rc::new(Object::Err(ErrorObj::IO(e)))),
+                        }
+                    }
+                    _ => Err(String::from("second argument should be a packet, byte, arr or string")),
                 },
                 FileHandle::Stderr => match args[1].as_ref() {
                     Object::Byte(b) => {
@@ -941,7 +955,14 @@ fn builtin_write(args: Vec<Rc<Object>>) -> Result<Rc<Object>, String> {
                         eprint!("{}", s);
                         Ok(Rc::new(Object::Integer(s.len() as i64)))
                     }
-                    _ => Err(String::from("second argument should be a byte or string")),
+                    Object::Packet(s) => {
+                        let bytes: Vec<u8> = s.as_ref().into();
+                        match io::stderr().write_all(&bytes) {
+                            Ok(_) => Ok(Rc::new(Object::Integer(bytes.len() as i64))),
+                            Err(e) => Ok(Rc::new(Object::Err(ErrorObj::IO(e)))),
+                        }
+                    }
+                    _ => Err(String::from("second argument should be a packet, byte, arr or string")),
                 },
             }
         }

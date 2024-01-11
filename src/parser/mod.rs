@@ -305,16 +305,24 @@ impl Parser {
         let token: Token = self.current.clone();
         // advance to the filter pattern expression or to the action
         self.next_token();
+
         let pattern = if self.curr_token_is(&TokenType::LeftBrace) {
             FilterPattern::None
         } else if self.curr_token_is(&TokenType::End) {
             self.next_token();
+            if !self.curr_token_is(&TokenType::LeftBrace) {
+                self.push_error("expected '{' after 'end'");
+                return Ok(Statement::Invalid);
+            }
             FilterPattern::End
         } else {
             let filter = FilterPattern::Expr(Box::new(
                 self.parse_expression(Precedence::Assignment, false),
             ));
-            self.next_token();
+            // consume the left brace
+            if self.peek_token_is(&TokenType::LeftBrace) {
+                self.next_token();
+            }
             filter
         };
 

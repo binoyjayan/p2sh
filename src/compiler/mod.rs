@@ -182,7 +182,7 @@ impl Compiler {
     #[allow(dead_code)]
     fn print_filters(&self) {
         let filters = self.filters.clone();
-        if filters.is_empty() {
+        if filters.is_empty() && self.filter_end.is_none() {
             return;
         }
         eprintln!(
@@ -193,6 +193,10 @@ impl Compiler {
         for (i, func) in filters.iter().enumerate() {
             eprintln!("[{}] {}", i, func);
             func.instructions.disassemble();
+        }
+        if let Some(end) = self.filter_end.as_ref() {
+            eprintln!("[end] {}", end);
+            end.instructions.disassemble();
         }
     }
 

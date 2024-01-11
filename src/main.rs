@@ -163,7 +163,7 @@ pub fn run_buf(buf: String, args: Vec<String>, cmd_mode: bool, skip_pcap: bool) 
     let filters = bytecode.filters.clone();
     let filter_end = bytecode.filter_end.clone();
 
-    let filter_mode = !filters.is_empty();
+    let filter_mode = !filters.is_empty() || filter_end.is_some();
 
     // Run the bytecode that excludes the filter statements
     let mut vm = VM::new_with_global_store(bytecode, globals);

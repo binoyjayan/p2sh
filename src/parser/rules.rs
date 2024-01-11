@@ -244,27 +244,11 @@ lazy_static! {
 lazy_static! {
     static ref PACKET_PROP_MAP: HashMap<String, PacketPropType> = {
         let mut map = HashMap::new();
-        map.insert("magic".to_string(), PacketPropType::Magic);
-        map.insert("major".to_string(), PacketPropType::Major);
-        map.insert("minor".to_string(), PacketPropType::Minor);
-        map.insert("thiszone".to_string(), PacketPropType::ThisZone);
-        map.insert("sigflags".to_string(), PacketPropType::SigFigs);
-        map.insert("snaplen".to_string(), PacketPropType::Snaplen);
-        map.insert("linktype".to_string(), PacketPropType::LinkType);
-        map.insert("sec".to_string(), PacketPropType::Sec);
-        map.insert("usec".to_string(), PacketPropType::USec);
+        for p in 0..PacketPropType::Invalid as u8 {
+            let prop_type: PacketPropType = p.into();
+            map.insert(prop_type.to_string(), prop_type);
+        }
         map.insert("nsec".to_string(), PacketPropType::USec);
-        map.insert("caplen".to_string(), PacketPropType::Caplen);
-        map.insert("wirelen".to_string(), PacketPropType::Wirelen);
-        map.insert("payload".to_string(), PacketPropType::Payload);
-        map.insert("eth".to_string(), PacketPropType::Eth);
-        map.insert("src".to_string(), PacketPropType::Src);
-        map.insert("dst".to_string(), PacketPropType::Dst);
-        map.insert("type".to_string(), PacketPropType::EtherType);
-        map.insert("vlan".to_string(), PacketPropType::Vlan);
-        map.insert("id".to_string(), PacketPropType::Id);
-        map.insert("priority".to_string(), PacketPropType::Priority);
-        map.insert("dei".to_string(), PacketPropType::Dei);
         map
     };
 }

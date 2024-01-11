@@ -3,6 +3,7 @@ use std::rc::Rc;
 use super::error::RTError;
 use super::interpreter::VM;
 use crate::builtins::packet::ethernet::Ethernet;
+use crate::builtins::packet::ipv4::Ipv4Packet;
 use crate::builtins::packet::vlan::Vlan;
 use crate::builtins::pcap::Pcap;
 use crate::builtins::pcap::PcapPacket;
@@ -11,7 +12,7 @@ use crate::object::error::ErrorObj;
 use crate::object::Object;
 
 // define constant for max protool depth
-pub const MAX_PROTO_DEPTH: usize = 4;
+pub const MAX_PROTO_DEPTH: usize = 10;
 
 impl VM {
     pub fn get_inner(
@@ -49,6 +50,11 @@ impl VM {
                                 self.exec_prop_eth(eth.clone(), PacketPropType::Vlan, None, line)?;
                             self.get_inner(&obj, depth - 1, line)?
                         }
+                        0x0800 => {
+                            let obj =
+                                self.exec_prop_eth(eth.clone(), PacketPropType::Ipv4, None, line)?;
+                            self.get_inner(&obj, depth - 1, line)?
+                        }
                         _ => Rc::new(Object::Null),
                     }
                 }
@@ -69,8 +75,26 @@ impl VM {
                             )?;
                             self.get_inner(&obj, depth - 1, line)?
                         }
+                        0x0800 => {
+                            let obj = self.exec_prop_vlan(
+                                vlan.clone(),
+                                PacketPropType::Ipv4,
+                                None,
+                                line,
+                            )?;
+                            self.get_inner(&obj, depth - 1, line)?
+                        }
                         _ => Rc::new(Object::Null),
                     }
+                }
+            }
+            Object::Ipv4(ipv4) => {
+                // Clone the wrapped Rc object so we do not get BorrowMutError
+                let wrapped = ipv4.inner.borrow().clone();
+                if let Some(inner) = wrapped.as_ref() {
+                    self.get_inner(inner, depth - 1, line)?
+                } else {
+                    Rc::new(Object::Null)
                 }
             }
             _ => obj.clone(),
@@ -97,6 +121,7 @@ impl VM {
             Object::Packet(pkt) => self.exec_prop_packet(pkt.clone(), prop, setval, line)?,
             Object::Eth(eth) => self.exec_prop_eth(eth.clone(), prop, setval, line)?,
             Object::Vlan(v) => self.exec_prop_vlan(v.clone(), prop, setval, line)?,
+            Object::Ipv4(ipv4) => self.exec_prop_ipv4(ipv4.clone(), prop, setval, line)?,
             _ => {
                 let msg = format!("{}: Object does not have any property", left);
                 return Err(RTError::new(&msg, line));
@@ -349,6 +374,26 @@ impl VM {
                     obj
                 }
             }
+            PacketPropType::Ipv4 => {
+                if let Some(val) = setval {
+                    eth.inner.replace(Some(val.clone()));
+                    val
+                } else {
+                    if let Some(inner) = eth.inner.borrow().as_ref() {
+                        return Ok(inner.clone());
+                    }
+                    let obj = match Ipv4Packet::from_bytes(
+                        Rc::clone(&eth.rawdata.borrow()),
+                        eth.offset,
+                    ) {
+                        Ok(ipv4) => Rc::new(Object::Ipv4(Rc::new(ipv4))),
+                        Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
+                    };
+                    // Borrow the inner object again and replace its content
+                    eth.inner.replace(Some(obj.clone()));
+                    obj
+                }
+            }
             _ => {
                 return Err(RTError::new(
                     &format!("Invalid ethernet property '{}'", prop),
@@ -430,9 +475,174 @@ impl VM {
                     obj
                 }
             }
+            PacketPropType::Ipv4 => {
+                if let Some(val) = setval {
+                    vlan.inner.replace(Some(val.clone()));
+                    val
+                } else {
+                    if let Some(inner) = vlan.inner.borrow().as_ref() {
+                        return Ok(inner.clone());
+                    }
+                    let obj = match Ipv4Packet::from_bytes(
+                        Rc::clone(&vlan.rawdata.borrow()),
+                        vlan.offset,
+                    ) {
+                        Ok(ipv4) => Rc::new(Object::Ipv4(Rc::new(ipv4))),
+                        Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
+                    };
+                    // Borrow the inner object again and replace its content
+                    vlan.inner.replace(Some(obj.clone()));
+                    obj
+                }
+            }
             _ => {
                 return Err(RTError::new(
                     &format!("Invalid vlan property '{}'", prop),
+                    line,
+                ));
+            }
+        };
+        Ok(obj)
+    }
+
+    fn exec_prop_ipv4(
+        &self,
+        ipv4: Rc<Ipv4Packet>,
+        prop: PacketPropType,
+        setval: Option<Rc<Object>>,
+        line: usize,
+    ) -> Result<Rc<Object>, RTError> {
+        let obj = match prop {
+            PacketPropType::Version => {
+                if setval.is_some() {
+                    return Err(RTError::new("Cannot set ipv4 property version", line));
+                } else {
+                    ipv4.get_version()
+                }
+            }
+            PacketPropType::Ihl => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_ihl(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_ihl()
+                }
+            }
+            PacketPropType::TotalLength => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_total_length(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_total_length()
+                }
+            }
+            PacketPropType::Id => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_identification(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_identification()
+                }
+            }
+            PacketPropType::Dscp => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_dscp(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_dscp()
+                }
+            }
+            PacketPropType::Ecn => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_ecn(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_ecn()
+                }
+            }
+            PacketPropType::Flags => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_flags(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_flags()
+                }
+            }
+            PacketPropType::FragmentOffset => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_fragment_offset(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_fragment_offset()
+                }
+            }
+            PacketPropType::Ttl => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_ttl(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_ttl()
+                }
+            }
+            PacketPropType::Protocol => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_protocol(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_protocol()
+                }
+            }
+            PacketPropType::Checksum => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_checksum(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_checksum()
+                }
+            }
+            PacketPropType::Src => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_src(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_src()
+                }
+            }
+            PacketPropType::Dst => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv4.set_dst(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv4.get_dst()
+                }
+            }
+            _ => {
+                return Err(RTError::new(
+                    &format!("Invalid ipv4 property '{}'", prop),
                     line,
                 ));
             }

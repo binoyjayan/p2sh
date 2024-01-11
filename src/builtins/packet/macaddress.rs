@@ -43,13 +43,6 @@ impl fmt::Display for MacAddress {
 
 impl From<&MacAddress> for Vec<u8> {
     fn from(eth: &MacAddress) -> Self {
-        let mut bytes = Vec::new();
-        bytes.extend_from_slice(&eth.0.to_be_bytes());
-        bytes.extend_from_slice(&eth.1.to_be_bytes());
-        bytes.extend_from_slice(&eth.2.to_be_bytes());
-        bytes.extend_from_slice(&eth.3.to_be_bytes());
-        bytes.extend_from_slice(&eth.4.to_be_bytes());
-        bytes.extend_from_slice(&eth.5.to_be_bytes());
-        bytes
+        vec![eth.0, eth.1, eth.2, eth.3, eth.4, eth.5]
     }
 }

@@ -157,6 +157,7 @@ impl Object {
                 | Object::Bool(_)
                 | Object::Null
                 | Object::Builtin(_)
+                | Object::Arr(_)
         )
     }
 
@@ -368,6 +369,7 @@ impl Hash for Object {
             Object::Bool(ref b) => b.hash(state),
             Object::Str(ref s) => s.hash(state),
             Object::Builtin(f) => f.name.hash(state),
+            Object::Arr(ref a) => a.hash(state),
             _ => "".hash(state),
         }
     }

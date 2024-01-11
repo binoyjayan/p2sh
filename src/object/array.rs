@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::fmt;
 use std::fmt::Write;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use super::Object;
@@ -87,3 +88,11 @@ impl PartialEq for Array {
 }
 
 impl Eq for Array {}
+
+impl Hash for Array {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for element in self.elements.borrow().iter() {
+            element.hash(state);
+        }
+    }
+}

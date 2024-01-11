@@ -1,0 +1,31 @@
+#!/usr/bin/env p2sh -s
+
+let ipv4 = 0;
+let ipv6 = 0;
+let vlan = 0;
+let qinq = 0;
+let curr = null;
+
+@ { curr = $1; }
+
+@ curr.type == 0x8100 || curr.type == 0x9100 {
+  vlan =  vlan + 1;
+  curr = curr.vlan;
+}
+
+@ curr.type == 0x8100 || curr.type == 0x9100 {
+  qinq =  qinq + 1;
+  curr = curr.vlan;
+}
+
+@ curr.type == 0x0800 { ipv4 =  ipv4 + 1; }
+@ curr.type == 0x86DD { ipv6 =  ipv6 + 1; }
+
+@ end {
+  eprintln("ipv4: {}", ipv4);
+  eprintln("ipv6: {}", ipv6);
+  eprintln("vlan: {}", vlan);
+  eprintln("qinq  {}", qinq);
+  eprintln("tot: {}", NP);
+}
+

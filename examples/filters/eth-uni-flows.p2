@@ -1,0 +1,22 @@
+#!/usr/bin/env p2sh -s
+
+let packets = map {};
+let bytes = map {};
+
+@ {
+  let flow = [($1).src, ($1).dst];
+  if contains(packets, flow) {
+    packets[flow] = packets[flow] + 1;
+    bytes[flow] = bytes[flow] + ($0).caplen;
+  } else {
+    packets[flow] = 1;
+    bytes[flow] = ($0).caplen;
+  }
+}
+
+@ end {
+  puts("Flow packets:")
+  puts(packets);
+  puts("Flow bytes:")
+  puts(bytes);
+}

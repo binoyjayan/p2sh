@@ -1,0 +1,30 @@
+#!/usr/bin/env p2sh -s
+
+let packets = map {};
+let bytes = map {};
+
+@ {
+  let f1 = [($1).src, ($1).dst];
+  let f2 = [($1).dst, ($1).src];
+  let dir1 = contains(packets, f1);
+  let dir2 = contains(packets, f2);
+  if dir1 || dir2 {
+    if dir1 {
+      packets[f1] = packets[f1] + 1;
+      bytes[f1] = bytes[f1] + ($0).caplen;
+    } else {
+      packets[f2] = packets[f2] + 1;
+      bytes[f2] = bytes[f2] + ($0).caplen;
+    }
+  } else {
+    packets[f1] = 1;
+    bytes[f1] = ($0).caplen;
+  }
+}
+
+@ end {
+  puts("Flow packets:")
+  puts(packets);
+  puts("Flow bytes:")
+  puts(bytes);
+}

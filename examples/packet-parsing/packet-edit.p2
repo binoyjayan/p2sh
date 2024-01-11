@@ -24,7 +24,10 @@ while pcap = pcap_read_next(f1) {
    let usec = pcap.usec;
    let eth = pcap.eth;
 
-   let vlan = match eth.type {
+   match eth.type {
+     0x0800 => {
+       eth.ipv4;
+     }
      0x8100 => {
        eth.vlan.id = eth.vlan.id + 7;
        let prio = eth.vlan.priority = 1;
@@ -33,10 +36,18 @@ while pcap = pcap_read_next(f1) {
            eth.vlan.vlan.id = eth.vlan.vlan.id + 3;
            eth.vlan.vlan.priority = 1;
            eth.vlan.vlan.dei = true;
+           match eth.vlan.vlan.type {
+             0x0800 => {
+               eth.vlan.vlan.ipv4;
+             }
+           }
+         }
+         0x0800 => {
+           eth.vlan.ipv4;
          }
        }
      }
-   };
+   }
    println("[{}.{}] {}", sec, usec, eth);
    pcap_write(f2, pcap);
 }

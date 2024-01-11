@@ -18,11 +18,21 @@ while pcap = pcap_read_next(f) {
    let usec = pcap.usec;
    let eth = pcap.eth;
 
-   let vlan = match eth.type {
+   let ipv4 = match eth.type {
+     0x0800 => {
+       eth.ipv4;
+     }
      0x8100 => {
        match eth.vlan.type {
          0x8100 => {
-           eth.vlan.vlan;
+           match eth.vlan.vlan.type {
+             0x0800 => {
+               eth.vlan.vlan.ipv4;
+             }
+           }
+         }
+         0x0800 => {
+           eth.vlan.ipv4;
          }
        }
      }

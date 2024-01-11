@@ -23,6 +23,8 @@ Note: While using the command mode, use single quotes to pass in the command
 instead of a double quotes to avoid cli such as bash intefering with special
 symbols such as '$0'.
 
+Note: Advanced examples are in the `examples/filters` directory.
+
 ### Match every packet
 
 ```bash
@@ -60,6 +62,27 @@ This example prints the packet timestamp and its length.
 p2sh -s -c '@ { eprintln("{}.{}: {}", ($0).sec, ($0).usec, PL) }' < in.pcap
 ```
 
+### Protocols at different depth
+
+```bash
+p2sh -sc '@ { puts(($0)); }' < in.pcap
+p2sh -sc '@ { puts(($1)); }' < in.pcap
+p2sh -sc '@ { puts(($2)); }' < in.pcap
+```
+
+### Source to destination
+
+```bash
+p2sh -sc '@ { eprintln("{} -> {}", ($1).src, ($1).dst);}' < in.pcap
+p2sh -sc '@ { eprintln("{} -> {}", ($2).src, ($2).dst);}' < in.pcap
+```
+
+### Packets from a specific source
+
+```bash
+p2sh -sc '@ ($2).src == "192.168.29.58" { puts(($2).src, " -> ", ($2).dst); }' < in.pcap
+```
+
 ### Interact with other programs
 
 Display the packet timestamp and length but use the input from another program.
@@ -92,5 +115,4 @@ let wire_size = 0;
 
 Use the '-s' flag to skip writing the pcap header, as we're displaying
 only the packet summary.
-
 

@@ -81,7 +81,7 @@ let r = match tolower(s) {
   "a" | "e" | "i" | "o" | "u" => {  "vowel" }
   "b"..="z" => "consonant",
   _ => {  "others" }
-}
+};
 puts(r);
 
 

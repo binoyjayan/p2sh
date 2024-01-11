@@ -200,10 +200,18 @@ fn run_filters(
     filter_end: Option<Rc<CompiledFunction>>,
     skip_pcap: bool,
 ) {
+    let pcap_in = match Pcap::from_file(Rc::new(FileHandle::Stdin)) {
+        Ok(pcap) => pcap,
+        Err(err) => {
+            eprintln!("{}", err);
+            return;
+        }
+    };
+    let magic = pcap_in.get_magic_number_raw();
     let pcap_out = if skip_pcap {
         None
     } else {
-        let out = match Pcap::new(Rc::new(FileHandle::Stdout)) {
+        let out = match Pcap::new_with_magic(Rc::new(FileHandle::Stdout), magic) {
             Ok(pcap) => pcap,
             Err(err) => {
                 eprintln!("{}", err);
@@ -211,14 +219,6 @@ fn run_filters(
             }
         };
         Some(out)
-    };
-
-    let pcap_in = match Pcap::from_file(Rc::new(FileHandle::Stdin)) {
-        Ok(pcap) => pcap,
-        Err(err) => {
-            eprintln!("{}", err);
-            return;
-        }
     };
 
     // Read packet stream from stdin and write to stdout in a loop

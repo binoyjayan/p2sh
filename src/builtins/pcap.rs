@@ -7,7 +7,7 @@ use std::rc::Rc;
 use crate::object::file::FileHandle;
 use crate::object::Object;
 
-const PCAP_MAGIC_MS: u32 = 0xA1B2C3D4;
+const PCAP_MAGIC_US: u32 = 0xA1B2C3D4;
 const PCAP_MAGIC_NS: u32 = 0xA1B23C4D;
 
 #[derive(Debug)]
@@ -30,7 +30,7 @@ pub struct PcapGlobalHeader {
 impl Default for PcapGlobalHeader {
     fn default() -> Self {
         Self {
-            magic_number: PCAP_MAGIC_MS,
+            magic_number: PCAP_MAGIC_US,
             version_major: 2,
             version_minor: 4,
             thiszone: 0,
@@ -59,6 +59,12 @@ impl From<&PcapGlobalHeader> for Vec<u8> {
 }
 
 impl PcapGlobalHeader {
+    pub fn new(magic_number: u32) -> Self {
+        Self {
+            magic_number,
+            ..Default::default()
+        }
+    }
     pub fn from_bytes(data: &[u8]) -> io::Result<Self> {
         if data.len() < 24 {
             return Err(io::Error::new(
@@ -75,7 +81,7 @@ impl PcapGlobalHeader {
         let snaplen = u32::from_le_bytes([data[16], data[17], data[18], data[19]]);
         let linktype = u32::from_le_bytes([data[20], data[21], data[22], data[23]]);
 
-        if magic_number != PCAP_MAGIC_MS && magic_number != PCAP_MAGIC_NS {
+        if magic_number != PCAP_MAGIC_US && magic_number != PCAP_MAGIC_NS {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!("Invalid pcap magic number {:X}", magic_number,),
@@ -254,6 +260,9 @@ impl Pcap {
     pub fn get_magic_number(&self) -> Rc<Object> {
         Rc::new(Object::Integer(self.header.borrow().magic_number as i64))
     }
+    pub fn get_magic_number_raw(&self) -> u32 {
+        self.header.borrow().magic_number
+    }
     pub fn get_version_major(&self) -> Rc<Object> {
         Rc::new(Object::Integer(self.header.borrow().version_major as i64))
     }
@@ -368,7 +377,7 @@ impl Pcap {
             }
         }
         let global_header = PcapGlobalHeader::from_bytes(&global_header_data)?;
-        let ts_format = if global_header.magic_number == PCAP_MAGIC_MS {
+        let ts_format = if global_header.magic_number == PCAP_MAGIC_US {
             PcapTsFormat::MicroSeconds
         } else {
             PcapTsFormat::NanoSeconds
@@ -382,9 +391,9 @@ impl Pcap {
     }
 
     /// Write global header to a newly created pcap file
-    pub fn new(file: Rc<FileHandle>) -> io::Result<Self> {
+    pub fn new_with_magic(file: Rc<FileHandle>, magic: u32) -> io::Result<Self> {
         // Write the pcap global header to the file
-        let global_header = PcapGlobalHeader::default();
+        let global_header = PcapGlobalHeader::new(magic);
         let bytes: Vec<u8> = (&global_header).into();
         match file.as_ref() {
             FileHandle::Writer(writer) => {
@@ -406,6 +415,10 @@ impl Pcap {
             header: RefCell::new(global_header),
             ts_format: PcapTsFormat::MicroSeconds,
         })
+    }
+
+    pub fn new(file: Rc<FileHandle>) -> io::Result<Self> {
+        Self::new_with_magic(file, PCAP_MAGIC_US)
     }
 
     /// Read next packet from a pcap file

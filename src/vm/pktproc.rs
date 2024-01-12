@@ -2,8 +2,11 @@ use std::rc::Rc;
 
 use super::error::RTError;
 use super::interpreter::VM;
+use crate::builtins::packet::ethernet::EtherTypes;
 use crate::builtins::packet::ethernet::Ethernet;
 use crate::builtins::packet::ipv4::Ipv4Packet;
+use crate::builtins::packet::ipv4::Protocols;
+use crate::builtins::packet::udp::Udp;
 use crate::builtins::packet::vlan::Vlan;
 use crate::builtins::pcap::Pcap;
 use crate::builtins::pcap::PcapPacket;
@@ -45,12 +48,12 @@ impl VM {
                 } else {
                     // Parse inner packet from bytes
                     match eth.get_ethertype_raw() {
-                        0x8100 => {
+                        EtherTypes::Vlan => {
                             let obj =
                                 self.exec_prop_eth(eth.clone(), PacketPropType::Vlan, None, line)?;
                             self.get_inner(&obj, depth - 1, line)?
                         }
-                        0x0800 => {
+                        EtherTypes::Ipv4 => {
                             let obj =
                                 self.exec_prop_eth(eth.clone(), PacketPropType::Ipv4, None, line)?;
                             self.get_inner(&obj, depth - 1, line)?
@@ -66,7 +69,7 @@ impl VM {
                 } else {
                     // Parse inner packet from bytes
                     match vlan.get_ethertype_raw() {
-                        0x8100 => {
+                        EtherTypes::Vlan => {
                             let obj = self.exec_prop_vlan(
                                 vlan.clone(),
                                 PacketPropType::Vlan,
@@ -75,7 +78,7 @@ impl VM {
                             )?;
                             self.get_inner(&obj, depth - 1, line)?
                         }
-                        0x0800 => {
+                        EtherTypes::Ipv4 => {
                             let obj = self.exec_prop_vlan(
                                 vlan.clone(),
                                 PacketPropType::Ipv4,
@@ -91,6 +94,23 @@ impl VM {
             Object::Ipv4(ipv4) => {
                 // Clone the wrapped Rc object so we do not get BorrowMutError
                 let wrapped = ipv4.inner.borrow().clone();
+                if let Some(inner) = wrapped.as_ref() {
+                    self.get_inner(inner, depth - 1, line)?
+                } else {
+                    // Parse inner packet from bytes
+                    match ipv4.get_protocol_raw() {
+                        Protocols::Udp => {
+                            let obj =
+                                self.exec_prop_ipv4(ipv4.clone(), PacketPropType::Udp, None, line)?;
+                            self.get_inner(&obj, depth - 1, line)?
+                        }
+                        _ => Rc::new(Object::Null),
+                    }
+                }
+            }
+            Object::Udp(udp) => {
+                // Clone the wrapped Rc object so we do not get BorrowMutError
+                let wrapped = udp.inner.borrow().clone();
                 if let Some(inner) = wrapped.as_ref() {
                     self.get_inner(inner, depth - 1, line)?
                 } else {
@@ -122,6 +142,7 @@ impl VM {
             Object::Eth(eth) => self.exec_prop_eth(eth.clone(), prop, setval, line)?,
             Object::Vlan(v) => self.exec_prop_vlan(v.clone(), prop, setval, line)?,
             Object::Ipv4(ipv4) => self.exec_prop_ipv4(ipv4.clone(), prop, setval, line)?,
+            Object::Udp(udp) => self.exec_prop_udp(udp.clone(), prop, setval, line)?,
             _ => {
                 let msg = format!("{}: Object does not have any property", left);
                 return Err(RTError::new(&msg, line));
@@ -640,9 +661,85 @@ impl VM {
                     ipv4.get_dst()
                 }
             }
+            PacketPropType::Udp => {
+                if let Some(val) = setval {
+                    ipv4.inner.replace(Some(val.clone()));
+                    val
+                } else {
+                    if let Some(inner) = ipv4.inner.borrow().as_ref() {
+                        return Ok(inner.clone());
+                    }
+                    let obj = match Udp::from_bytes(Rc::clone(&ipv4.rawdata.borrow()), ipv4.offset)
+                    {
+                        Ok(udp) => Rc::new(Object::Udp(Rc::new(udp))),
+                        Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
+                    };
+                    // Borrow the inner object again and replace its content
+                    ipv4.inner.replace(Some(obj.clone()));
+                    obj
+                }
+            }
             _ => {
                 return Err(RTError::new(
                     &format!("Invalid ipv4 property '{}'", prop),
+                    line,
+                ));
+            }
+        };
+        Ok(obj)
+    }
+
+    fn exec_prop_udp(
+        &self,
+        udp: Rc<Udp>,
+        prop: PacketPropType,
+        setval: Option<Rc<Object>>,
+        line: usize,
+    ) -> Result<Rc<Object>, RTError> {
+        let obj = match prop {
+            PacketPropType::SrcPort => {
+                if let Some(val) = setval {
+                    if let Err(e) = udp.set_source_port(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    udp.get_source_port()
+                }
+            }
+            PacketPropType::DstPort => {
+                if let Some(val) = setval {
+                    if let Err(e) = udp.set_destination_port(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    udp.get_destination_port()
+                }
+            }
+            PacketPropType::Length => {
+                if let Some(val) = setval {
+                    if let Err(e) = udp.set_length(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    udp.get_length()
+                }
+            }
+            PacketPropType::Checksum => {
+                if let Some(val) = setval {
+                    if let Err(e) = udp.set_checksum(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    udp.get_checksum()
+                }
+            }
+            _ => {
+                return Err(RTError::new(
+                    &format!("Invalid ethernet property '{}'", prop),
                     line,
                 ));
             }

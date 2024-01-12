@@ -282,6 +282,9 @@ impl Ipv4Packet {
         }
     }
 
+    pub fn get_protocol_raw(&self) -> Protocol {
+        self.header.borrow().protocol.clone()
+    }
     pub fn get_protocol(&self) -> Rc<Object> {
         Rc::new(Object::Integer(self.header.borrow().protocol.0 as i64))
     }
@@ -352,7 +355,7 @@ impl From<&Ipv4Packet> for Vec<u8> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Protocol(pub u8);
 
 #[allow(unused, non_upper_case_globals, non_snake_case)]

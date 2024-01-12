@@ -93,8 +93,8 @@ impl Ethernet {
             inner: RefCell::new(None),
         })
     }
-    pub fn get_ethertype_raw(&self) -> u16 {
-        self.header.borrow().ethertype.0
+    pub fn get_ethertype_raw(&self) -> EtherType {
+        self.header.borrow().ethertype.clone()
     }
     pub fn get_src(&self) -> Rc<Object> {
         Rc::new(Object::Str(self.header.borrow().source.to_string()))
@@ -143,7 +143,7 @@ impl Ethernet {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EtherType(pub u16);
 
 #[allow(unused, non_upper_case_globals, non_snake_case)]

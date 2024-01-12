@@ -123,8 +123,8 @@ impl Vlan {
             inner: RefCell::new(None),
         })
     }
-    pub fn get_ethertype_raw(&self) -> u16 {
-        self.header.borrow().ethertype.0
+    pub fn get_ethertype_raw(&self) -> EtherType {
+        self.header.borrow().ethertype.clone()
     }
     pub fn get_priority(&self) -> Rc<Object> {
         let priority: u8 = self.header.borrow().priority.clone().into();

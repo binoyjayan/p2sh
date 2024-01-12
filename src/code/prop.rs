@@ -35,6 +35,10 @@ pub enum PacketPropType {
     Ttl,
     Protocol,
     Checksum,
+    Udp,
+    SrcPort,
+    DstPort,
+    Length,
     #[default]
     Invalid,
 }
@@ -73,6 +77,10 @@ impl From<u8> for PacketPropType {
             28 => Self::Ttl,
             29 => Self::Protocol,
             30 => Self::Checksum,
+            31 => Self::Udp,
+            32 => Self::SrcPort,
+            33 => Self::DstPort,
+            34 => Self::Length,
             _ => Self::Invalid,
         }
     }
@@ -118,6 +126,10 @@ impl fmt::Display for PacketPropType {
             PacketPropType::Ttl => "ttl",
             PacketPropType::Protocol => "proto",
             PacketPropType::Checksum => "checksum",
+            PacketPropType::Udp => "udp",
+            PacketPropType::SrcPort => "srcport",
+            PacketPropType::DstPort => "dstport",
+            PacketPropType::Length => "len",
             PacketPropType::Invalid => "invalid",
         };
         write!(f, "{}", string_representation)

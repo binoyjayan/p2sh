@@ -84,11 +84,12 @@ p2sh -sc '@ { eprintln("{} -> {}", ($2).src, ($2).dst);}' < in.pcap
 p2sh -sc '@ ($2).src == "192.168.29.58" { puts(($2).src, " -> ", ($2).dst); }' < in.pcap
 ```
 
-### Update fields
+### Modify fields
 
 ```bash
 p2sh -c '@ { ($1).src = "11:22:33:44:55:66" } @true ' < in.pcap > out.pcap
 p2sh -c '@ { ($2).src = "192.168.0.1" } @ true ' < in.pcap > out.pcap
+p2sh -c '@ { ($3).srcport = 1111 } @ true ' < in.pcap > out.pcap
 ```
 
 ### Interact with other programs

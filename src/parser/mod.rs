@@ -319,7 +319,7 @@ impl Parser {
             let filter = FilterPattern::Expr(Box::new(
                 self.parse_expression(Precedence::Assignment, false),
             ));
-            // consume the left brace
+            // advance to the left brace
             if self.peek_token_is(&TokenType::LeftBrace) {
                 self.next_token();
             }

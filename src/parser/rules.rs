@@ -96,9 +96,9 @@ lazy_static! {
         );
         // Unary - Dollar '$'
         rules[TokenType::Dollar as usize] = ParseRule::new(
-            Some(Parser::parse_prefix_expression),
+            Some(Parser::parse_dollar_expression),
             None,
-            Precedence::Primary,
+            Precedence::Lowest,
         );
         // Binary - Relational
         rules[TokenType::Equal as usize] = ParseRule::new(
@@ -346,8 +346,8 @@ impl Parser {
         })
     }
 
-    fn parse_decimal(&mut self, _: bool) -> Expression {
-        self.peek_invalid_assignment(false);
+    fn parse_decimal(&mut self, can_assign: bool) -> Expression {
+        self.peek_invalid_assignment(can_assign);
         if let Ok(value) = self.current.literal.parse() {
             Expression::Integer(IntegerLiteral {
                 token: self.current.clone(),
@@ -1017,6 +1017,35 @@ impl Parser {
             left: Box::new(left),
             property: Box::new(property),
             context,
+        })
+    }
+
+    /// Parse expressions such as $0, $1, $2, etc.
+    /// We cannot use the generic prefix expression parser here since
+    /// they will not allow the dollar expressions to be assignment targets
+    /// due to their higher precedence. So, we parse them separately.
+    /// Parse decimal and identifier expressions after the dollar sign
+    /// and pass in the 'can_assign' flag as true to allow them to be
+    /// assignment targets.
+    fn parse_dollar_expression(&mut self, _: bool) -> Expression {
+        let operator = self.current.literal.clone();
+        let token = self.current.clone();
+        self.next_token();
+
+        let right = if self.curr_token_is(&TokenType::Decimal) {
+            self.parse_decimal(true)
+        } else if self.curr_token_is(&TokenType::Identifier) {
+            self.parse_identifier(false)
+        } else {
+            let msg = format!("invalid expression after '{}'", operator);
+            self.push_error(&msg);
+            Expression::Invalid
+        };
+
+        Expression::Unary(UnaryExpr {
+            token,
+            operator,
+            right: Box::new(right),
         })
     }
 

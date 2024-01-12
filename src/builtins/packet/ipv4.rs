@@ -83,6 +83,18 @@ impl Ipv4Packet {
             rawdata[off + 19],
         );
 
+        // Handle ipv4 options
+        let mut options = Vec::new();
+        if ihl > 5 {
+            let mut i: usize = 20;
+            while i < ihl as usize * 4 {
+                options.push(rawdata[off + i]);
+                i += 1;
+            }
+        }
+        //  offset of payload
+        let off = off + ihl as usize * 4;
+
         let header = Ipv4Header {
             version,
             ihl,

@@ -60,7 +60,7 @@ below).
 | $0 | Current pcap packet. Includes pcap packet header |
 | $1 | Current ethernet packet |
 | $2 | Current ipv4 packet [ if ($1).type is ipv4 ] - TBD |
-| $3 | Current udp/tcp/.. packet - TBD |
+| $3 | Current udp/tcp/.. packet |
 | $4 | Raw data - TBD |
 | $n | Packet 'n' level deep |
 

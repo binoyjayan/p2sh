@@ -6,14 +6,15 @@ Filters are powerful programming constructs in p2sh. For a formal introduction
 of filters, please refer to the language reference.
 
 Filters statements start with a '@' character and is of the following form.
-The pattern is an expression that evaluates to a true or false. Actions are
-statements executed as a consequence.
-
-Filters resemble constructs found in the AWK language.
 
 ```
 @ pattern { action }
 ```
+
+The pattern is an expression that evaluates to a true or false. Actions are
+statements executed as a consequence.
+
+Filters resemble constructs found in the AWK language.
 
 Filter statements execute against every pcap packet read in the pcap stream.
 
@@ -81,6 +82,13 @@ p2sh -sc '@ { eprintln("{} -> {}", ($2).src, ($2).dst);}' < in.pcap
 
 ```bash
 p2sh -sc '@ ($2).src == "192.168.29.58" { puts(($2).src, " -> ", ($2).dst); }' < in.pcap
+```
+
+### Update fields
+
+```bash
+p2sh -c '@ { ($1).src = "11:22:33:44:55:66" } @true ' < in.pcap > out.pcap
+p2sh -c '@ { ($2).src = "192.168.0.1" } @ true ' < in.pcap > out.pcap
 ```
 
 ### Interact with other programs

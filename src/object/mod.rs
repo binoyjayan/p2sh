@@ -51,7 +51,14 @@ pub enum Object {
 impl From<&Object> for Vec<u8> {
     fn from(obj: &Object) -> Self {
         match obj {
-            Object::Null => Vec::new(),
+            Object::Null
+            | Object::Return(_)
+            | Object::Builtin(_)
+            | Object::Func(_)
+            | Object::Clos(_)
+            | Object::File(_)
+            | Object::Pcap(_)
+            | Object::Err(_) => Vec::new(),
             Object::Str(v) => v.as_bytes().to_vec(),
             Object::Char(v) => v.to_string().as_bytes().to_vec(),
             Object::Byte(v) => vec![*v],
@@ -63,7 +70,7 @@ impl From<&Object> for Vec<u8> {
             Object::Packet(v) => v.as_ref().into(),
             Object::Eth(v) => v.as_ref().into(),
             Object::Vlan(v) => v.as_ref().into(),
-            _ => Vec::new(),
+            Object::Ipv4(v) => v.as_ref().into(),
         }
     }
 }

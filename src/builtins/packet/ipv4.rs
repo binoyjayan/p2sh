@@ -315,35 +315,39 @@ impl Ipv4Packet {
     }
 }
 
-impl From<&Ipv4Packet> for Vec<u8> {
-    fn from(packet: &Ipv4Packet) -> Self {
-        let header = packet.header.borrow();
+impl From<&Ipv4Header> for Vec<u8> {
+    fn from(hdr: &Ipv4Header) -> Self {
         let mut bytes = Vec::new();
-        // Version (4 bits) and IHL (4 bits)
-        let version_ihl: u8 = (header.version << 4) | header.ihl;
+        let version_ihl: u8 = (hdr.version << 4) | hdr.ihl;
         bytes.push(version_ihl);
-        // DSCP (6 bits) and ECN (2 bits)
-        let dscp_ecn: u8 = (header.dscp << 2) | header.ecn;
+        let dscp_ecn: u8 = (hdr.dscp << 2) | hdr.ecn;
         bytes.push(dscp_ecn);
-        // Total Length (16 bits)
-        bytes.extend_from_slice(&header.total_length.to_be_bytes());
-        // Identification (16 bits)
-        bytes.extend_from_slice(&header.identification.to_be_bytes());
-        // Flags (3 bits) and Fragment Offset (13 bits)
-        let flags_fragment_offset: u16 = ((header.flags as u16) << 13) | header.fragment_offset;
+        bytes.extend_from_slice(&hdr.total_length.to_be_bytes());
+        bytes.extend_from_slice(&hdr.identification.to_be_bytes());
+        let flags_fragment_offset: u16 = ((hdr.flags as u16) << 13) | hdr.fragment_offset;
         bytes.extend_from_slice(&flags_fragment_offset.to_be_bytes());
-        // Time to Live (8 bits)
-        bytes.push(header.ttl);
-        // Protocol (8 bits)
-        bytes.push(header.protocol.0);
-        // Checksum (16 bits)
-        bytes.extend_from_slice(&header.checksum.to_be_bytes());
-        // Source Address (32 bits)
-        let b: Vec<u8> = (&header.source).into();
+        bytes.push(hdr.ttl);
+        bytes.push(hdr.protocol.0);
+        bytes.extend_from_slice(&hdr.checksum.to_be_bytes());
+        let b: Vec<u8> = (&hdr.source).into();
         bytes.extend_from_slice(&b);
-        // Destination Address (32 bits)
-        let b: Vec<u8> = (&header.destination).into();
+        let b: Vec<u8> = (&hdr.destination).into();
         bytes.extend_from_slice(&b);
+        bytes
+    }
+}
+
+impl From<&Ipv4Packet> for Vec<u8> {
+    fn from(ipv4: &Ipv4Packet) -> Self {
+        let header = ipv4.header.borrow().clone();
+        let mut bytes: Vec<u8> = (&header).into();
+        if let Some(inner) = ipv4.inner.borrow().clone() {
+            let data: Vec<u8> = inner.as_ref().into();
+            bytes.extend_from_slice(&data);
+        } else {
+            let data = ipv4.rawdata.borrow().clone();
+            bytes.extend_from_slice(&data[ipv4.offset..]);
+        }
         bytes
     }
 }

@@ -112,8 +112,26 @@ The following table lists the properties available for this object.
 
 | Name | Description |
 |------|-------------|
-| srcport | An string property representing source port |
-| dstport | An string property representing destination port |
+| srcport | An integer property representing source port |
+| dstport | An integer property representing destination port |
 | len | An integer property representing length udp header and data |
+| checksum | An integer property representing checksum of header and data |
+| payload | The udp payload as an array of bytes |
+
+### The tcp object
+
+This object represents a tcp packet.
+The following table lists the properties available for this object.
+
+| Name | Description |
+|------|-------------|
+| srcport | An integer property representing source port |
+| dstport | An integer property representing destination port |
+| seq | An integer property representing sequence number |
+| ack | An integer property representing acknowledgment number |
+| dataoff | An integer property representing offset of data in 32-bit words |
+| len | Length of header in 32-bit words. Same as dataoff |
+| flags | An integer property representing TCP flags |
+| winsize | The size of receive window |
 | checksum | An integer property representing checksum of header and data |
 | payload | The udp payload as an array of bytes |

@@ -739,7 +739,7 @@ impl VM {
             }
             _ => {
                 return Err(RTError::new(
-                    &format!("Invalid ethernet property '{}'", prop),
+                    &format!("Invalid udp property '{}'", prop),
                     line,
                 ));
             }

@@ -9,6 +9,7 @@ use crate::builtins::pcap::Pcap;
 use crate::builtins::pcap::PcapPacket;
 use crate::builtins::protocols::ethernet::Ethernet;
 use crate::builtins::protocols::ipv4::Ipv4Packet;
+use crate::builtins::protocols::tcp::Tcp;
 use crate::builtins::protocols::udp::Udp;
 use crate::builtins::protocols::vlan::Vlan;
 use crate::object::array::Array;
@@ -48,6 +49,7 @@ pub enum Object {
     Vlan(Rc<Vlan>),
     Ipv4(Rc<Ipv4Packet>),
     Udp(Rc<Udp>),
+    Tcp(Rc<Tcp>),
 }
 
 impl From<&Object> for Vec<u8> {
@@ -74,6 +76,7 @@ impl From<&Object> for Vec<u8> {
             Object::Vlan(v) => v.as_ref().into(),
             Object::Ipv4(v) => v.as_ref().into(),
             Object::Udp(v) => v.as_ref().into(),
+            Object::Tcp(v) => v.as_ref().into(),
         }
     }
 }
@@ -204,6 +207,7 @@ impl fmt::Display for Object {
             Self::Vlan(val) => write!(f, "{}", val),
             Self::Ipv4(val) => write!(f, "{}", val),
             Self::Udp(val) => write!(f, "{}", val),
+            Self::Tcp(val) => write!(f, "{}", val),
         }
     }
 }

@@ -39,6 +39,12 @@ pub enum PacketPropType {
     SrcPort,
     DstPort,
     Length,
+    Tcp,
+    Sequence,
+    Ack,
+    DataOffset,
+    WindowSize,
+    Urgent,
     #[default]
     Invalid,
 }
@@ -81,6 +87,12 @@ impl From<u8> for PacketPropType {
             32 => Self::SrcPort,
             33 => Self::DstPort,
             34 => Self::Length,
+            35 => Self::Tcp,
+            36 => Self::Sequence,
+            37 => Self::Ack,
+            38 => Self::DataOffset,
+            39 => Self::WindowSize,
+            40 => Self::Urgent,
             _ => Self::Invalid,
         }
     }
@@ -130,6 +142,12 @@ impl fmt::Display for PacketPropType {
             PacketPropType::SrcPort => "srcport",
             PacketPropType::DstPort => "dstport",
             PacketPropType::Length => "len",
+            PacketPropType::Tcp => "tcp",
+            PacketPropType::Sequence => "seq",
+            PacketPropType::Ack => "ack",
+            PacketPropType::DataOffset => "dataoff",
+            PacketPropType::WindowSize => "winsize",
+            PacketPropType::Urgent => "urgent",
             PacketPropType::Invalid => "invalid",
         };
         write!(f, "{}", string_representation)

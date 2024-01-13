@@ -8,6 +8,7 @@ use crate::builtins::protocols::ethernet::EtherTypes;
 use crate::builtins::protocols::ethernet::Ethernet;
 use crate::builtins::protocols::ipv4::Ipv4Packet;
 use crate::builtins::protocols::ipv4::Protocols;
+use crate::builtins::protocols::tcp::Tcp;
 use crate::builtins::protocols::udp::Udp;
 use crate::builtins::protocols::vlan::Vlan;
 use crate::code::prop::PacketPropType;
@@ -105,13 +106,25 @@ impl VM {
                                 self.exec_prop_ipv4(ipv4.clone(), PacketPropType::Udp, None, line)?;
                             self.get_inner(&obj, depth - 1, line)?
                         }
+                        Protocols::Tcp => {
+                            let obj =
+                                self.exec_prop_ipv4(ipv4.clone(), PacketPropType::Tcp, None, line)?;
+                            self.get_inner(&obj, depth - 1, line)?
+                        }
                         _ => Rc::new(Object::Null),
                     }
                 }
             }
             Object::Udp(udp) => {
-                // Clone the wrapped Rc object so we do not get BorrowMutError
                 let wrapped = udp.inner.borrow().clone();
+                if let Some(inner) = wrapped.as_ref() {
+                    self.get_inner(inner, depth - 1, line)?
+                } else {
+                    Rc::new(Object::Null)
+                }
+            }
+            Object::Tcp(tcp) => {
+                let wrapped = tcp.inner.borrow().clone();
                 if let Some(inner) = wrapped.as_ref() {
                     self.get_inner(inner, depth - 1, line)?
                 } else {
@@ -144,6 +157,7 @@ impl VM {
             Object::Vlan(v) => self.exec_prop_vlan(v.clone(), prop, setval, line)?,
             Object::Ipv4(ipv4) => self.exec_prop_ipv4(ipv4.clone(), prop, setval, line)?,
             Object::Udp(udp) => self.exec_prop_udp(udp.clone(), prop, setval, line)?,
+            Object::Tcp(tcp) => self.exec_prop_tcp(tcp.clone(), prop, setval, line)?,
             _ => {
                 let msg = format!("{}: Object does not have any property", left);
                 return Err(RTError::new(&msg, line));
@@ -710,6 +724,24 @@ impl VM {
                     obj
                 }
             }
+            PacketPropType::Tcp => {
+                if let Some(val) = setval {
+                    ipv4.inner.replace(Some(val.clone()));
+                    val
+                } else {
+                    if let Some(inner) = ipv4.inner.borrow().as_ref() {
+                        return Ok(inner.clone());
+                    }
+                    let obj = match Tcp::from_bytes(Rc::clone(&ipv4.rawdata.borrow()), ipv4.offset)
+                    {
+                        Ok(tcp) => Rc::new(Object::Tcp(Rc::new(tcp))),
+                        Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
+                    };
+                    // Borrow the inner object again and replace its content
+                    ipv4.inner.replace(Some(obj.clone()));
+                    obj
+                }
+            }
             PacketPropType::Payload => {
                 let payload = ipv4.rawdata.borrow().clone();
                 let mut elements = Vec::new();
@@ -791,6 +823,124 @@ impl VM {
             _ => {
                 return Err(RTError::new(
                     &format!("Invalid udp property '{}'", prop),
+                    line,
+                ));
+            }
+        };
+        Ok(obj)
+    }
+
+    fn exec_prop_tcp(
+        &self,
+        tcp: Rc<Tcp>,
+        prop: PacketPropType,
+        setval: Option<Rc<Object>>,
+        line: usize,
+    ) -> Result<Rc<Object>, RTError> {
+        let obj = match prop {
+            PacketPropType::SrcPort => {
+                if let Some(val) = setval {
+                    if let Err(e) = tcp.set_source_port(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    tcp.get_source_port()
+                }
+            }
+            PacketPropType::DstPort => {
+                if let Some(val) = setval {
+                    if let Err(e) = tcp.set_destination_port(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    tcp.get_destination_port()
+                }
+            }
+            PacketPropType::Sequence => {
+                if let Some(val) = setval {
+                    if let Err(e) = tcp.set_sequence(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    tcp.get_sequence()
+                }
+            }
+            PacketPropType::Ack => {
+                if let Some(val) = setval {
+                    if let Err(e) = tcp.set_ack(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    tcp.get_ack()
+                }
+            }
+            PacketPropType::DataOffset | PacketPropType::Length => {
+                if let Some(val) = setval {
+                    if let Err(e) = tcp.set_data_off(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    tcp.get_data_off()
+                }
+            }
+            PacketPropType::Flags => {
+                if let Some(val) = setval {
+                    if let Err(e) = tcp.set_flags(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    tcp.get_flags()
+                }
+            }
+            PacketPropType::WindowSize => {
+                if let Some(val) = setval {
+                    if let Err(e) = tcp.set_window_size(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    tcp.get_window_size()
+                }
+            }
+            PacketPropType::Checksum => {
+                if let Some(val) = setval {
+                    if let Err(e) = tcp.set_checksum(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    tcp.get_checksum()
+                }
+            }
+            PacketPropType::Urgent => {
+                if let Some(val) = setval {
+                    if let Err(e) = tcp.set_urgent(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    tcp.get_urgent()
+                }
+            }
+            PacketPropType::Payload => {
+                let payload = tcp.rawdata.borrow().clone();
+                let mut elements = Vec::new();
+                // start at offset 'offset' to skip the tcp header
+                for byte in payload.iter().skip(tcp.offset) {
+                    elements.push(Rc::new(Object::Byte(*byte)));
+                }
+                let arr = Array::new(elements);
+                Rc::new(Object::Arr(Rc::new(arr)))
+            }
+            _ => {
+                return Err(RTError::new(
+                    &format!("Invalid tcp property '{}'", prop),
                     line,
                 ));
             }

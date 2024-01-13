@@ -3,5 +3,6 @@ pub mod ethernet;
 pub mod ipv4;
 pub mod ipv4addr;
 pub mod macaddress;
+pub mod tcp;
 pub mod udp;
 pub mod vlan;

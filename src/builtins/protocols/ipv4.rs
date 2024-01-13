@@ -57,7 +57,7 @@ impl Ipv4Packet {
             return Err(PacketError::InvalidLength(rawdata.len()));
         }
         let version_ihl = rawdata[off] & 0xF;
-        let version = (version_ihl >> 4) & 0xF;
+        let version = (rawdata[off] >> 4) & 0xF;
         let ihl = version_ihl & 0xF;
         let dscp_ecn = rawdata[off + 1];
         let dscp = dscp_ecn >> 2;
@@ -70,19 +70,8 @@ impl Ipv4Packet {
         let ttl = rawdata[off + 8];
         let protocol = Protocol(rawdata[off + 9]);
         let checksum = ((rawdata[off + 10] as u16) << 8) | (rawdata[off + 11] as u16);
-        let source = Ipv4Address(
-            rawdata[off + 12],
-            rawdata[off + 13],
-            rawdata[off + 14],
-            rawdata[off + 15],
-        );
-        let destination = Ipv4Address(
-            rawdata[off + 16],
-            rawdata[off + 17],
-            rawdata[off + 18],
-            rawdata[off + 19],
-        );
-
+        let source = Ipv4Address::from_bytes(&rawdata[(off + 12)..(off + 16)]);
+        let destination = Ipv4Address::from_bytes(&rawdata[(off + 16)..(off + 20)]);
         // Handle ipv4 options
         let mut options = Vec::new();
         if ihl > 5 {
@@ -93,7 +82,7 @@ impl Ipv4Packet {
             }
         }
         //  offset of payload
-        let off = off + ihl as usize * 4;
+        let offset = off + ihl as usize * 4;
 
         let header = Ipv4Header {
             version,
@@ -113,7 +102,7 @@ impl Ipv4Packet {
         Ok(Self {
             header: RefCell::new(header),
             rawdata: RefCell::new(rawdata),
-            offset: off,
+            offset,
             inner: RefCell::new(None),
         })
     }
@@ -366,6 +355,7 @@ pub mod Protocols {
     pub const Tcp: Protocol = Protocol(6);
     pub const Udp: Protocol = Protocol(17);
     pub const Rdp: Protocol = Protocol(27);
+    pub const Ipv6: Protocol = Protocol(41);
     pub const Rsvp: Protocol = Protocol(46);
     pub const Gre: Protocol = Protocol(47);
     pub const Esp: Protocol = Protocol(50);

@@ -45,6 +45,11 @@ pub enum PacketPropType {
     DataOffset,
     WindowSize,
     Urgent,
+    Ipv6,
+    TrafficClass,
+    FlowLabel,
+    NextHeader,
+    HopLimit,
     #[default]
     Invalid,
 }
@@ -93,6 +98,11 @@ impl From<u8> for PacketPropType {
             38 => Self::DataOffset,
             39 => Self::WindowSize,
             40 => Self::Urgent,
+            41 => Self::Ipv6,
+            42 => Self::TrafficClass,
+            43 => Self::FlowLabel,
+            44 => Self::NextHeader,
+            45 => Self::HopLimit,
             _ => Self::Invalid,
         }
     }
@@ -148,6 +158,11 @@ impl fmt::Display for PacketPropType {
             PacketPropType::DataOffset => "dataoff",
             PacketPropType::WindowSize => "winsize",
             PacketPropType::Urgent => "urgent",
+            PacketPropType::Ipv6 => "ipv6",
+            PacketPropType::TrafficClass => "trafficclass",
+            PacketPropType::FlowLabel => "flowlabel",
+            PacketPropType::NextHeader => "nextheader",
+            PacketPropType::HopLimit => "hoplimit",
             PacketPropType::Invalid => "invalid",
         };
         write!(f, "{}", string_representation)

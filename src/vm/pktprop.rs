@@ -8,6 +8,8 @@ use crate::builtins::protocols::ethernet::EtherTypes;
 use crate::builtins::protocols::ethernet::Ethernet;
 use crate::builtins::protocols::ipv4::Ipv4Packet;
 use crate::builtins::protocols::ipv4::Protocols;
+use crate::builtins::protocols::ipv6::Ipv6Packet;
+use crate::builtins::protocols::ipv6::NextHeaders;
 use crate::builtins::protocols::tcp::Tcp;
 use crate::builtins::protocols::udp::Udp;
 use crate::builtins::protocols::vlan::Vlan;
@@ -16,7 +18,6 @@ use crate::object::array::Array;
 use crate::object::error::ErrorObj;
 use crate::object::Object;
 
-// define constant for max protool depth
 pub const MAX_PROTO_DEPTH: usize = 10;
 
 impl VM {
@@ -60,6 +61,11 @@ impl VM {
                                 self.exec_prop_eth(eth.clone(), PacketPropType::Ipv4, None, line)?;
                             self.get_inner(&obj, depth - 1, line)?
                         }
+                        EtherTypes::Ipv6 => {
+                            let obj =
+                                self.exec_prop_eth(eth.clone(), PacketPropType::Ipv6, None, line)?;
+                            self.get_inner(&obj, depth - 1, line)?
+                        }
                         _ => Rc::new(Object::Null),
                     }
                 }
@@ -89,6 +95,15 @@ impl VM {
                             )?;
                             self.get_inner(&obj, depth - 1, line)?
                         }
+                        EtherTypes::Ipv6 => {
+                            let obj = self.exec_prop_vlan(
+                                vlan.clone(),
+                                PacketPropType::Ipv6,
+                                None,
+                                line,
+                            )?;
+                            self.get_inner(&obj, depth - 1, line)?
+                        }
                         _ => Rc::new(Object::Null),
                     }
                 }
@@ -109,6 +124,37 @@ impl VM {
                         Protocols::Tcp => {
                             let obj =
                                 self.exec_prop_ipv4(ipv4.clone(), PacketPropType::Tcp, None, line)?;
+                            self.get_inner(&obj, depth - 1, line)?
+                        }
+                        Protocols::Ipv6 => {
+                            let obj = self.exec_prop_ipv4(
+                                ipv4.clone(),
+                                PacketPropType::Ipv6,
+                                None,
+                                line,
+                            )?;
+                            self.get_inner(&obj, depth - 1, line)?
+                        }
+                        _ => Rc::new(Object::Null),
+                    }
+                }
+            }
+            Object::Ipv6(ipv6) => {
+                // Clone the wrapped Rc object so we do not get BorrowMutError
+                let wrapped = ipv6.inner.borrow().clone();
+                if let Some(inner) = wrapped.as_ref() {
+                    self.get_inner(inner, depth - 1, line)?
+                } else {
+                    // Parse inner packet from bytes
+                    match ipv6.get_next_header_raw() {
+                        NextHeaders::Udp => {
+                            let obj =
+                                self.exec_prop_ipv6(ipv6.clone(), PacketPropType::Udp, None, line)?;
+                            self.get_inner(&obj, depth - 1, line)?
+                        }
+                        NextHeaders::Tcp => {
+                            let obj =
+                                self.exec_prop_ipv6(ipv6.clone(), PacketPropType::Tcp, None, line)?;
                             self.get_inner(&obj, depth - 1, line)?
                         }
                         _ => Rc::new(Object::Null),
@@ -156,6 +202,7 @@ impl VM {
             Object::Eth(eth) => self.exec_prop_eth(eth.clone(), prop, setval, line)?,
             Object::Vlan(v) => self.exec_prop_vlan(v.clone(), prop, setval, line)?,
             Object::Ipv4(ipv4) => self.exec_prop_ipv4(ipv4.clone(), prop, setval, line)?,
+            Object::Ipv6(ipv6) => self.exec_prop_ipv6(ipv6.clone(), prop, setval, line)?,
             Object::Udp(udp) => self.exec_prop_udp(udp.clone(), prop, setval, line)?,
             Object::Tcp(tcp) => self.exec_prop_tcp(tcp.clone(), prop, setval, line)?,
             _ => {
@@ -436,6 +483,25 @@ impl VM {
                         Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
                     };
                     // Borrow the inner object again and replace its content
+                    eth.inner.replace(Some(obj.clone()));
+                    obj
+                }
+            }
+            PacketPropType::Ipv6 => {
+                if let Some(val) = setval {
+                    eth.inner.replace(Some(val.clone()));
+                    val
+                } else {
+                    if let Some(inner) = eth.inner.borrow().as_ref() {
+                        return Ok(inner.clone());
+                    }
+                    let obj = match Ipv6Packet::from_bytes(
+                        Rc::clone(&eth.rawdata.borrow()),
+                        eth.offset,
+                    ) {
+                        Ok(ipv6) => Rc::new(Object::Ipv6(Rc::new(ipv6))),
+                        Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
+                    };
                     eth.inner.replace(Some(obj.clone()));
                     obj
                 }
@@ -742,6 +808,25 @@ impl VM {
                     obj
                 }
             }
+            PacketPropType::Ipv6 => {
+                if let Some(val) = setval {
+                    ipv4.inner.replace(Some(val.clone()));
+                    val
+                } else {
+                    if let Some(inner) = ipv4.inner.borrow().as_ref() {
+                        return Ok(inner.clone());
+                    }
+                    let obj = match Ipv6Packet::from_bytes(
+                        Rc::clone(&ipv4.rawdata.borrow()),
+                        ipv4.offset,
+                    ) {
+                        Ok(ipv6) => Rc::new(Object::Ipv6(Rc::new(ipv6))),
+                        Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
+                    };
+                    ipv4.inner.replace(Some(obj.clone()));
+                    obj
+                }
+            }
             PacketPropType::Payload => {
                 let payload = ipv4.rawdata.borrow().clone();
                 let mut elements = Vec::new();
@@ -755,6 +840,148 @@ impl VM {
             _ => {
                 return Err(RTError::new(
                     &format!("Invalid ipv4 property '{}'", prop),
+                    line,
+                ));
+            }
+        };
+        Ok(obj)
+    }
+
+    fn exec_prop_ipv6(
+        &self,
+        ipv6: Rc<Ipv6Packet>,
+        prop: PacketPropType,
+        setval: Option<Rc<Object>>,
+        line: usize,
+    ) -> Result<Rc<Object>, RTError> {
+        let obj = match prop {
+            PacketPropType::Version => {
+                if setval.is_some() {
+                    return Err(RTError::new("Cannot set ipv4 property version", line));
+                } else {
+                    ipv6.get_version()
+                }
+            }
+            PacketPropType::TrafficClass => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv6.set_traffic_class(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv6.get_traffic_class()
+                }
+            }
+            PacketPropType::FlowLabel => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv6.set_flow_label(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv6.get_flow_label()
+                }
+            }
+            PacketPropType::Length => {
+                // Payload length
+                if let Some(val) = setval {
+                    if let Err(e) = ipv6.set_payload_length(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv6.get_payload_length()
+                }
+            }
+            PacketPropType::NextHeader => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv6.set_next_header(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv6.get_next_header()
+                }
+            }
+            PacketPropType::HopLimit => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv6.set_hop_limit(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv6.get_hop_limit()
+                }
+            }
+            PacketPropType::Src => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv6.set_src(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv6.get_src()
+                }
+            }
+            PacketPropType::Dst => {
+                if let Some(val) = setval {
+                    if let Err(e) = ipv6.set_dst(val.clone()) {
+                        return Err(RTError::new(&e, line));
+                    }
+                    val
+                } else {
+                    ipv6.get_dst()
+                }
+            }
+            PacketPropType::Udp => {
+                if let Some(val) = setval {
+                    ipv6.inner.replace(Some(val.clone()));
+                    val
+                } else {
+                    if let Some(inner) = ipv6.inner.borrow().as_ref() {
+                        return Ok(inner.clone());
+                    }
+                    let obj = match Udp::from_bytes(Rc::clone(&ipv6.rawdata.borrow()), ipv6.offset)
+                    {
+                        Ok(udp) => Rc::new(Object::Udp(Rc::new(udp))),
+                        Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
+                    };
+                    // Borrow the inner object again and replace its content
+                    ipv6.inner.replace(Some(obj.clone()));
+                    obj
+                }
+            }
+            PacketPropType::Tcp => {
+                if let Some(val) = setval {
+                    ipv6.inner.replace(Some(val.clone()));
+                    val
+                } else {
+                    if let Some(inner) = ipv6.inner.borrow().as_ref() {
+                        return Ok(inner.clone());
+                    }
+                    let obj = match Tcp::from_bytes(Rc::clone(&ipv6.rawdata.borrow()), ipv6.offset)
+                    {
+                        Ok(tcp) => Rc::new(Object::Tcp(Rc::new(tcp))),
+                        Err(e) => Rc::new(Object::Err(ErrorObj::Packet(e))),
+                    };
+                    // Borrow the inner object again and replace its content
+                    ipv6.inner.replace(Some(obj.clone()));
+                    obj
+                }
+            }
+            PacketPropType::Payload => {
+                let payload = ipv6.rawdata.borrow().clone();
+                let mut elements = Vec::new();
+                // start at offset 'offset' to skip the ipv4 header
+                for byte in payload.iter().skip(ipv6.offset) {
+                    elements.push(Rc::new(Object::Byte(*byte)));
+                }
+                let arr = Array::new(elements);
+                Rc::new(Object::Arr(Rc::new(arr)))
+            }
+            _ => {
+                return Err(RTError::new(
+                    &format!("Invalid ipv6 property '{}'", prop),
                     line,
                 ));
             }

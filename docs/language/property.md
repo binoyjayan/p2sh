@@ -51,7 +51,7 @@ The following table lists the properties available for the this object.
 | caplen | An integer property representing the capture length |
 | wirelen | An integer property representing the length of packet on wire |
 | eth | The ethernet object contained within the packet |
-| payload | The ethernet object contained within the packet |
+| payload | The ethernet data as an array of bytes |
 
 
 ## The ethernet object
@@ -66,6 +66,7 @@ The following table lists the properties available for the this object.
 | type | An integer property representing ethertype |
 | vlan | An vlan object if the ethertype is 0x8100 |
 | ipv4 | An ipv4 object if the ethertype is 0x0800 |
+| payload | The ethernet payload as an array of bytes |
 
 ## The vlan object
 
@@ -79,6 +80,7 @@ The following table lists the properties available for the vlan object.
 | dei | A boolean property representing DEI |
 | vlan | An vlan object if the ethertype is 0x8100 |
 | ipv4 | An ipv4 object if the ethertype is 0x0800 |
+| payload | The vlan payload as an array of bytes |
 
 ## The ipv4 object
 
@@ -101,6 +103,7 @@ The following table lists the properties available for the this object.
 | src | An string property representing source ip |
 | dst | An string property representing destination ip |
 | udp | A udp object if the protocol is 17 |
+| payload | The ipv4 payload as an array of bytes |
 
 ### The udp object
 
@@ -113,3 +116,4 @@ The following table lists the properties available for this object.
 | dstport | An string property representing destination port |
 | len | An integer property representing length udp header and data |
 | checksum | An integer property representing checksum of header and data |
+| payload | The udp payload as an array of bytes |

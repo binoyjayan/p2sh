@@ -1,7 +1,7 @@
 use std::fmt;
 use std::io;
 
-use crate::builtins::packet::error::PacketError;
+use crate::builtins::protocols::error::PacketError;
 
 /// The error object.
 /// It is different from runtime error in the sense that a runtime error

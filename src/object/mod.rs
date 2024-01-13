@@ -5,12 +5,12 @@ use std::hash::{Hash, Hasher};
 use std::ops;
 use std::rc::Rc;
 
-use crate::builtins::packet::ethernet::Ethernet;
-use crate::builtins::packet::ipv4::Ipv4Packet;
-use crate::builtins::packet::udp::Udp;
-use crate::builtins::packet::vlan::Vlan;
 use crate::builtins::pcap::Pcap;
 use crate::builtins::pcap::PcapPacket;
+use crate::builtins::protocols::ethernet::Ethernet;
+use crate::builtins::protocols::ipv4::Ipv4Packet;
+use crate::builtins::protocols::udp::Udp;
+use crate::builtins::protocols::vlan::Vlan;
 use crate::object::array::Array;
 use crate::object::error::ErrorObj;
 use crate::object::file::FileHandle;

@@ -11,6 +11,7 @@ use crate::builtins::packet::vlan::Vlan;
 use crate::builtins::pcap::Pcap;
 use crate::builtins::pcap::PcapPacket;
 use crate::code::prop::PacketPropType;
+use crate::object::array::Array;
 use crate::object::error::ErrorObj;
 use crate::object::Object;
 
@@ -297,7 +298,7 @@ impl VM {
                     pkt.get_wirelen()
                 }
             }
-            PacketPropType::Eth | PacketPropType::Payload => {
+            PacketPropType::Eth => {
                 if let Some(val) = setval {
                     pkt.inner.replace(Some(val.clone()));
                     val
@@ -318,6 +319,16 @@ impl VM {
                     pkt.inner.replace(Some(obj.clone()));
                     obj
                 }
+            }
+            PacketPropType::Payload => {
+                // return the payload as bytes
+                let payload = pkt.rawdata.borrow().clone();
+                let mut elements = Vec::new();
+                for byte in payload.iter() {
+                    elements.push(Rc::new(Object::Byte(*byte)));
+                }
+                let arr = Array::new(elements);
+                Rc::new(Object::Arr(Rc::new(arr)))
             }
             _ => {
                 return Err(RTError::new(
@@ -414,6 +425,16 @@ impl VM {
                     eth.inner.replace(Some(obj.clone()));
                     obj
                 }
+            }
+            PacketPropType::Payload => {
+                let payload = eth.rawdata.borrow().clone();
+                let mut elements = Vec::new();
+                // start at offset 'offset' to skip the ethernet header
+                for byte in payload.iter().skip(eth.offset) {
+                    elements.push(Rc::new(Object::Byte(*byte)));
+                }
+                let arr = Array::new(elements);
+                Rc::new(Object::Arr(Rc::new(arr)))
             }
             _ => {
                 return Err(RTError::new(
@@ -515,6 +536,16 @@ impl VM {
                     vlan.inner.replace(Some(obj.clone()));
                     obj
                 }
+            }
+            PacketPropType::Payload => {
+                let payload = vlan.rawdata.borrow().clone();
+                let mut elements = Vec::new();
+                // start at offset 'offset' to skip the vlan header
+                for byte in payload.iter().skip(vlan.offset) {
+                    elements.push(Rc::new(Object::Byte(*byte)));
+                }
+                let arr = Array::new(elements);
+                Rc::new(Object::Arr(Rc::new(arr)))
             }
             _ => {
                 return Err(RTError::new(
@@ -679,6 +710,16 @@ impl VM {
                     obj
                 }
             }
+            PacketPropType::Payload => {
+                let payload = ipv4.rawdata.borrow().clone();
+                let mut elements = Vec::new();
+                // start at offset 'offset' to skip the ipv4 header
+                for byte in payload.iter().skip(ipv4.offset) {
+                    elements.push(Rc::new(Object::Byte(*byte)));
+                }
+                let arr = Array::new(elements);
+                Rc::new(Object::Arr(Rc::new(arr)))
+            }
             _ => {
                 return Err(RTError::new(
                     &format!("Invalid ipv4 property '{}'", prop),
@@ -736,6 +777,16 @@ impl VM {
                 } else {
                     udp.get_checksum()
                 }
+            }
+            PacketPropType::Payload => {
+                let payload = udp.rawdata.borrow().clone();
+                let mut elements = Vec::new();
+                // start at offset 'offset' to skip the udp header
+                for byte in payload.iter().skip(udp.offset) {
+                    elements.push(Rc::new(Object::Byte(*byte)));
+                }
+                let arr = Array::new(elements);
+                Rc::new(Object::Arr(Rc::new(arr)))
             }
             _ => {
                 return Err(RTError::new(

@@ -186,7 +186,7 @@ impl fmt::Display for Object {
             // But do not use this in builtins "puts" and "print"
             Self::Str(s) => write!(f, r#""{}""#, s),
             Self::Char(c) => write!(f, "'{}'", c),
-            Self::Byte(b) => write!(f, "{}", b),
+            Self::Byte(b) => write!(f, "0x{:x}", b),
             Self::Integer(val) => write!(f, "{}", val),
             Self::Float(val) => write!(f, "{}", val),
             Self::Bool(val) => write!(f, "{}", val),

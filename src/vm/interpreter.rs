@@ -17,7 +17,7 @@ use crate::object::hmap::HMap;
 use crate::object::Object;
 use crate::vm::error::RTError;
 use crate::vm::frame::Frame;
-use crate::vm::pktproc::MAX_PROTO_DEPTH;
+use crate::vm::pktprop::MAX_PROTO_DEPTH;
 
 const STACK_SIZE: usize = 4096;
 const MAX_FRAMES: usize = 4096;

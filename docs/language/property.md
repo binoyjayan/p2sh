@@ -102,6 +102,7 @@ The following table lists the properties available for the this object.
 | checksum | An integer property representing checksum |
 | src | An string property representing source ip |
 | dst | An string property representing destination ip |
+| tcp | A tcp object if the protocol is 6 |
 | udp | A udp object if the protocol is 17 |
 | payload | The ipv4 payload as an array of bytes |
 
@@ -135,3 +136,22 @@ The following table lists the properties available for this object.
 | winsize | The size of receive window |
 | checksum | An integer property representing checksum of header and data |
 | payload | The udp payload as an array of bytes |
+
+## The ipv6 object
+
+This object represents a ipv6 packet.
+The following table lists the properties available for the this object.
+
+| Name | Description |
+|------|-------------|
+| version | An read only integer property representing the ipv4 version |
+| trafficclass | An integer property representing Traffic class |
+| flowlabel | An integer property representing Flow label |
+| len | An integer property representing the payload length |
+| nextheader | An integer property representing the Next Header value |
+| hoplimit | An string property representing Hop Limit |
+| src | An string property representing source ip |
+| dst | An string property representing destination ip |
+| tcp | A tcp object if next header is 6 |
+| udp | A udp object if next header is 17 |
+| payload | The ipv6 payload as an array of bytes |

@@ -57,6 +57,8 @@ below).
 | NP | Number of packets processed so far |
 | PL | Captured length of the current packet |
 | WL | Length of the current packet on wire |
+| TSS | Seconds component of the packet timestamp |
+| TSS | Micro or nano seconds component of the packet timestamp |
 | $0 | Current pcap packet. Includes pcap packet header |
 | $1 | Current ethernet packet |
 | $2 | Current ipv4 packet [ if ($1).type is ipv4 ] - TBD |
@@ -64,8 +66,10 @@ below).
 | $4 | Raw data - TBD |
 | $n | Packet 'n' level deep |
 
-
-Look at the tutorial for example of pattern usage.
+Note that if the packets are encapsulated, the '$2', '$3' etc can mean
+something else. In these cases, use the ether type '($1).type' or
+the protocol ('($2).proto') type to determine the inner packet contents.
+Refer to the tutorial for example of pattern usage.
 
 ## Actions
 

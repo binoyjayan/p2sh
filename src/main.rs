@@ -319,4 +319,6 @@ fn init_builtin_vars(vm: &VM, args: Vec<String>) {
     vm.update_builtin_var(BuiltinVarType::NP, Rc::new(Object::Null));
     vm.update_builtin_var(BuiltinVarType::PL, Rc::new(Object::Null));
     vm.update_builtin_var(BuiltinVarType::WL, Rc::new(Object::Null));
+    vm.update_builtin_var(BuiltinVarType::Tss, Rc::new(Object::Null));
+    vm.update_builtin_var(BuiltinVarType::Tsu, Rc::new(Object::Null));
 }

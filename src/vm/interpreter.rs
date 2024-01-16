@@ -853,6 +853,8 @@ impl VM {
     pub fn set_curr_pkt(&self, pkt: Rc<PcapPacket>) {
         self.update_builtin_var(BuiltinVarType::PL, pkt.get_caplen());
         self.update_builtin_var(BuiltinVarType::WL, pkt.get_wirelen());
+        self.update_builtin_var(BuiltinVarType::Tss, pkt.get_ts_sec());
+        self.update_builtin_var(BuiltinVarType::Tsu, pkt.get_ts_usec());
         let obj = Object::Packet(pkt);
         self.curr_pkt.borrow_mut().replace(Rc::new(obj));
     }

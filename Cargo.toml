@@ -1,10 +1,10 @@
 [package]
 name = "p2sh"
-version = "0.4.1"
+version = "0.4.2"
 edition = "2021"
 authors = ["Binoy Jayan <binoyjayan@gmail.com>"]
 description = "The p2sh Programming language interpreter"
-repository = "https://github.com/binoyjayan/algorithms-rs"
+repository = "https://github.com/binoyjayan/p2sh"
 documentation = "https://docs.rs/p2sh"
 keywords = ["bytecode", "compiler", "interpreter", "packet", "processing"]
 license = "MIT"

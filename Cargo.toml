@@ -1,6 +1,6 @@
 [package]
 name = "p2sh"
-version = "0.4.2"
+version = "0.4.3"
 edition = "2021"
 authors = ["Binoy Jayan <binoyjayan@gmail.com>"]
 description = "The p2sh Programming language interpreter"

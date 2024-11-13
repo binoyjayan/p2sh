@@ -488,3 +488,31 @@ fn test_tokens_filter() {
 
     run_scanner_tests(input, tests);
 }
+
+#[test]
+fn test_scanner_iterator() {
+    let input = r#"
+        let x = 5;
+        let y = 10;
+    "#;
+
+    let tests = vec![
+        ExpectedToken(TokenType::Let, "let"),
+        ExpectedToken(TokenType::Identifier, "x"),
+        ExpectedToken(TokenType::Assign, "="),
+        ExpectedToken(TokenType::Decimal, "5"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::Let, "let"),
+        ExpectedToken(TokenType::Identifier, "y"),
+        ExpectedToken(TokenType::Assign, "="),
+        ExpectedToken(TokenType::Decimal, "10"),
+        ExpectedToken(TokenType::Semicolon, ";"),
+        ExpectedToken(TokenType::Eof, ""),
+    ];
+
+    let scanner = Scanner::new(input);
+    for (tt, exp) in scanner.zip(tests.iter()) {
+        assert_eq!(tt.ttype, exp.0);
+        assert_eq!(tt.literal, exp.1);
+    }
+}

@@ -394,3 +394,15 @@ impl Scanner {
         }
     }
 }
+
+impl Iterator for Scanner {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let token = self.next_token();
+        match token.ttype {
+            TokenType::Eof => None,
+            _ => Some(token),
+        }
+    }
+}
